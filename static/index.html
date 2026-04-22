@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>나비 길드 대시보드</title>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #11151e;
+      --card:      #161b27;
+      --border:    #1e2740;
+      --accent:    #4f8ef7;
+      --accent2:   #f7c04f;
+      --gold:      #e8b84b;
+      --silver:    #9aaabf;
+      --bronze:    #cd7f4e;
+      --text:      #d4dff5;
+      --muted:     #5a6a8a;
+      --danger:    #f75f5f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 배경 그리드 효과 */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 32px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .header-left h1 {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.05em;
+      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-left .subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.08em;
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .updated-at { font-size: 0.72rem; color: var(--muted); }
+
+    /* ── STAT CARDS ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .stat-card:hover { border-color: var(--accent); }
+
+    .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+    .stat-value { font-family: 'Black Han Sans', sans-serif; font-size: 1.8rem; color: var(--text); }
+    .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Noto Sans KR', sans-serif; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    /* ── CHART ── */
+    .chart-wrap { position: relative; height: 320px; }
+
+    /* ── JOB DONUT ── */
+    .donut-wrap { position: relative; height: 320px; }
+
+    .job-legend {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .legend-name { flex: 1; color: var(--text); }
+    .legend-count { color: var(--muted); font-size: 0.72rem; }
+
+    .legend-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .legend-nav button {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 2px 10px;
+      line-height: 1.6;
+      transition: background 0.15s;
+    }
+
+    .legend-nav button:hover:not(:disabled) { background: var(--border); }
+    .legend-nav button:disabled { opacity: 0.3; cursor: default; }
+    .legend-page { font-size: 0.75rem; color: var(--muted); }
+
+    /* ── STATS ANALYSIS ── */
+    .analysis-block { margin-bottom: 16px; }
+    .analysis-block:last-child { margin-bottom: 0; }
+    .analysis-label {
+      font-size: 0.95rem;
+      color: #ffffff;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .analysis-value {
+      font-size: 1.7rem;
+      font-family: 'Black Han Sans', sans-serif;
+      color: var(--text);
+    }
+    .analysis-desc {
+      font-size: 0.85rem;
+      color: #ffffff;
+      font-weight: 600;
+      line-height: 1.6;
+      margin: 5px 0 8px;
+    }
+    .quartile-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .quartile-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .quartile-tag {
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .quartile-val {
+      font-size: 1.15rem;
+      font-family: 'Black Han Sans', sans-serif;
+      color: var(--text);
+    }
+    .analysis-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 14px 0;
+    }
+
+    /* ── RANKING TABLE ── */
+    .rank-table { width: 100%; border-collapse: collapse; }
+
+    .rank-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rank-table th:last-child,
+    .rank-table td:last-child { text-align: right; }
+
+    .rank-table td {
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(30,39,64,0.5);
+    }
+
+    .rank-table tbody tr {
+      transition: background 0.15s;
+    }
+
+    .rank-table tbody tr:hover { background: rgba(79,142,247,0.05); }
+
+    .rank-num {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 0.9rem;
+      color: var(--muted);
+      width: 36px;
+    }
+
+    .rank-num.gold   { color: var(--gold); }
+    .rank-num.silver { color: var(--silver); }
+    .rank-num.bronze { color: var(--bronze); }
+
+    .rank-name { font-weight: 500; color: var(--text); }
+
+    .rank-job {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: rgba(79,142,247,0.08);
+      border: 1px solid rgba(79,142,247,0.15);
+      border-radius: 4px;
+      padding: 2px 8px;
+      display: inline-block;
+    }
+
+    .rank-score {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 0.95rem;
+      color: var(--accent2);
+    }
+
+    .score-bar-wrap {
+      width: 80px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .score-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    /* ── FULL TABLE ── */
+    .full-table-section { margin-top: 32px; }
+
+    .table-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.85rem;
+      padding: 8px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 220px;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    .table-info { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+
+    .full-table-wrap { overflow-x: auto; }
+
+    .full-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    .full-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .full-table th:hover { color: var(--accent); }
+    .full-table th:last-child,
+    .full-table td:last-child { text-align: right; }
+
+    .full-table td {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(30,39,64,0.4);
+      color: var(--text);
+    }
+
+    .full-table tbody tr:hover { background: rgba(79,142,247,0.04); }
+
+    .zero-score { color: var(--muted) !important; }
+
+    /* ── BRIEFING BOARD ── */
+    .brief-banner {
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .brief-banner.up   { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); color: #4ade80; }
+    .brief-banner.down { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+    .brief-banner .brief-icon { font-size: 1.3rem; }
+    .brief-streak { font-size: 0.8rem; font-weight: 400; opacity: 0.85; margin-left: auto; }
+    .brief-group-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 14px 0 8px;
+    }
+    .brief-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .brief-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .brief-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .brief-card-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; }
+    .brief-card-value { font-size: 1.2rem; font-family: 'Black Han Sans', sans-serif; color: var(--text); margin-bottom: 5px; }
+    .brief-change { font-size: 0.78rem; font-weight: 700; margin-bottom: 8px; }
+    .brief-change.up   { color: #4ade80; }
+    .brief-change.down { color: #f87171; }
+    .brief-change.flat { color: var(--muted); }
+    .brief-record { font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+    .brief-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .brief-bar { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.6s ease; }
+    .brief-pct { font-size: 0.65rem; color: var(--muted); margin-top: 3px; text-align: right; }
+
+    @media (max-width: 900px) {
+      .brief-grid-3, .brief-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 900px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 500px) {
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <h1>🦋 나비 길드</h1>
+      <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+      <div class="updated-at" id="updatedAt">불러오는 중...</div>
+    </div>
+  </header>
+
+  <!-- STAT CARDS -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label" id="labelTotal">총 길드원</div>
+      <div class="stat-value" id="statTotal">—<span>명</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" id="labelActive">수로 참여자</div>
+      <div class="stat-value" id="statActive">—<span>명</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" id="labelScore">수로 총 점수</div>
+      <div class="stat-value" id="statTotalScore">—</div>
+    </div>
+  </div>
+
+  <!-- 브리핑 보드 -->
+  <div id="briefingBoard" style="margin-bottom:32px;"></div>
+
+  <!-- 주간 총점수 추이 -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title">주간 길드 총점수 추이</div>
+    <div class="chart-wrap">
+      <canvas id="historyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 점수 분포 차트 -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
+      점수 분포 (구간별 인원)
+      <span id="distWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="distChart"></canvas>
+    </div>
+  </div>
+
+  <!-- TOP30 + DONUT -->
+  <div class="main-grid">
+
+    <!-- 통계 분석 -->
+    <div class="card">
+      <div class="section-title">길드원 점수 통계 분석</div>
+      <div id="statsAnalysisWrap"><div class="loading"><div class="spinner"></div> 불러오는 중</div></div>
+      <hr class="analysis-divider">
+      <div class="section-title" style="font-size:0.85rem;margin-bottom:10px;">주간 통계 추이</div>
+      <div style="position:relative;height:220px;">
+        <canvas id="statTrendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 직업 분포 -->
+    <div class="card">
+      <div class="section-title">직업별 분포</div>
+      <div class="donut-wrap">
+        <canvas id="jobChart"></canvas>
+      </div>
+      <div class="job-legend" id="jobLegend"></div>
+      <div class="legend-nav">
+        <button id="legendPrev">&#8592;</button>
+        <span class="legend-page" id="legendPage"></span>
+        <button id="legendNext">&#8594;</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FULL TABLE -->
+  <div class="full-table-section">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
+      전체 길드원 현황
+      <span id="tableWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+    </div>
+    <div class="card">
+      <div class="table-controls">
+        <input class="search-input" id="searchInput" type="text" placeholder="닉네임 / 직업 검색..." />
+        <span class="table-info" id="tableInfo"></span>
+      </div>
+      <div class="full-table-wrap">
+        <table class="full-table" id="fullTable">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>닉네임</th>
+              <th>직업</th>
+              <th>지하수로 점수</th>
+            </tr>
+          </thead>
+          <tbody id="fullTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const JOB_COLORS = [
+  '#4f8ef7','#f7c04f','#a78bfa','#4ade80','#f87171',
+  '#fb923c','#38bdf8','#e879f9','#facc15','#34d399',
+  '#60a5fa','#f472b6','#a3e635','#fb7185','#c084fc',
+  '#22d3ee','#fbbf24','#86efac','#818cf8','#f9a8d4',
+];
+
+let allMembers = [];
+let filteredMembers = [];
+let jobChart = null;
+let distChart = null;
+let historyChart = null;
+let statTrendChart = null;
+
+async function fetchData() {
+  const res = await fetch('/api/data');
+  return res.json();
+}
+
+function fmt(n) {
+  return Number(n).toLocaleString('ko-KR');
+}
+
+const JOB_NAME_MAP = {
+  '아크메이지(불, 독)': '아크메이지(불, 독)',
+  '아크메이지(불)': '아크메이지(불, 독)',
+  '아크메이지(썬, 콜)': '아크메이지(썬, 콜)',
+  '아크메이지(썬)': '아크메이지(썬, 콜)',
+  '아크메이지 (불, 독)': '아크메이지(불, 독)',
+  '아크메이지 (썬, 콜)': '아크메이지(썬, 콜)',
+};
+
+function normalizeJob(job) {
+  return JOB_NAME_MAP[job] ?? job;
+}
+
+function normalizeMembers(members) {
+  return members.map(m => ({ ...m, job: normalizeJob(m.job) }));
+}
+
+function renderStats(stats) {
+  document.getElementById('statTotal').innerHTML = `${fmt(stats.total)}<span>명</span>`;
+  document.getElementById('statActive').innerHTML = `${fmt(stats.active)}<span>명</span>`;
+  document.getElementById('statTotalScore').textContent = fmt(stats.total_score);
+  document.getElementById('updatedAt').textContent = `업데이트: ${stats.updated_at}`;
+}
+
+function calcAnalysis(members) {
+  const scores = members.map(m => m.score).filter(s => s > 0).sort((a, b) => a - b);
+  const n = scores.length;
+  if (!n) return null;
+  const mean = scores.reduce((a, b) => a + b, 0) / n;
+  const stddev = Math.sqrt(scores.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+  const q = p => {
+    const idx = p * (n - 1);
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return Math.round(scores[lo] + (scores[hi] - scores[lo]) * (idx - lo));
+  };
+  return { mean: Math.round(mean), stddev: Math.round(stddev), q1: q(0.25), q2: q(0.5), q3: q(0.75) };
+}
+
+function renderAnalysis(members) {
+  const r = calcAnalysis(members);
+  if (!r) { document.getElementById('statsAnalysisWrap').innerHTML = '<p style="color:var(--muted)">데이터 없음</p>'; return; }
+  document.getElementById('statsAnalysisWrap').innerHTML = `
+    <div class="analysis-block">
+      <div class="analysis-label">평균 점수</div>
+      <div class="analysis-value">${fmt(r.mean)}</div>
+    </div>
+    <hr class="analysis-divider">
+    <div class="analysis-block">
+      <div class="analysis-label">표준편차</div>
+      <div class="analysis-desc">점수가 평균으로부터 얼마나 퍼져 있는지를 나타냅니다. 값이 클수록 길드원 간 점수 격차가 크고, 작을수록 고르게 분포되어 있습니다.</div>
+      <div class="analysis-value">${fmt(r.stddev)}</div>
+    </div>
+    <hr class="analysis-divider">
+    <div class="analysis-block">
+      <div class="analysis-label">사분위 구간</div>
+      <div class="analysis-desc">참여자를 점수 순으로 나열했을 때 하위 25%(Q1), 50%(Q2), 75%(Q3) 지점의 점수입니다. Q1~Q3 사이에 전체 참여자의 절반이 분포합니다.</div>
+      <div class="quartile-row">
+        <div class="quartile-item">
+          <div class="quartile-tag">Q1 · 하위 25%</div>
+          <div class="quartile-val">${fmt(r.q1)}</div>
+        </div>
+        <div class="quartile-item">
+          <div class="quartile-tag">Q2 · 중간값</div>
+          <div class="quartile-val">${fmt(r.q2)}</div>
+        </div>
+        <div class="quartile-item">
+          <div class="quartile-tag">Q3 · 상위 25%</div>
+          <div class="quartile-val">${fmt(r.q3)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderJobChart(dist) {
+  const labels = dist.map(d => d.job);
+  const data   = dist.map(d => d.count);
+  const colors = dist.map((_, i) => JOB_COLORS[i % JOB_COLORS.length]);
+
+  if (jobChart) jobChart.destroy();
+  jobChart = new Chart(document.getElementById('jobChart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
+    options: {
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}명` }
+      }},
+      animation: { animateRotate: true, duration: 800 }
+    }
+  });
+
+  const PAGE_SIZE = 10;
+  let legendPage = 0;
+  const totalPages = Math.ceil(dist.length / PAGE_SIZE);
+
+  function renderLegendPage() {
+    const start = legendPage * PAGE_SIZE;
+    const items = dist.slice(start, start + PAGE_SIZE);
+    document.getElementById('jobLegend').innerHTML = items.map((d, i) => `
+      <div class="legend-item">
+        <span class="legend-dot" style="background:${colors[start + i]}"></span>
+        <span class="legend-name">${d.job}</span>
+        <span class="legend-count">${d.count}명</span>
+      </div>`).join('');
+    document.getElementById('legendPage').textContent = `${legendPage + 1} / ${totalPages}`;
+    document.getElementById('legendPrev').disabled = legendPage === 0;
+    document.getElementById('legendNext').disabled = legendPage === totalPages - 1;
+  }
+
+  document.getElementById('legendPrev').onclick = () => { if (legendPage > 0) { legendPage--; renderLegendPage(); } };
+  document.getElementById('legendNext').onclick = () => { if (legendPage < totalPages - 1) { legendPage++; renderLegendPage(); } };
+
+  renderLegendPage();
+}
+
+function renderDistChart(members) {
+  const active = members.filter(m => m.score > 0).map(m => m.score);
+  const STEP = 10000;
+  const maxScore = active.length ? Math.max(...active) : STEP;
+  const topBracket = Math.ceil(maxScore / STEP) * STEP;
+
+  const brackets = [{ label: '0점', count: members.filter(m => m.score === 0).length }];
+  for (let lo = 0; lo < topBracket; lo += STEP) {
+    const hi = lo + STEP;
+    const label = lo === 0 ? `~1만` : `${lo / 10000}만~${hi / 10000}만`;
+    brackets.push({ label, count: active.filter(s => s > lo && s <= hi).length });
+  }
+
+  if (distChart) distChart.destroy();
+  distChart = new Chart(document.getElementById('distChart'), {
+    type: 'bar',
+    data: {
+      labels: brackets.map(b => b.label),
+      datasets: [{
+        label: '인원 수',
+        data: brackets.map(b => b.count),
+        backgroundColor: 'rgba(79,142,247,0.6)',
+        borderColor: '#4f8ef7',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${ctx.parsed.y}명` }
+      }},
+      scales: {
+        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
+        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', stepSize: 1 } }
+      }
+    }
+  });
+}
+
+function renderFullTable(members) {
+  const tbody = document.getElementById('fullTbody');
+  tbody.innerHTML = members.map(m => `<tr>
+    <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+    <td>${m.name}</td>
+    <td><span class="rank-job">${m.job}</span></td>
+    <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-family:'Black Han Sans',sans-serif">
+      ${m.score === 0 ? '—' : fmt(m.score)}
+    </td>
+  </tr>`).join('');
+  document.getElementById('tableInfo').textContent = `${members.length}명 표시 중`;
+}
+
+function filterTable(query) {
+  const q = query.trim().toLowerCase();
+  filteredMembers = q
+    ? allMembers.filter(m => m.name.toLowerCase().includes(q) || m.job.toLowerCase().includes(q))
+    : [...allMembers];
+  renderFullTable(filteredMembers);
+}
+
+function weekLabel(w) {
+  return `${w.slice(0,4)}-${w.slice(4,6)}-${w.slice(6,8)}`;
+}
+
+function setStatLabels(week) {
+  const prefix = week ? `(${weekRangeLabel(week)}) ` : '';
+  document.getElementById('labelTotal').textContent  = `${prefix}총 길드원`;
+  document.getElementById('labelActive').textContent = `${prefix}수로 참여자`;
+  document.getElementById('labelScore').textContent  = `${prefix}수로 총 점수`;
+}
+
+function setWeekBadge(week) {
+  const badge = week ? `— ${weekLabel(week)}` : '';
+  document.getElementById('distWeekBadge').textContent = badge;
+  document.getElementById('tableWeekBadge').textContent = badge;
+}
+
+async function loadWeekData(week) {
+  const res = await fetch(`/api/week/${week}`);
+  if (!res.ok) return;
+  const data = await res.json();
+  const members = normalizeMembers(data.all_members);
+  allMembers = members;
+  filteredMembers = [...members];
+  setWeekBadge(week);
+  setStatLabels(week);
+
+  const scores = members.map(m => m.score).filter(s => s > 0);
+  renderStats({
+    total: members.length,
+    active: scores.length,
+    total_score: scores.reduce((a, b) => a + b, 0),
+    updated_at: weekLabel(week),
+  });
+
+  renderAnalysis(members);
+  renderDistChart(members);
+  renderFullTable(members);
+  document.getElementById('searchInput').value = '';
+}
+
+function weekRangeLabel(w) {
+  const end = new Date(`${w.slice(0,4)}-${w.slice(4,6)}-${w.slice(6,8)}`);
+  const start = new Date(end);
+  start.setDate(end.getDate() - 6);
+  const f = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${f(start)}~${f(end)}`;
+}
+
+function renderStatTrendChart(history) {
+  const labels = history.map(h => weekRangeLabel(h.week));
+  const mk = (label, data, color, dash) => ({
+    label, data,
+    borderColor: color,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderDash: dash || [],
+    pointRadius: 3,
+    pointHoverRadius: 6,
+    tension: 0.3,
+  });
+
+  if (statTrendChart) statTrendChart.destroy();
+  statTrendChart = new Chart(document.getElementById('statTrendChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        mk('Q3 (상위 25%)',  history.map(h => h.q3),           '#a78bfa'),
+        mk('평균',           history.map(h => h.mean),          '#4ade80'),
+        mk('중간값 (Q2)',    history.map(h => h.median_score),  '#4f8ef7'),
+        mk('Q1 (하위 25%)', history.map(h => h.q1),            '#f87171', [4,3]),
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8899bb', font: { size: 12 }, boxWidth: 24 } },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
+        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+
+function renderBriefing(history) {
+  const el = document.getElementById('briefingBoard');
+  if (history.length < 2) { el.innerHTML = ''; return; }
+
+  const cur  = history[history.length - 1];
+  const prev = history[history.length - 2];
+
+  const atHigh = k => Math.max(...history.map(h => h[k]));
+  const atLow  = k => Math.min(...history.filter(h => h[k] > 0).map(h => h[k]));
+
+  // 연속 성장/하락 주수
+  const isUp = cur.total_score >= prev.total_score;
+  let streak = 1;
+  for (let i = history.length - 2; i > 0; i--) {
+    const up = history[i].total_score >= history[i-1].total_score;
+    if (up === isUp) streak++; else break;
+  }
+
+  function chg(c, p, unit='', reversed=false) {
+    const diff = c - p;
+    const pct  = p > 0 ? ((diff / p) * 100).toFixed(1) : '0.0';
+    const good = reversed ? diff <= 0 : diff >= 0;
+    const cls  = diff === 0 ? 'flat' : good ? 'up' : 'down';
+    const arr  = diff > 0 ? '▲' : diff < 0 ? '▼' : '━';
+    const sign = diff > 0 ? '+' : '';
+    return `<div class="brief-change ${cls}">${arr} ${sign}${fmt(Math.abs(diff))}${unit} (${sign}${pct}%)</div>`;
+  }
+
+  function bar(c, best, reversed=false) {
+    const pct = best > 0 ? Math.min(100, Math.round((reversed ? best/c : c/best)*100)) : 0;
+    const lbl = reversed ? `역대 최저: ${fmt(best)}` : `역대 최고: ${fmt(best)}`;
+    const ref = reversed ? '최저 대비' : '최고 대비';
+    return `<div class="brief-record">${lbl}</div>
+            <div class="brief-bar-wrap"><div class="brief-bar" style="width:${pct}%"></div></div>
+            <div class="brief-pct">${ref} ${pct}%</div>`;
+  }
+
+  function card(label, c, p, best, unit='', reversed=false) {
+    return `<div class="brief-card">
+      <div class="brief-card-label">${label}</div>
+      <div class="brief-card-value">${fmt(c)}${unit}</div>
+      ${chg(c, p, unit, reversed)}
+      ${bar(c, best, reversed)}
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="brief-banner ${isUp ? 'up' : 'down'}">
+      <span class="brief-icon">${isUp ? '📈' : '📉'}</span>
+      <span>이번 주 길드는 지난 주보다 ${isUp ? '성장했습니다' : '하향됐습니다'}</span>
+      <span class="brief-streak">${streak}주 연속 ${isUp ? '성장' : '하락'} 중</span>
+    </div>
+    <div class="brief-group-label">주요 지표</div>
+    <div class="brief-grid-3">
+      ${card('길드 총 점수',   cur.total_score,   prev.total_score,   atHigh('total_score'))}
+      ${card('이번 주 참여자', cur.active,         prev.active,         atHigh('active'), '명')}
+      ${card('평균 점수',      cur.mean,           prev.mean,           atHigh('mean'))}
+    </div>
+    <div class="brief-group-label">분포 지표</div>
+    <div class="brief-grid-4">
+      ${card('Q1 · 하위 25%', cur.q1,           prev.q1,           atHigh('q1'))}
+      ${card('Q2 · 중간값',   cur.median_score, prev.median_score, atHigh('median_score'))}
+      ${card('Q3 · 상위 25%', cur.q3,           prev.q3,           atHigh('q3'))}
+      ${card('표준편차',       cur.stddev,        prev.stddev,        atLow('stddev'), '', true)}
+    </div>`;
+}
+
+function renderHistoryChart(history) {
+  const labels  = history.map(h => weekRangeLabel(h.week));
+  const totals  = history.map(h => h.total_score);
+  const medians = history.map(h => h.median_score);
+  const actives = history.map(h => h.active);
+
+  if (historyChart) historyChart.destroy();
+  historyChart = new Chart(document.getElementById('historyChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '길드 총점수',
+        data: totals,
+        borderColor: '#4f8ef7',
+        backgroundColor: 'rgba(79,142,247,0.12)',
+        borderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 10,
+        pointHitRadius: 24,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onHover: (e, elements) => {
+        e.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      },
+      onClick: (_, elements) => {
+        if (!elements.length) return;
+        const week = history[elements[0].index].week;
+        loadWeekData(week);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => weekLabel(history[ctx[0].dataIndex].week),
+            afterBody: ctx => {
+              const i = ctx[0].dataIndex;
+              return [`중간값: ${fmt(medians[i])}`, `참여인원: ${actives[i]}명`];
+            },
+            label: ctx => ` 총점수: ${fmt(ctx.parsed.y)}`,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
+        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+
+async function init() {
+  const [data, history] = await Promise.all([fetchData(), fetch('/api/history').then(r => r.json())]);
+  data.all_members = normalizeMembers(data.all_members);
+  data.top30 = normalizeMembers(data.top30);
+  data.job_distribution = data.job_distribution.map(d => ({ ...d, job: normalizeJob(d.job) }));
+
+  allMembers = data.all_members;
+  filteredMembers = [...allMembers];
+
+  renderStats(data.stats);
+  setStatLabels(data.stats.week);
+  renderBriefing(history);
+  renderHistoryChart(history);
+  renderStatTrendChart(history);
+  renderAnalysis(data.all_members);
+  renderJobChart(data.job_distribution);
+  renderDistChart(data.all_members);
+  renderFullTable(data.all_members);
+
+  document.getElementById('searchInput').addEventListener('input', e => filterTable(e.target.value));
+}
+
+// 5분마다 자동 갱신
+init();
+setInterval(init, 5 * 60 * 1000);
+</script>
+</body>
+</html>
