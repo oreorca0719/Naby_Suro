@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>나비 길드 대시보드</title>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #11151e;
+      --card:      #161b27;
+      --border:    #1e2740;
+      --accent:    #4f8ef7;
+      --accent2:   #f7c04f;
+      --gold:      #e8b84b;
+      --silver:    #9aaabf;
+      --bronze:    #cd7f4e;
+      --text:      #d4dff5;
+      --muted:     #5a6a8a;
+      --danger:    #f75f5f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 배경 그리드 효과 */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 32px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .header-left h1 {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.05em;
+      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-left .subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.08em;
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .updated-at { font-size: 0.72rem; color: var(--muted); }
+
+    /* ── STAT CARDS ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .stat-card:hover { border-color: var(--accent); }
+
+    .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+    .stat-value { font-family: 'Black Han Sans', sans-serif; font-size: 1.8rem; color: var(--text); }
+    .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Noto Sans KR', sans-serif; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    /* ── CHART ── */
+    .chart-wrap { position: relative; height: 320px; }
+
+    /* ── JOB DONUT ── */
+    .donut-wrap { position: relative; height: 260px; }
+
+    .job-legend {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .job-legend::-webkit-scrollbar { width: 4px; }
+    .job-legend::-webkit-scrollbar-track { background: transparent; }
+    .job-legend::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .legend-name { flex: 1; color: var(--text); }
+    .legend-count { color: var(--muted); font-size: 0.72rem; }
+
+    /* ── RANKING TABLE ── */
+    .rank-table { width: 100%; border-collapse: collapse; }
+
+    .rank-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rank-table th:last-child,
+    .rank-table td:last-child { text-align: right; }
+
+    .rank-table td {
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(30,39,64,0.5);
+    }
+
+    .rank-table tbody tr {
+      transition: background 0.15s;
+    }
+
+    .rank-table tbody tr:hover { background: rgba(79,142,247,0.05); }
+
+    .rank-num {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 0.9rem;
+      color: var(--muted);
+      width: 36px;
+    }
+
+    .rank-num.gold   { color: var(--gold); }
+    .rank-num.silver { color: var(--silver); }
+    .rank-num.bronze { color: var(--bronze); }
+
+    .rank-name { font-weight: 500; color: var(--text); }
+
+    .rank-job {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: rgba(79,142,247,0.08);
+      border: 1px solid rgba(79,142,247,0.15);
+      border-radius: 4px;
+      padding: 2px 8px;
+      display: inline-block;
+    }
+
+    .rank-score {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 0.95rem;
+      color: var(--accent2);
+    }
+
+    .score-bar-wrap {
+      width: 80px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .score-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    /* ── FULL TABLE ── */
+    .full-table-section { margin-top: 32px; }
+
+    .table-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.85rem;
+      padding: 8px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 220px;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    .table-info { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+
+    .full-table-wrap { overflow-x: auto; }
+
+    .full-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    .full-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .full-table th:hover { color: var(--accent); }
+    .full-table th:last-child,
+    .full-table td:last-child { text-align: right; }
+
+    .full-table td {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(30,39,64,0.4);
+      color: var(--text);
+    }
+
+    .full-table tbody tr:hover { background: rgba(79,142,247,0.04); }
+
+    .zero-score { color: var(--muted) !important; }
+
+    /* ── LOADING ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 900px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 500px) {
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <h1>🦋 나비 길드</h1>
+      <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+      <div class="updated-at" id="updatedAt">불러오는 중...</div>
+    </div>
+  </header>
+
+  <!-- STAT CARDS -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">총 길드원</div>
+      <div class="stat-value" id="statTotal">—<span>명</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">활성 길드원</div>
+      <div class="stat-value" id="statActive">—<span>명</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">길드 총 점수</div>
+      <div class="stat-value" id="statTotalScore">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">1인 평균 점수</div>
+      <div class="stat-value" id="statAvg">—</div>
+    </div>
+  </div>
+
+  <!-- TOP30 + DONUT -->
+  <div class="main-grid">
+
+    <!-- TOP 30 -->
+    <div class="card">
+      <div class="section-title">지하수로 점수 TOP 30</div>
+      <div id="top30Wrap"><div class="loading"><div class="spinner"></div> 불러오는 중</div></div>
+    </div>
+
+    <!-- 직업 분포 -->
+    <div class="card">
+      <div class="section-title">직업별 분포</div>
+      <div class="donut-wrap">
+        <canvas id="jobChart"></canvas>
+      </div>
+      <div class="job-legend" id="jobLegend"></div>
+    </div>
+
+  </div>
+
+  <!-- 점수 분포 차트 -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title">점수 분포 (구간별 인원)</div>
+    <div class="chart-wrap">
+      <canvas id="distChart"></canvas>
+    </div>
+  </div>
+
+  <!-- FULL TABLE -->
+  <div class="full-table-section">
+    <div class="section-title">전체 길드원 현황</div>
+    <div class="card">
+      <div class="table-controls">
+        <input class="search-input" id="searchInput" type="text" placeholder="닉네임 / 직업 검색..." />
+        <span class="table-info" id="tableInfo"></span>
+      </div>
+      <div class="full-table-wrap">
+        <table class="full-table" id="fullTable">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>닉네임</th>
+              <th>직업</th>
+              <th>지하수로 점수</th>
+            </tr>
+          </thead>
+          <tbody id="fullTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const JOB_COLORS = [
+  '#4f8ef7','#f7c04f','#a78bfa','#4ade80','#f87171',
+  '#fb923c','#38bdf8','#e879f9','#facc15','#34d399',
+  '#60a5fa','#f472b6','#a3e635','#fb7185','#c084fc',
+  '#22d3ee','#fbbf24','#86efac','#818cf8','#f9a8d4',
+];
+
+let allMembers = [];
+let filteredMembers = [];
+let jobChart = null;
+let distChart = null;
+
+async function fetchData() {
+  const res = await fetch('/api/data');
+  return res.json();
+}
+
+function fmt(n) {
+  return Number(n).toLocaleString('ko-KR');
+}
+
+function renderStats(stats) {
+  document.getElementById('statTotal').innerHTML = `${fmt(stats.total)}<span>명</span>`;
+  document.getElementById('statActive').innerHTML = `${fmt(stats.active)}<span>명</span>`;
+  document.getElementById('statTotalScore').textContent = fmt(stats.total_score);
+  document.getElementById('statAvg').textContent = fmt(stats.avg_score);
+  document.getElementById('updatedAt').textContent = `업데이트: ${stats.updated_at}`;
+}
+
+function renderTop30(top30) {
+  const maxScore = top30[0]?.score || 1;
+  const rows = top30.map((m, i) => {
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const pct = Math.round((m.score / maxScore) * 100);
+    return `<tr>
+      <td><span class="rank-num ${rankClass}">${m.rank}</span></td>
+      <td><span class="rank-name">${m.name}</span></td>
+      <td><span class="rank-job">${m.job}</span></td>
+      <td>
+        <span class="rank-score">${fmt(m.score)}</span>
+        <span class="score-bar-wrap"><span class="score-bar" style="width:${pct}%"></span></span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('top30Wrap').innerHTML = `
+    <table class="rank-table">
+      <thead><tr>
+        <th>순위</th><th>닉네임</th><th>직업</th><th>점수</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderJobChart(dist) {
+  const labels = dist.map(d => d.job);
+  const data   = dist.map(d => d.count);
+  const colors = dist.map((_, i) => JOB_COLORS[i % JOB_COLORS.length]);
+
+  if (jobChart) jobChart.destroy();
+  jobChart = new Chart(document.getElementById('jobChart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
+    options: {
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}명` }
+      }},
+      animation: { animateRotate: true, duration: 800 }
+    }
+  });
+
+  const legend = document.getElementById('jobLegend');
+  legend.innerHTML = dist.map((d, i) => `
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${colors[i]}"></span>
+      <span class="legend-name">${d.job}</span>
+      <span class="legend-count">${d.count}명</span>
+    </div>`).join('');
+}
+
+function renderDistChart(members) {
+  const active = members.filter(m => m.score > 0).map(m => m.score);
+  const brackets = [
+    { label: '0', min: 0,       max: 1,       count: members.filter(m => m.score === 0).length },
+    { label: '1만~5만',  min: 1,       max: 50000,   count: 0 },
+    { label: '5만~10만', min: 50000,   max: 100000,  count: 0 },
+    { label: '10만~15만',min: 100000,  max: 150000,  count: 0 },
+    { label: '15만~20만',min: 150000,  max: 200000,  count: 0 },
+    { label: '20만+',    min: 200000,  max: Infinity, count: 0 },
+  ];
+  active.forEach(s => {
+    for (let i = 1; i < brackets.length; i++) {
+      if (s >= brackets[i].min && s < brackets[i].max) { brackets[i].count++; break; }
+    }
+  });
+
+  if (distChart) distChart.destroy();
+  distChart = new Chart(document.getElementById('distChart'), {
+    type: 'bar',
+    data: {
+      labels: brackets.map(b => b.label),
+      datasets: [{
+        label: '인원 수',
+        data: brackets.map(b => b.count),
+        backgroundColor: 'rgba(79,142,247,0.6)',
+        borderColor: '#4f8ef7',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${ctx.parsed.y}명` }
+      }},
+      scales: {
+        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
+        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', stepSize: 1 } }
+      }
+    }
+  });
+}
+
+function renderFullTable(members) {
+  const tbody = document.getElementById('fullTbody');
+  tbody.innerHTML = members.map(m => `<tr>
+    <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+    <td>${m.name}</td>
+    <td><span class="rank-job">${m.job}</span></td>
+    <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-family:'Black Han Sans',sans-serif">
+      ${m.score === 0 ? '—' : fmt(m.score)}
+    </td>
+  </tr>`).join('');
+  document.getElementById('tableInfo').textContent = `${members.length}명 표시 중`;
+}
+
+function filterTable(query) {
+  const q = query.trim().toLowerCase();
+  filteredMembers = q
+    ? allMembers.filter(m => m.name.toLowerCase().includes(q) || m.job.toLowerCase().includes(q))
+    : [...allMembers];
+  renderFullTable(filteredMembers);
+}
+
+async function init() {
+  const data = await fetchData();
+  allMembers = data.all_members;
+  filteredMembers = [...allMembers];
+
+  renderStats(data.stats);
+  renderTop30(data.top30);
+  renderJobChart(data.job_distribution);
+  renderDistChart(data.all_members);
+  renderFullTable(data.all_members);
+
+  document.getElementById('searchInput').addEventListener('input', e => filterTable(e.target.value));
+}
+
+// 5분마다 자동 갱신
+init();
+setInterval(init, 5 * 60 * 1000);
+</script>
+</body>
+</html>
