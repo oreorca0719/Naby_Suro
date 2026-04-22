@@ -9,7 +9,7 @@ app = FastAPI()
 
 # ── DynamoDB 설정 ──────────────────────────────────────────────────
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE", "maple_guild")
-AWS_REGION  = os.environ.get("AWS_REGION", "ap-northeast-2")
+AWS_REGION  = os.environ.get("AWS_REGION", "ap-northeast-1")
 
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 table    = dynamodb.Table(TABLE_NAME)

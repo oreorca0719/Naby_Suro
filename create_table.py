@@ -4,7 +4,7 @@
 
 import boto3
 
-AWS_REGION = "ap-northeast-2"
+AWS_REGION = "ap-northeast-1"
 TABLE_NAME = "maple_guild"
 
 def create_table():

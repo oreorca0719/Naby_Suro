@@ -11,7 +11,7 @@ from decimal import Decimal
 
 # ── 설정 ──────────────────────────────────────────────────────────
 TABLE_NAME = "maple_guild"
-AWS_REGION  = "ap-northeast-2"
+AWS_REGION  = "ap-northeast-1"
 # AWS 자격증명은 환경변수 또는 ~/.aws/credentials 에서 자동 로드
 # ────────────────────────────────────────────────────────────────
 
