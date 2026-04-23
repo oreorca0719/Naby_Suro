@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 import statistics
 import boto3
 import os
@@ -23,6 +24,16 @@ def get_latest_week() -> str:
     if not item:
         raise HTTPException(status_code=404, detail="데이터가 없습니다.")
     return item["latest_week"]
+
+
+def get_week_display(week: str) -> str:
+    """주차 YYYYMMDD를 m/d~m/d 형식으로 변환 (목요일~다음주 수요일)"""
+    try:
+        wed = datetime.strptime(week, "%Y%m%d")
+        thu = wed - timedelta(days=6)
+        return f"{thu.month}/{thu.day}~{wed.month}/{wed.day}"
+    except:
+        return week
 
 
 def get_members(week: str) -> list[dict]:
@@ -49,12 +60,13 @@ def get_data():
     job_cnt = Counter(m["job"] for m in members)
 
     stats = {
-        "week":        week,
-        "total":       len(members),
-        "active":      len(scores),
-        "total_score": sum(scores),
-        "avg_score":   int(sum(scores) / len(scores)) if scores else 0,
-        "max_score":   max(scores) if scores else 0,
+        "week":           week,
+        "week_display":   get_week_display(week),
+        "total":          len(members),
+        "active":         len(scores),
+        "total_score":    sum(scores),
+        "avg_score":      int(sum(scores) / len(scores)) if scores else 0,
+        "max_score":      max(scores) if scores else 0,
     }
 
     return {
@@ -70,7 +82,7 @@ def get_week(week: str):
     members = get_members(week)
     if not members:
         raise HTTPException(status_code=404, detail="해당 주차 데이터가 없습니다.")
-    return {"week": week, "all_members": members}
+    return {"week": week, "week_display": get_week_display(week), "all_members": members}
 
 
 @app.get("/api/history")
@@ -107,6 +119,7 @@ def get_history():
         stddev = int((sum((s - mean) ** 2 for s in active) / len(active)) ** 0.5) if active else 0
         result.append({
             "week": week,
+            "week_display": get_week_display(week),
             "total_score": sum(active),
             "active": len(active),
             "mean": mean,
