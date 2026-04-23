@@ -8,7 +8,12 @@
       "mcp__filesystem__write_file",
       "Bash(env)",
       "mcp__filesystem__get_file_info",
-      "mcp__filesystem__edit_file"
+      "mcp__filesystem__edit_file",
+      "Bash(aws ecr *)",
+      "Bash(aws dynamodb *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import sys, json; data = json.load\\(sys.stdin\\); weeks = set\\(item['week']['S'] for item in data['Items']\\); print\\('저장된 주차:', sorted\\(weeks\\)\\)\")",
+      "Bash(python migrate_week.py)"
     ]
   }
 }

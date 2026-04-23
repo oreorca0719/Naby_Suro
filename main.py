@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from collections import Counter
+from collections import Counter, defaultdict
+import statistics
 import boto3
 import os
 
@@ -62,6 +63,59 @@ def get_data():
         "all_members":      members,
         "job_distribution": [{"job": k, "count": v} for k, v in job_cnt.most_common()],
     }
+
+
+@app.get("/api/week/{week}")
+def get_week(week: str):
+    members = get_members(week)
+    if not members:
+        raise HTTPException(status_code=404, detail="해당 주차 데이터가 없습니다.")
+    return {"week": week, "all_members": members}
+
+
+@app.get("/api/history")
+def get_history():
+    from boto3.dynamodb.conditions import Attr
+    resp = table.scan(FilterExpression=Attr("rank").gt(0))
+    items = resp.get("Items", [])
+    while "LastEvaluatedKey" in resp:
+        resp = table.scan(
+            FilterExpression=Attr("rank").gt(0),
+            ExclusiveStartKey=resp["LastEvaluatedKey"]
+        )
+        items.extend(resp.get("Items", []))
+
+    weeks = defaultdict(list)
+    for item in items:
+        week = item["week"]
+        if week == "METADATA":
+            continue
+        weeks[week].append(int(item["score"]))
+
+    def quantile(arr, p):
+        if not arr: return 0
+        s = sorted(arr)
+        idx = p * (len(s) - 1)
+        lo, hi = int(idx), min(int(idx) + 1, len(s) - 1)
+        return int(s[lo] + (s[hi] - s[lo]) * (idx - lo))
+
+    result = []
+    for week in sorted(weeks.keys()):
+        scores = weeks[week]
+        active = [s for s in scores if s > 0]
+        mean = int(sum(active) / len(active)) if active else 0
+        stddev = int((sum((s - mean) ** 2 for s in active) / len(active)) ** 0.5) if active else 0
+        result.append({
+            "week": week,
+            "total_score": sum(active),
+            "active": len(active),
+            "mean": mean,
+            "stddev": stddev,
+            "median_score": quantile(active, 0.5),
+            "q1": quantile(active, 0.25),
+            "q3": quantile(active, 0.75),
+        })
+    return result
 
 
 @app.get("/api/health")

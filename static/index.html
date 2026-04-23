@@ -107,7 +107,7 @@
     /* ── STAT CARDS ── */
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-bottom: 32px;
     }
@@ -174,20 +174,14 @@
     .chart-wrap { position: relative; height: 320px; }
 
     /* ── JOB DONUT ── */
-    .donut-wrap { position: relative; height: 260px; }
+    .donut-wrap { position: relative; height: 320px; }
 
     .job-legend {
       margin-top: 16px;
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 180px;
-      overflow-y: auto;
     }
-
-    .job-legend::-webkit-scrollbar { width: 4px; }
-    .job-legend::-webkit-scrollbar-track { background: transparent; }
-    .job-legend::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     .legend-item {
       display: flex;
@@ -199,6 +193,80 @@
     .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
     .legend-name { flex: 1; color: var(--text); }
     .legend-count { color: var(--muted); font-size: 0.72rem; }
+
+    .legend-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .legend-nav button {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 2px 10px;
+      line-height: 1.6;
+      transition: background 0.15s;
+    }
+
+    .legend-nav button:hover:not(:disabled) { background: var(--border); }
+    .legend-nav button:disabled { opacity: 0.3; cursor: default; }
+    .legend-page { font-size: 0.75rem; color: var(--muted); }
+
+    /* ── STATS ANALYSIS ── */
+    .analysis-block { margin-bottom: 16px; }
+    .analysis-block:last-child { margin-bottom: 0; }
+    .analysis-label {
+      font-size: 0.95rem;
+      color: #ffffff;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .analysis-value {
+      font-size: 1.7rem;
+      font-family: 'Black Han Sans', sans-serif;
+      color: var(--text);
+    }
+    .analysis-desc {
+      font-size: 0.85rem;
+      color: #ffffff;
+      font-weight: 600;
+      line-height: 1.6;
+      margin: 5px 0 8px;
+    }
+    .quartile-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .quartile-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .quartile-tag {
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .quartile-val {
+      font-size: 1.15rem;
+      font-family: 'Black Han Sans', sans-serif;
+      color: var(--text);
+    }
+    .analysis-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 14px 0;
+    }
 
     /* ── RANKING TABLE ── */
     .rank-table { width: 100%; border-collapse: collapse; }
@@ -337,6 +405,51 @@
 
     .zero-score { color: var(--muted) !important; }
 
+    /* ── BRIEFING BOARD ── */
+    .brief-banner {
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .brief-banner.up   { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); color: #4ade80; }
+    .brief-banner.down { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+    .brief-banner .brief-icon { font-size: 1.3rem; }
+    .brief-streak { font-size: 0.8rem; font-weight: 400; opacity: 0.85; margin-left: auto; }
+    .brief-group-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 14px 0 8px;
+    }
+    .brief-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .brief-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .brief-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .brief-card-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; }
+    .brief-card-value { font-size: 1.2rem; font-family: 'Black Han Sans', sans-serif; color: var(--text); margin-bottom: 5px; }
+    .brief-change { font-size: 0.78rem; font-weight: 700; margin-bottom: 8px; }
+    .brief-change.up   { color: #4ade80; }
+    .brief-change.down { color: #f87171; }
+    .brief-change.flat { color: var(--muted); }
+    .brief-record { font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+    .brief-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .brief-bar { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.6s ease; }
+    .brief-pct { font-size: 0.65rem; color: var(--muted); margin-top: 3px; text-align: right; }
+
+    @media (max-width: 900px) {
+      .brief-grid-3, .brief-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* ── LOADING ── */
     .loading {
       display: flex;
@@ -386,30 +499,53 @@
   <!-- STAT CARDS -->
   <div class="stat-grid">
     <div class="stat-card">
-      <div class="stat-label">총 길드원</div>
+      <div class="stat-label" id="labelTotal">총 길드원</div>
       <div class="stat-value" id="statTotal">—<span>명</span></div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">활성 길드원</div>
+      <div class="stat-label" id="labelActive">수로 참여자</div>
       <div class="stat-value" id="statActive">—<span>명</span></div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">길드 총 점수</div>
+      <div class="stat-label" id="labelScore">수로 총 점수</div>
       <div class="stat-value" id="statTotalScore">—</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">1인 평균 점수</div>
-      <div class="stat-value" id="statAvg">—</div>
+  </div>
+
+  <!-- 브리핑 보드 -->
+  <div id="briefingBoard" style="margin-bottom:32px;"></div>
+
+  <!-- 주간 총점수 추이 -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title">주간 길드 총점수 추이</div>
+    <div class="chart-wrap">
+      <canvas id="historyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 점수 분포 차트 -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
+      점수 분포 (구간별 인원)
+      <span id="distWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="distChart"></canvas>
     </div>
   </div>
 
   <!-- TOP30 + DONUT -->
   <div class="main-grid">
 
-    <!-- TOP 30 -->
+    <!-- 통계 분석 -->
     <div class="card">
-      <div class="section-title">지하수로 점수 TOP 30</div>
-      <div id="top30Wrap"><div class="loading"><div class="spinner"></div> 불러오는 중</div></div>
+      <div class="section-title">길드원 점수 통계 분석</div>
+      <div id="statsAnalysisWrap"><div class="loading"><div class="spinner"></div> 불러오는 중</div></div>
+      <hr class="analysis-divider">
+      <div class="section-title" style="font-size:0.85rem;margin-bottom:10px;">주간 통계 추이</div>
+      <div style="position:relative;height:220px;">
+        <canvas id="statTrendChart"></canvas>
+      </div>
     </div>
 
     <!-- 직업 분포 -->
@@ -419,21 +555,21 @@
         <canvas id="jobChart"></canvas>
       </div>
       <div class="job-legend" id="jobLegend"></div>
+      <div class="legend-nav">
+        <button id="legendPrev">&#8592;</button>
+        <span class="legend-page" id="legendPage"></span>
+        <button id="legendNext">&#8594;</button>
+      </div>
     </div>
 
-  </div>
-
-  <!-- 점수 분포 차트 -->
-  <div class="card" style="margin-bottom:32px;">
-    <div class="section-title">점수 분포 (구간별 인원)</div>
-    <div class="chart-wrap">
-      <canvas id="distChart"></canvas>
-    </div>
   </div>
 
   <!-- FULL TABLE -->
   <div class="full-table-section">
-    <div class="section-title">전체 길드원 현황</div>
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
+      전체 길드원 현황
+      <span id="tableWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+    </div>
     <div class="card">
       <div class="table-controls">
         <input class="search-input" id="searchInput" type="text" placeholder="닉네임 / 직업 검색..." />
@@ -469,6 +605,8 @@ let allMembers = [];
 let filteredMembers = [];
 let jobChart = null;
 let distChart = null;
+let historyChart = null;
+let statTrendChart = null;
 
 async function fetchData() {
   const res = await fetch('/api/data');
@@ -479,37 +617,77 @@ function fmt(n) {
   return Number(n).toLocaleString('ko-KR');
 }
 
+const JOB_NAME_MAP = {
+  '아크메이지(불, 독)': '아크메이지(불, 독)',
+  '아크메이지(불)': '아크메이지(불, 독)',
+  '아크메이지(썬, 콜)': '아크메이지(썬, 콜)',
+  '아크메이지(썬)': '아크메이지(썬, 콜)',
+  '아크메이지 (불, 독)': '아크메이지(불, 독)',
+  '아크메이지 (썬, 콜)': '아크메이지(썬, 콜)',
+};
+
+function normalizeJob(job) {
+  return JOB_NAME_MAP[job] ?? job;
+}
+
+function normalizeMembers(members) {
+  return members.map(m => ({ ...m, job: normalizeJob(m.job) }));
+}
+
 function renderStats(stats) {
   document.getElementById('statTotal').innerHTML = `${fmt(stats.total)}<span>명</span>`;
   document.getElementById('statActive').innerHTML = `${fmt(stats.active)}<span>명</span>`;
   document.getElementById('statTotalScore').textContent = fmt(stats.total_score);
-  document.getElementById('statAvg').textContent = fmt(stats.avg_score);
   document.getElementById('updatedAt').textContent = `업데이트: ${stats.updated_at}`;
 }
 
-function renderTop30(top30) {
-  const maxScore = top30[0]?.score || 1;
-  const rows = top30.map((m, i) => {
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const pct = Math.round((m.score / maxScore) * 100);
-    return `<tr>
-      <td><span class="rank-num ${rankClass}">${m.rank}</span></td>
-      <td><span class="rank-name">${m.name}</span></td>
-      <td><span class="rank-job">${m.job}</span></td>
-      <td>
-        <span class="rank-score">${fmt(m.score)}</span>
-        <span class="score-bar-wrap"><span class="score-bar" style="width:${pct}%"></span></span>
-      </td>
-    </tr>`;
-  }).join('');
+function calcAnalysis(members) {
+  const scores = members.map(m => m.score).filter(s => s > 0).sort((a, b) => a - b);
+  const n = scores.length;
+  if (!n) return null;
+  const mean = scores.reduce((a, b) => a + b, 0) / n;
+  const stddev = Math.sqrt(scores.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+  const q = p => {
+    const idx = p * (n - 1);
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return Math.round(scores[lo] + (scores[hi] - scores[lo]) * (idx - lo));
+  };
+  return { mean: Math.round(mean), stddev: Math.round(stddev), q1: q(0.25), q2: q(0.5), q3: q(0.75) };
+}
 
-  document.getElementById('top30Wrap').innerHTML = `
-    <table class="rank-table">
-      <thead><tr>
-        <th>순위</th><th>닉네임</th><th>직업</th><th>점수</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+function renderAnalysis(members) {
+  const r = calcAnalysis(members);
+  if (!r) { document.getElementById('statsAnalysisWrap').innerHTML = '<p style="color:var(--muted)">데이터 없음</p>'; return; }
+  document.getElementById('statsAnalysisWrap').innerHTML = `
+    <div class="analysis-block">
+      <div class="analysis-label">평균 점수</div>
+      <div class="analysis-value">${fmt(r.mean)}</div>
+    </div>
+    <hr class="analysis-divider">
+    <div class="analysis-block">
+      <div class="analysis-label">표준편차</div>
+      <div class="analysis-desc">점수가 평균으로부터 얼마나 퍼져 있는지를 나타냅니다. 값이 클수록 길드원 간 점수 격차가 크고, 작을수록 고르게 분포되어 있습니다.</div>
+      <div class="analysis-value">${fmt(r.stddev)}</div>
+    </div>
+    <hr class="analysis-divider">
+    <div class="analysis-block">
+      <div class="analysis-label">사분위 구간</div>
+      <div class="analysis-desc">참여자를 점수 순으로 나열했을 때 하위 25%(Q1), 50%(Q2), 75%(Q3) 지점의 점수입니다. Q1~Q3 사이에 전체 참여자의 절반이 분포합니다.</div>
+      <div class="quartile-row">
+        <div class="quartile-item">
+          <div class="quartile-tag">Q1 · 하위 25%</div>
+          <div class="quartile-val">${fmt(r.q1)}</div>
+        </div>
+        <div class="quartile-item">
+          <div class="quartile-tag">Q2 · 중간값</div>
+          <div class="quartile-val">${fmt(r.q2)}</div>
+        </div>
+        <div class="quartile-item">
+          <div class="quartile-tag">Q3 · 상위 25%</div>
+          <div class="quartile-val">${fmt(r.q3)}</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderJobChart(dist) {
@@ -530,30 +708,42 @@ function renderJobChart(dist) {
     }
   });
 
-  const legend = document.getElementById('jobLegend');
-  legend.innerHTML = dist.map((d, i) => `
-    <div class="legend-item">
-      <span class="legend-dot" style="background:${colors[i]}"></span>
-      <span class="legend-name">${d.job}</span>
-      <span class="legend-count">${d.count}명</span>
-    </div>`).join('');
+  const PAGE_SIZE = 10;
+  let legendPage = 0;
+  const totalPages = Math.ceil(dist.length / PAGE_SIZE);
+
+  function renderLegendPage() {
+    const start = legendPage * PAGE_SIZE;
+    const items = dist.slice(start, start + PAGE_SIZE);
+    document.getElementById('jobLegend').innerHTML = items.map((d, i) => `
+      <div class="legend-item">
+        <span class="legend-dot" style="background:${colors[start + i]}"></span>
+        <span class="legend-name">${d.job}</span>
+        <span class="legend-count">${d.count}명</span>
+      </div>`).join('');
+    document.getElementById('legendPage').textContent = `${legendPage + 1} / ${totalPages}`;
+    document.getElementById('legendPrev').disabled = legendPage === 0;
+    document.getElementById('legendNext').disabled = legendPage === totalPages - 1;
+  }
+
+  document.getElementById('legendPrev').onclick = () => { if (legendPage > 0) { legendPage--; renderLegendPage(); } };
+  document.getElementById('legendNext').onclick = () => { if (legendPage < totalPages - 1) { legendPage++; renderLegendPage(); } };
+
+  renderLegendPage();
 }
 
 function renderDistChart(members) {
   const active = members.filter(m => m.score > 0).map(m => m.score);
-  const brackets = [
-    { label: '0', min: 0,       max: 1,       count: members.filter(m => m.score === 0).length },
-    { label: '1만~5만',  min: 1,       max: 50000,   count: 0 },
-    { label: '5만~10만', min: 50000,   max: 100000,  count: 0 },
-    { label: '10만~15만',min: 100000,  max: 150000,  count: 0 },
-    { label: '15만~20만',min: 150000,  max: 200000,  count: 0 },
-    { label: '20만+',    min: 200000,  max: Infinity, count: 0 },
-  ];
-  active.forEach(s => {
-    for (let i = 1; i < brackets.length; i++) {
-      if (s >= brackets[i].min && s < brackets[i].max) { brackets[i].count++; break; }
-    }
-  });
+  const STEP = 10000;
+  const maxScore = active.length ? Math.max(...active) : STEP;
+  const topBracket = Math.ceil(maxScore / STEP) * STEP;
+
+  const brackets = [{ label: '0점', count: members.filter(m => m.score === 0).length }];
+  for (let lo = 0; lo < topBracket; lo += STEP) {
+    const hi = lo + STEP;
+    const label = lo === 0 ? `~1만` : `${lo / 10000}만~${hi / 10000}만`;
+    brackets.push({ label, count: active.filter(s => s > lo && s <= hi).length });
+  }
 
   if (distChart) distChart.destroy();
   distChart = new Chart(document.getElementById('distChart'), {
@@ -603,13 +793,235 @@ function filterTable(query) {
   renderFullTable(filteredMembers);
 }
 
+function weekLabel(w) {
+  return `${w.slice(0,4)}-${w.slice(4,6)}-${w.slice(6,8)}`;
+}
+
+function setStatLabels(week) {
+  const prefix = week ? `(${weekRangeLabel(week)}) ` : '';
+  document.getElementById('labelTotal').textContent  = `${prefix}총 길드원`;
+  document.getElementById('labelActive').textContent = `${prefix}수로 참여자`;
+  document.getElementById('labelScore').textContent  = `${prefix}수로 총 점수`;
+}
+
+function setWeekBadge(week) {
+  const badge = week ? `— ${weekLabel(week)}` : '';
+  document.getElementById('distWeekBadge').textContent = badge;
+  document.getElementById('tableWeekBadge').textContent = badge;
+}
+
+async function loadWeekData(week) {
+  const res = await fetch(`/api/week/${week}`);
+  if (!res.ok) return;
+  const data = await res.json();
+  const members = normalizeMembers(data.all_members);
+  allMembers = members;
+  filteredMembers = [...members];
+  setWeekBadge(week);
+  setStatLabels(week);
+
+  const scores = members.map(m => m.score).filter(s => s > 0);
+  renderStats({
+    total: members.length,
+    active: scores.length,
+    total_score: scores.reduce((a, b) => a + b, 0),
+    updated_at: weekLabel(week),
+  });
+
+  renderAnalysis(members);
+  renderDistChart(members);
+  renderFullTable(members);
+  document.getElementById('searchInput').value = '';
+}
+
+function weekRangeLabel(w) {
+  const end = new Date(`${w.slice(0,4)}-${w.slice(4,6)}-${w.slice(6,8)}`);
+  const start = new Date(end);
+  start.setDate(end.getDate() - 6);
+  const f = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${f(start)}~${f(end)}`;
+}
+
+function renderStatTrendChart(history) {
+  const labels = history.map(h => weekRangeLabel(h.week));
+  const mk = (label, data, color, dash) => ({
+    label, data,
+    borderColor: color,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderDash: dash || [],
+    pointRadius: 3,
+    pointHoverRadius: 6,
+    tension: 0.3,
+  });
+
+  if (statTrendChart) statTrendChart.destroy();
+  statTrendChart = new Chart(document.getElementById('statTrendChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        mk('Q3 (상위 25%)',  history.map(h => h.q3),           '#a78bfa'),
+        mk('평균',           history.map(h => h.mean),          '#4ade80'),
+        mk('중간값 (Q2)',    history.map(h => h.median_score),  '#4f8ef7'),
+        mk('Q1 (하위 25%)', history.map(h => h.q1),            '#f87171', [4,3]),
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8899bb', font: { size: 12 }, boxWidth: 24 } },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
+        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+
+function renderBriefing(history) {
+  const el = document.getElementById('briefingBoard');
+  if (history.length < 2) { el.innerHTML = ''; return; }
+
+  const cur  = history[history.length - 1];
+  const prev = history[history.length - 2];
+
+  const atHigh = k => Math.max(...history.map(h => h[k]));
+  const atLow  = k => Math.min(...history.filter(h => h[k] > 0).map(h => h[k]));
+
+  // 연속 성장/하락 주수
+  const isUp = cur.total_score >= prev.total_score;
+  let streak = 1;
+  for (let i = history.length - 2; i > 0; i--) {
+    const up = history[i].total_score >= history[i-1].total_score;
+    if (up === isUp) streak++; else break;
+  }
+
+  function chg(c, p, unit='', reversed=false) {
+    const diff = c - p;
+    const pct  = p > 0 ? ((diff / p) * 100).toFixed(1) : '0.0';
+    const good = reversed ? diff <= 0 : diff >= 0;
+    const cls  = diff === 0 ? 'flat' : good ? 'up' : 'down';
+    const arr  = diff > 0 ? '▲' : diff < 0 ? '▼' : '━';
+    const sign = diff > 0 ? '+' : '';
+    return `<div class="brief-change ${cls}">${arr} ${sign}${fmt(Math.abs(diff))}${unit} (${sign}${pct}%)</div>`;
+  }
+
+  function bar(c, best, reversed=false) {
+    const pct = best > 0 ? Math.min(100, Math.round((reversed ? best/c : c/best)*100)) : 0;
+    const lbl = reversed ? `역대 최저: ${fmt(best)}` : `역대 최고: ${fmt(best)}`;
+    const ref = reversed ? '최저 대비' : '최고 대비';
+    return `<div class="brief-record">${lbl}</div>
+            <div class="brief-bar-wrap"><div class="brief-bar" style="width:${pct}%"></div></div>
+            <div class="brief-pct">${ref} ${pct}%</div>`;
+  }
+
+  function card(label, c, p, best, unit='', reversed=false) {
+    return `<div class="brief-card">
+      <div class="brief-card-label">${label}</div>
+      <div class="brief-card-value">${fmt(c)}${unit}</div>
+      ${chg(c, p, unit, reversed)}
+      ${bar(c, best, reversed)}
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="brief-banner ${isUp ? 'up' : 'down'}">
+      <span class="brief-icon">${isUp ? '📈' : '📉'}</span>
+      <span>이번 주 길드는 지난 주보다 ${isUp ? '성장했습니다' : '하향됐습니다'}</span>
+      <span class="brief-streak">${streak}주 연속 ${isUp ? '성장' : '하락'} 중</span>
+    </div>
+    <div class="brief-group-label">주요 지표</div>
+    <div class="brief-grid-3">
+      ${card('길드 총 점수',   cur.total_score,   prev.total_score,   atHigh('total_score'))}
+      ${card('이번 주 참여자', cur.active,         prev.active,         atHigh('active'), '명')}
+      ${card('평균 점수',      cur.mean,           prev.mean,           atHigh('mean'))}
+    </div>
+    <div class="brief-group-label">분포 지표</div>
+    <div class="brief-grid-4">
+      ${card('Q1 · 하위 25%', cur.q1,           prev.q1,           atHigh('q1'))}
+      ${card('Q2 · 중간값',   cur.median_score, prev.median_score, atHigh('median_score'))}
+      ${card('Q3 · 상위 25%', cur.q3,           prev.q3,           atHigh('q3'))}
+      ${card('표준편차',       cur.stddev,        prev.stddev,        atLow('stddev'), '', true)}
+    </div>`;
+}
+
+function renderHistoryChart(history) {
+  const labels  = history.map(h => weekRangeLabel(h.week));
+  const totals  = history.map(h => h.total_score);
+  const medians = history.map(h => h.median_score);
+  const actives = history.map(h => h.active);
+
+  if (historyChart) historyChart.destroy();
+  historyChart = new Chart(document.getElementById('historyChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '길드 총점수',
+        data: totals,
+        borderColor: '#4f8ef7',
+        backgroundColor: 'rgba(79,142,247,0.12)',
+        borderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 10,
+        pointHitRadius: 24,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onHover: (e, elements) => {
+        e.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      },
+      onClick: (_, elements) => {
+        if (!elements.length) return;
+        const week = history[elements[0].index].week;
+        loadWeekData(week);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => weekLabel(history[ctx[0].dataIndex].week),
+            afterBody: ctx => {
+              const i = ctx[0].dataIndex;
+              return [`중간값: ${fmt(medians[i])}`, `참여인원: ${actives[i]}명`];
+            },
+            label: ctx => ` 총점수: ${fmt(ctx.parsed.y)}`,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
+        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+
 async function init() {
-  const data = await fetchData();
+  const [data, history] = await Promise.all([fetchData(), fetch('/api/history').then(r => r.json())]);
+  data.all_members = normalizeMembers(data.all_members);
+  data.top30 = normalizeMembers(data.top30);
+  data.job_distribution = data.job_distribution.map(d => ({ ...d, job: normalizeJob(d.job) }));
+
   allMembers = data.all_members;
   filteredMembers = [...allMembers];
 
   renderStats(data.stats);
-  renderTop30(data.top30);
+  setStatLabels(data.stats.week);
+  renderBriefing(history);
+  renderHistoryChart(history);
+  renderStatTrendChart(history);
+  renderAnalysis(data.all_members);
   renderJobChart(data.job_distribution);
   renderDistChart(data.all_members);
   renderFullTable(data.all_members);
