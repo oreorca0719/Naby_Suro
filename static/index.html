@@ -405,6 +405,22 @@
 
     .zero-score { color: var(--muted) !important; }
 
+    .history-btn {
+      background: rgba(79,142,247,0.1);
+      border: 1px solid rgba(79,142,247,0.3);
+      border-radius: 6px;
+      color: var(--accent);
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .history-btn:hover {
+      background: rgba(79,142,247,0.2);
+      border-color: var(--accent);
+    }
+
     /* ── BRIEFING BOARD ── */
     .brief-banner {
       border-radius: 12px;
@@ -582,7 +598,8 @@
               <th>순위</th>
               <th>닉네임</th>
               <th>직업</th>
-              <th>지하수로 점수</th>
+              <th style="text-align:right">지하수로 점수</th>
+              <th style="text-align:right">히스토리</th>
             </tr>
           </thead>
           <tbody id="fullTbody"></tbody>
@@ -772,6 +789,10 @@ function renderDistChart(members) {
   });
 }
 
+function escapeAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
 function renderFullTable(members) {
   const tbody = document.getElementById('fullTbody');
   tbody.innerHTML = members.map(m => `<tr>
@@ -780,6 +801,9 @@ function renderFullTable(members) {
     <td><span class="rank-job">${m.job}</span></td>
     <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-family:'Black Han Sans',sans-serif">
       ${m.score === 0 ? '—' : fmt(m.score)}
+    </td>
+    <td style="text-align:right">
+      <button type="button" class="history-btn" data-name="${escapeAttr(m.name)}">히스토리</button>
     </td>
   </tr>`).join('');
   document.getElementById('tableInfo').textContent = `${members.length}명 표시 중`;
@@ -1028,6 +1052,17 @@ async function init() {
 
   document.getElementById('searchInput').addEventListener('input', e => filterTable(e.target.value));
 }
+
+document.getElementById('fullTbody').addEventListener('click', e => {
+  const btn = e.target.closest('.history-btn');
+  if (!btn) return;
+  const name = btn.dataset.name;
+  window.open(
+    `/static/member.html?name=${encodeURIComponent(name)}`,
+    '_blank',
+    'width=1000,height=800,noopener'
+  );
+});
 
 // 5분마다 자동 갱신
 init();

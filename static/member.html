@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>길드원 히스토리</title>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #11151e;
+      --card:      #161b27;
+      --border:    #1e2740;
+      --accent:    #4f8ef7;
+      --accent2:   #f7c04f;
+      --text:      #d4dff5;
+      --muted:     #5a6a8a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      padding: 32px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    h1 {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.04em;
+      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle { font-size: 0.85rem; color: var(--muted); margin-top: 4px; letter-spacing: 0.04em; }
+
+    .back-link {
+      font-size: 0.78rem;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      transition: background 0.15s;
+    }
+    .back-link:hover { background: rgba(79,142,247,0.1); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .chart-wrap { position: relative; height: 340px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .stat-box-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; }
+    .stat-box-value { font-size: 1.15rem; font-family: 'Black Han Sans', sans-serif; color: var(--text); margin-top: 4px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid rgba(30,39,64,0.4); }
+    th:last-child, td:last-child { text-align: right; }
+    tbody tr:hover { background: rgba(79,142,247,0.04); }
+    .zero { color: var(--muted); }
+    .score-cell { font-family: 'Black Han Sans', sans-serif; color: var(--accent2); }
+
+    .rank-job-tag {
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: rgba(79,142,247,0.08);
+      border: 1px solid rgba(79,142,247,0.15);
+      border-radius: 4px;
+      padding: 2px 8px;
+      display: inline-block;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 60px 20px;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--muted);
+      gap: 10px;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 700px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div>
+      <h1 id="memberName">불러오는 중...</h1>
+      <div class="subtitle" id="memberJob"></div>
+    </div>
+    <a href="/" class="back-link" target="_self">← 대시보드</a>
+  </header>
+
+  <div class="card">
+    <div class="section-title">주차별 지하수로 점수 추이</div>
+    <div id="chartContainer">
+      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">상세 기록</div>
+    <table id="histTable">
+      <thead>
+        <tr>
+          <th>주차</th>
+          <th>순위</th>
+          <th>직업</th>
+          <th>점수</th>
+        </tr>
+      </thead>
+      <tbody id="histTbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+function fmt(n) { return Number(n).toLocaleString('ko-KR'); }
+
+const params = new URLSearchParams(window.location.search);
+const name = params.get('name');
+
+if (!name) {
+  document.querySelector('.wrapper').innerHTML = '<div class="empty">name 파라미터가 필요합니다.</div>';
+} else {
+  document.title = `${name} - 길드원 히스토리`;
+  fetch(`/api/member/${encodeURIComponent(name)}`)
+    .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
+    .then(render)
+    .catch(err => {
+      document.querySelector('.wrapper').innerHTML = `<div class="empty">불러오기 실패: ${err.message}</div>`;
+    });
+}
+
+function render(data) {
+  const hist = data.history;
+  document.getElementById('memberName').textContent = data.name;
+
+  if (!hist || !hist.length) {
+    document.getElementById('memberJob').textContent = '기록 없음';
+    document.getElementById('chartContainer').innerHTML = '<div class="empty">이 길드원의 기록이 없습니다.</div>';
+    return;
+  }
+
+  const latest = hist[hist.length - 1];
+  document.getElementById('memberJob').textContent = `${latest.job} · 최근 ${latest.week_display} (현 순위 ${latest.rank}위)`;
+
+  // 차트
+  document.getElementById('chartContainer').innerHTML = `
+    <div class="chart-wrap"><canvas id="memberChart"></canvas></div>
+    <div class="stats-row" id="statsRow"></div>
+  `;
+
+  const labels = hist.map(h => h.week_display);
+  const scores = hist.map(h => h.score);
+
+  new Chart(document.getElementById('memberChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '지하수로 점수',
+        data: scores,
+        borderColor: '#4f8ef7',
+        backgroundColor: 'rgba(79,142,247,0.12)',
+        borderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 9,
+        pointHitRadius: 20,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterBody: ctx => {
+              const h = hist[ctx[0].dataIndex];
+              return [`순위: ${h.rank}`, `직업: ${h.job}`];
+            },
+            label: ctx => ` 점수: ${fmt(ctx.parsed.y)}`,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
+        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+      }
+    }
+  });
+
+  // 요약 통계
+  const active = scores.filter(s => s > 0);
+  const max = active.length ? Math.max(...active) : 0;
+  const min = active.length ? Math.min(...active) : 0;
+  const avg = active.length ? Math.round(active.reduce((a,b)=>a+b,0) / active.length) : 0;
+  const first = active[0] ?? 0;
+  const last  = active[active.length - 1] ?? 0;
+  const growth = active.length >= 2 ? last - first : 0;
+  const growthColor = growth > 0 ? '#4ade80' : growth < 0 ? '#f87171' : 'var(--muted)';
+  const growthSign  = growth > 0 ? '+' : '';
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-box"><div class="stat-box-label">최고 점수</div><div class="stat-box-value">${fmt(max)}</div></div>
+    <div class="stat-box"><div class="stat-box-label">최저 점수</div><div class="stat-box-value">${fmt(min)}</div></div>
+    <div class="stat-box"><div class="stat-box-label">평균 점수</div><div class="stat-box-value">${fmt(avg)}</div></div>
+    <div class="stat-box"><div class="stat-box-label">기록 변화</div><div class="stat-box-value" style="color:${growthColor}">${growthSign}${fmt(growth)}</div></div>
+  `;
+
+  // 상세표 (최신 주차 위로)
+  const tbody = document.getElementById('histTbody');
+  tbody.innerHTML = hist.slice().reverse().map(h => `<tr>
+    <td>${h.week_display}</td>
+    <td>${h.rank}</td>
+    <td><span class="rank-job-tag">${h.job}</span></td>
+    <td class="${h.score === 0 ? 'zero' : 'score-cell'}">${h.score === 0 ? '—' : fmt(h.score)}</td>
+  </tr>`).join('');
+}
+</script>
+</body>
+</html>

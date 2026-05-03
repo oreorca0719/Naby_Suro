@@ -131,6 +131,34 @@ def get_history():
     return result
 
 
+@app.get("/api/member/{name}")
+def get_member_history(name: str):
+    from boto3.dynamodb.conditions import Attr
+    resp = table.scan(FilterExpression=Attr("name").eq(name) & Attr("rank").gt(0))
+    items = resp.get("Items", [])
+    while "LastEvaluatedKey" in resp:
+        resp = table.scan(
+            FilterExpression=Attr("name").eq(name) & Attr("rank").gt(0),
+            ExclusiveStartKey=resp["LastEvaluatedKey"],
+        )
+        items.extend(resp.get("Items", []))
+
+    history = sorted(
+        [
+            {
+                "week":         i["week"],
+                "week_display": get_week_display(i["week"]),
+                "rank":         int(i["rank"]),
+                "job":          i["job"],
+                "score":        int(i["score"]),
+            }
+            for i in items
+        ],
+        key=lambda x: x["week"],
+    )
+    return {"name": name, "history": history}
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
