@@ -3,9 +3,27 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+import asyncio
 import statistics
+import time
 import boto3
+import httpx
 import os
+
+
+def _load_env_file(path: str = ".env") -> None:
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+_load_env_file()
 
 app = FastAPI()
 
@@ -15,6 +33,14 @@ AWS_REGION  = os.environ.get("AWS_REGION", "ap-northeast-1")
 
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 table    = dynamodb.Table(TABLE_NAME)
+
+# ── Nexon Open API 설정 ───────────────────────────────────────────
+NEXON_API_KEY = os.environ.get("NEXON_API_KEY", "")
+NEXON_BASE    = "https://open.api.nexon.com/maplestory/v1"
+PROFILE_TTL   = 600  # 프로필 캐시 10분
+
+_ocid_cache: dict[str, str] = {}
+_profile_cache: dict[str, tuple[float, dict]] = {}
 
 
 def get_latest_week() -> str:
@@ -157,6 +183,84 @@ def get_member_history(name: str):
         key=lambda x: x["week"],
     )
     return {"name": name, "history": history}
+
+
+async def _nexon_get(client: httpx.AsyncClient, path: str, params: dict) -> dict:
+    headers = {"x-nxopen-api-key": NEXON_API_KEY}
+    r = await client.get(f"{NEXON_BASE}{path}", params=params, headers=headers, timeout=10.0)
+    r.raise_for_status()
+    return r.json()
+
+
+async def _get_ocid(client: httpx.AsyncClient, name: str) -> str:
+    if name in _ocid_cache:
+        return _ocid_cache[name]
+    data = await _nexon_get(client, "/id", {"character_name": name})
+    ocid = data.get("ocid")
+    if not ocid:
+        raise HTTPException(status_code=404, detail="character_not_found")
+    _ocid_cache[name] = ocid
+    return ocid
+
+
+@app.get("/api/member/{name}/profile")
+async def get_member_profile(name: str):
+    if not NEXON_API_KEY:
+        raise HTTPException(status_code=503, detail="NEXON_API_KEY 미설정")
+
+    cached = _profile_cache.get(name)
+    if cached and (time.time() - cached[0] < PROFILE_TTL):
+        return cached[1]
+
+    async with httpx.AsyncClient() as client:
+        try:
+            ocid = await _get_ocid(client, name)
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            if status in (400, 404):
+                raise HTTPException(status_code=404, detail="character_not_found")
+            raise HTTPException(status_code=502, detail=f"nexon_error_{status}")
+
+        try:
+            basic, stat, hexa = await asyncio.gather(
+                _nexon_get(client, "/character/basic", {"ocid": ocid}),
+                _nexon_get(client, "/character/stat", {"ocid": ocid}),
+                _nexon_get(client, "/character/hexamatrix", {"ocid": ocid}),
+            )
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=502, detail=f"nexon_error_{e.response.status_code}")
+
+    combat_power = None
+    for s in stat.get("final_stat", []) or []:
+        if s.get("stat_name") == "전투력":
+            try:
+                combat_power = int(s["stat_value"])
+            except (TypeError, ValueError):
+                pass
+            break
+
+    profile = {
+        "name":         basic.get("character_name"),
+        "level":        basic.get("character_level"),
+        "exp_rate":     basic.get("character_exp_rate"),
+        "world":        basic.get("world_name"),
+        "job":          basic.get("character_class"),
+        "job_level":    basic.get("character_class_level"),
+        "guild":        basic.get("character_guild_name"),
+        "image":        basic.get("character_image"),
+        "combat_power": combat_power,
+        "hexa_cores": [
+            {
+                "name":  c.get("hexa_core_name"),
+                "level": c.get("hexa_core_level"),
+                "type":  c.get("hexa_core_type"),
+            }
+            for c in (hexa.get("character_hexa_core_equipment") or [])
+        ],
+    }
+
+    _profile_cache[name] = (time.time(), profile)
+    return profile
 
 
 @app.get("/api/health")

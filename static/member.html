@@ -145,6 +145,102 @@
       font-size: 0.95rem;
     }
 
+    /* ── PROFILE CARD ── */
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+    .profile-img-wrap {
+      width: 160px;
+      height: 160px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .profile-img-wrap img {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+    }
+    .profile-img-wrap.empty-img { color: var(--muted); font-size: 0.78rem; }
+    .profile-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .profile-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .profile-item-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .profile-item-value {
+      font-size: 1.05rem;
+      font-family: 'Black Han Sans', sans-serif;
+      color: var(--text);
+    }
+    .profile-item-value.combat { color: var(--accent2); font-size: 1.2rem; }
+    .profile-item-sub { font-size: 0.7rem; color: var(--muted); margin-left: 6px; font-family: 'Noto Sans KR', sans-serif; }
+
+    .hexa-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .hexa-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .hexa-name { font-size: 0.82rem; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hexa-level {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 0.95rem;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .hexa-type-tag {
+      font-size: 0.65rem;
+      color: var(--muted);
+      background: rgba(79,142,247,0.08);
+      border: 1px solid rgba(79,142,247,0.15);
+      border-radius: 4px;
+      padding: 1px 6px;
+      flex-shrink: 0;
+    }
+    .profile-error {
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    @media (max-width: 700px) {
+      .profile-grid { grid-template-columns: 1fr; }
+      .profile-img-wrap { margin: 0 auto; }
+      .profile-info-grid { grid-template-columns: 1fr 1fr; }
+    }
+
     .loading {
       display: flex;
       align-items: center;
@@ -177,6 +273,13 @@
     </div>
     <a href="/" class="back-link" target="_self">← 대시보드</a>
   </header>
+
+  <div class="card" id="profileCard">
+    <div class="section-title">캐릭터 정보</div>
+    <div id="profileContainer">
+      <div class="loading"><div class="spinner"></div> 캐릭터 정보 불러오는 중</div>
+    </div>
+  </div>
 
   <div class="card">
     <div class="section-title">주차별 지하수로 점수 추이</div>
@@ -218,6 +321,84 @@ if (!name) {
     .catch(err => {
       document.querySelector('.wrapper').innerHTML = `<div class="empty">불러오기 실패: ${err.message}</div>`;
     });
+  loadProfile(name);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadProfile(name) {
+  const container = document.getElementById('profileContainer');
+  try {
+    const res = await fetch(`/api/member/${encodeURIComponent(name)}/profile`);
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}));
+      const msg = res.status === 404
+        ? '넥슨 API에서 이 닉네임의 캐릭터를 찾을 수 없습니다.'
+        : res.status === 503
+        ? 'NEXON_API_KEY가 서버에 설정되어 있지 않습니다.'
+        : `넥슨 API 오류 (${detail.detail || res.status})`;
+      container.innerHTML = `<div class="profile-error">${msg}</div>`;
+      return;
+    }
+    const p = await res.json();
+    renderProfile(p);
+  } catch (err) {
+    container.innerHTML = `<div class="profile-error">캐릭터 정보 로드 실패: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderProfile(p) {
+  const container = document.getElementById('profileContainer');
+
+  const img = p.image
+    ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || '')}" loading="lazy" />`
+    : '캐릭터 초상화 없음';
+  const imgClass = p.image ? 'profile-img-wrap' : 'profile-img-wrap empty-img';
+
+  const level = p.level != null ? `Lv. ${p.level}` : '—';
+  const expRate = p.exp_rate != null ? `<span class="profile-item-sub">${escapeHtml(p.exp_rate)}%</span>` : '';
+  const job = p.job ? `${escapeHtml(p.job)}${p.job_level ? ` <span class="profile-item-sub">${escapeHtml(p.job_level)}</span>` : ''}` : '—';
+  const world = p.world ? escapeHtml(p.world) : '—';
+  const cp = p.combat_power != null ? fmt(p.combat_power) : '—';
+
+  const hexaHtml = (p.hexa_cores && p.hexa_cores.length)
+    ? `<div class="hexa-list">${p.hexa_cores.map(c => `
+        <div class="hexa-item">
+          <span class="hexa-name" title="${escapeHtml(c.name || '')}">${escapeHtml(c.name || '—')}</span>
+          ${c.type ? `<span class="hexa-type-tag">${escapeHtml(c.type)}</span>` : ''}
+          <span class="hexa-level">Lv.${c.level ?? '—'}</span>
+        </div>`).join('')}</div>`
+    : `<div class="profile-error" style="padding:12px;">HEXA 코어 정보 없음</div>`;
+
+  container.innerHTML = `
+    <div class="profile-grid">
+      <div class="${imgClass}">${img}</div>
+      <div class="profile-info-grid">
+        <div class="profile-item">
+          <div class="profile-item-label">레벨</div>
+          <div class="profile-item-value">${level}${expRate}</div>
+        </div>
+        <div class="profile-item">
+          <div class="profile-item-label">전투력</div>
+          <div class="profile-item-value combat">${cp}</div>
+        </div>
+        <div class="profile-item">
+          <div class="profile-item-label">직업</div>
+          <div class="profile-item-value">${job}</div>
+        </div>
+        <div class="profile-item">
+          <div class="profile-item-label">월드</div>
+          <div class="profile-item-value">${world}</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
+      <div class="section-title" style="font-size:0.85rem;margin-bottom:10px;">HEXA 코어</div>
+      ${hexaHtml}
+    </div>
+  `;
 }
 
 function render(data) {
