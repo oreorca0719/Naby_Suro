@@ -833,16 +833,27 @@ def rename_member(payload: dict = Body(...), _admin: str = Depends(require_admin
         return [i for i in items if i.get("week") != "METADATA"]
 
     old_items = scan_by_name(old)
+    new_items_before = scan_by_name(new)
+
     if not old_items:
         # 기존 닉네임 기록이 없고 신규 닉네임이 이미 존재하면 이미 변경 완료된 것으로 안내
-        if scan_by_name(new):
+        if new_items_before:
             raise HTTPException(
                 status_code=409,
                 detail={"code": "already_changed", "message": f"이미 '{new}'(으)로 수정한 닉네임입니다."},
             )
-        raise HTTPException(status_code=404, detail=f"'{old}' 닉네임을 가진 길드원을 찾을 수 없습니다.")
+        # 둘 다 존재하지 않음 — 기존 닉네임 오입력
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": f"'{old}' 닉네임의 존재 기록이 없습니다. 다시 확인해주세요."},
+        )
 
-    new_items_before = scan_by_name(new)
+    if not new_items_before:
+        # 기존은 존재하나 신규 닉네임 기록이 없음 — 신규 닉네임 오입력
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": f"'{new}' 닉네임의 존재 기록이 없습니다. 다시 확인해주세요."},
+        )
     old_weeks = {i["week"] for i in old_items}
     new_weeks = {i["week"] for i in new_items_before}
     collision_weeks = sorted(old_weeks & new_weeks)

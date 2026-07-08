@@ -2383,6 +2383,9 @@ async function confirmRenameMember() {
       if (d && typeof d === 'object' && d.code === 'already_changed') {
         resultEl.innerHTML = `<span style="color:#60a5fa;">ℹ️ ${d.message}</span>`;
         alert(d.message);
+      } else if (d && typeof d === 'object' && d.code === 'not_found') {
+        resultEl.innerHTML = `<span style="color:#fbbf24;">⚠️ ${d.message}</span>`;
+        alert(d.message);
       } else {
         const msg = (d && typeof d === 'object') ? (d.message || '요청이 실패했습니다.') : (d || '요청이 실패했습니다.');
         resultEl.innerHTML = `<span style="color:#f87171;">오류: ${msg}</span>`;
