@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>신규/기존 연합원 조회 — 나비 길드</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #11151e;
+      --card:      #161b27;
+      --border:    #1e2740;
+      --accent:    #4f8ef7;
+      --text:      #d4dff5;
+      --muted:     #5a6a8a;
+      --green:     #4ade80;
+      --yellow:    #facc15;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 0%, #1a2240 0%, var(--bg) 60%) fixed;
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrapper {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 28px 22px 60px;
+    }
+
+    /* TOP NAV */
+    .topnav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .topnav a, .topnav button {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .topnav a:hover, .topnav button:hover {
+      background: #1c2236;
+      border-color: var(--accent);
+    }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      color: #fff;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 2.2rem;
+      margin: 0 0 10px;
+      letter-spacing: -0.01em;
+      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin: 0;
+    }
+
+    /* SEARCH */
+    .search-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 24px;
+      margin-bottom: 30px;
+    }
+    .search-label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      flex: 1 1 240px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .search-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 14px 26px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+    }
+    .search-btn:hover { background: #6097f8; }
+    .search-btn:active { transform: scale(0.98); }
+
+    /* RESULT */
+    .result {
+      display: none;
+      padding: 32px 28px;
+      border-radius: 14px;
+      text-align: center;
+      animation: fadeUp 0.32s ease both;
+    }
+    .result.show { display: block; }
+    .result.match {
+      background: linear-gradient(180deg, rgba(74,222,128,0.10), rgba(74,222,128,0.02));
+      border: 1px solid rgba(74,222,128,0.35);
+    }
+    .result.nomatch {
+      background: linear-gradient(180deg, rgba(250,204,21,0.10), rgba(250,204,21,0.02));
+      border: 1px solid rgba(250,204,21,0.35);
+    }
+    .result-icon {
+      font-size: 2.6rem;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .result-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 6px 0 18px;
+    }
+    .result.match .result-title { color: var(--green); }
+    .result.nomatch .result-title { color: var(--yellow); }
+    .result-body {
+      font-size: 1.05rem;
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .result-score {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1.55rem;
+      letter-spacing: -0.01em;
+      vertical-align: -2px;
+      padding: 0 2px;
+    }
+    .result-score-green  { color: var(--green); }
+    .result-score-yellow { color: var(--yellow); }
+    .result-sub {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .result-name {
+      display: inline-block;
+      background: rgba(255,255,255,0.06);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      margin: 0 2px;
+    }
+
+    /* META FOOTER */
+    .meta {
+      margin-top: 38px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+    .meta .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .meta .dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.6s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+      padding: 40px 0;
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .wrapper { padding: 20px 16px 40px; }
+      .hero h1 { font-size: 1.8rem; }
+      .search-card { padding: 22px 18px; }
+      .result { padding: 26px 18px; }
+      .result-title { font-size: 1.2rem; }
+      .result-body { font-size: 0.98rem; }
+      .result-score { font-size: 1.35rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- TOP NAV -->
+    <nav class="topnav">
+      <a href="/manage">← 관리 페이지</a>
+      <button id="logoutBtn" type="button">로그아웃</button>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="hero-badge">EVENT</div>
+      <h1>신규/기존 연합원 조회</h1>
+      <p>가입 신청자의 닉네임을 입력해 적용 커트라인을 확인하세요</p>
+      <p style="font-size:0.78rem;margin-top:4px;">달빛 · 연꽃 · 꽃잎 · 꿀벌 연합 멤버 통합 조회</p>
+    </header>
+
+    <!-- 인증 가드: 비로그인 시 /login 으로 이동 -->
+    <div id="authLoading" class="loading"><div class="spinner"></div> 인증 확인 중...</div>
+
+    <div id="mainArea" style="display:none;">
+      <!-- SEARCH -->
+      <div class="search-card">
+        <label class="search-label" for="searchName">신청자 닉네임</label>
+        <form id="searchForm" class="search-row" onsubmit="return false;">
+          <input
+            class="search-input"
+            id="searchName"
+            type="text"
+            placeholder="예: 빈혈무무"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="search-btn" type="submit" id="searchBtn">확인</button>
+        </form>
+      </div>
+
+      <!-- RESULT -->
+      <div id="resultMatch" class="result match">
+        <span class="result-icon">✓</span>
+        <div class="result-title">기존 연합원입니다!</div>
+        <div class="result-body">
+          <span class="result-name" id="matchName"></span> 님은
+          <br />현재 커트라인인
+          <span class="result-score result-score-green" id="matchScore">33,000</span>점을 적용합니다.
+        </div>
+        <div class="result-sub"><span id="matchGuild">—</span> 연합 소속 — 다음 커트라인 상향 전까지 적용</div>
+      </div>
+
+      <div id="resultNoMatch" class="result nomatch">
+        <span class="result-icon">※</span>
+        <div class="result-title">신규 연합원입니다!</div>
+        <div class="result-body">
+          <span class="result-name" id="nomatchName"></span> 님은
+          <br />신규 가입 커트라인인
+          <span class="result-score result-score-yellow" id="nomatchScore">—</span>점을 적용합니다.
+        </div>
+        <div class="result-sub">매주 갱신 — 참여자 점수 오름차순 정렬 후 하위 20% 위치 회원의 점수</div>
+      </div>
+
+      <!-- META FOOTER -->
+      <div class="meta">
+        <div class="live"><span class="dot"></span> <span id="liveLabel">최신 주차 데이터 적용 중</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── 인증 가드 ──
+    async function authGuard() {
+      try {
+        const r = await fetch('/api/auth-status', { credentials: 'include' });
+        const j = await r.json();
+        if (!j.is_admin) throw new Error('not admin');
+      } catch (e) {
+        location.replace('/login');
+        return false;
+      }
+      return true;
+    }
+
+    // ── 로그아웃 ──
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+      location.href = '/';
+    });
+
+    // ── 신규 가입 커트라인 계산 (관리 페이지와 동일 산식) ──
+    function calcNewCutoff(allMembers) {
+      const scores = allMembers
+        .map(m => m.score)
+        .filter(s => s > 0)
+        .sort((a, b) => a - b);
+      const n = scores.length;
+      if (n === 0) return null;
+      const idx = Math.max(0, Math.ceil(n * 0.2) - 1);
+      return scores[idx];
+    }
+
+    // ── 숫자 포맷 ──
+    function fmt(n) { return Number(n).toLocaleString('ko-KR'); }
+
+    // ── 메인 ──
+    let allyMap = null;         // Map<normalizedName, guildName>
+    let newCutoff = null;       // number | null
+    let latestWeek = null;      // string | null
+
+    async function bootstrap() {
+      const [alliedJson, data] = await Promise.all([
+        fetch('/static/allied_guilds.json').then(r => r.json()),
+        fetch('/api/data').then(r => r.json()),
+      ]);
+      // 매칭은 정확 일치(NFC 정규화 + trim). 중복 멤버는 처음 만난 길드로 귀속.
+      allyMap = new Map();
+      for (const guild of (alliedJson.guilds || [])) {
+        for (const member of (guild.members || [])) {
+          const key = member.normalize('NFC').trim();
+          if (!allyMap.has(key)) allyMap.set(key, guild.name);
+        }
+      }
+      newCutoff = calcNewCutoff(data.all_members || []);
+      latestWeek = (data.stats && data.stats.week_display) || (data.stats && data.stats.week) || '';
+      document.getElementById('nomatchScore').textContent = newCutoff !== null ? fmt(newCutoff) : '—';
+      if (latestWeek) {
+        document.getElementById('liveLabel').textContent = `최신 주차(${latestWeek}) 데이터 적용 중 · 통합 명단 ${allyMap.size.toLocaleString('ko-KR')}명`;
+      }
+    }
+
+    function hideResults() {
+      document.getElementById('resultMatch').classList.remove('show');
+      document.getElementById('resultNoMatch').classList.remove('show');
+    }
+
+    function showMatch(name, guildName) {
+      document.getElementById('matchName').textContent = name;
+      document.getElementById('matchGuild').textContent = guildName;
+      hideResults();
+      // reflow → animation 재실행
+      void document.getElementById('resultMatch').offsetWidth;
+      document.getElementById('resultMatch').classList.add('show');
+    }
+    function showNoMatch(name) {
+      document.getElementById('nomatchName').textContent = name;
+      hideResults();
+      void document.getElementById('resultNoMatch').offsetWidth;
+      document.getElementById('resultNoMatch').classList.add('show');
+    }
+
+    function doSearch() {
+      const raw = document.getElementById('searchName').value;
+      const name = (raw || '').normalize('NFC').trim();
+      if (!name) {
+        document.getElementById('searchName').focus();
+        return;
+      }
+      if (allyMap === null) return;  // 아직 로딩
+      const guildName = allyMap.get(name);
+      if (guildName) {
+        showMatch(name, guildName);
+      } else {
+        showNoMatch(name);
+      }
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', doSearch);
+    document.getElementById('searchBtn').addEventListener('click', doSearch);
+    document.getElementById('searchName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSearch();
+    });
+
+    (async () => {
+      const ok = await authGuard();
+      if (!ok) return;
+      document.getElementById('authLoading').style.display = 'none';
+      document.getElementById('mainArea').style.display = 'block';
+      await bootstrap();
+      document.getElementById('searchName').focus();
+    })();
+  </script>
+</body>
+</html>

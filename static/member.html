@@ -40,7 +40,7 @@
       z-index: 0;
     }
 
-    .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
+    .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
     header {
       display: flex;
@@ -114,7 +114,7 @@
 
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     th {
-      text-align: left;
+      text-align: center;
       font-size: 0.7rem;
       color: var(--muted);
       letter-spacing: 0.08em;
@@ -122,7 +122,14 @@
       padding: 10px 14px;
       border-bottom: 1px solid var(--border);
     }
-    td { padding: 9px 14px; border-bottom: 1px solid rgba(30,39,64,0.4); }
+    td { 
+      padding: 9px 14px; 
+      border-bottom: 1px solid rgba(30,39,64,0.4);
+      text-align: center;
+    }
+    td:nth-child(1) { text-align: center; }
+    td:nth-child(2) { text-align: center; }
+    td:nth-child(3) { text-align: center; }
     th:last-child, td:last-child { text-align: right; }
     tbody tr:hover { background: rgba(79,142,247,0.04); }
     .zero { color: var(--muted); }
@@ -136,6 +143,34 @@
       border-radius: 4px;
       padding: 2px 8px;
       display: inline-block;
+    }
+
+    /* ── FINE BADGE (상세 기록 상단 누적 벌금 표시) ── */
+    .fine-badge-wrap { margin: 0 0 14px; }
+    .fine-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid;
+      pointer-events: none;
+      user-select: none;
+      letter-spacing: 0.02em;
+    }
+    .fine-badge:disabled { opacity: 1; cursor: default; }
+    .fine-badge.clean {
+      background: rgba(74,222,128,0.12);
+      border-color: rgba(74,222,128,0.4);
+      color: #4ade80;
+    }
+    .fine-badge.alert {
+      background: rgba(248,113,113,0.12);
+      border-color: rgba(248,113,113,0.4);
+      color: #f87171;
     }
 
     .empty {
@@ -238,10 +273,100 @@
       border-radius: 8px;
     }
 
-    @media (max-width: 700px) {
-      .profile-grid { grid-template-columns: 1fr; }
-      .profile-img-wrap { margin: 0 auto; }
-      .profile-info-grid { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 1024px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 20px; }
+      .wrapper { max-width: 100%; }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+      }
+      h1 { font-size: 1.5rem; }
+      .subtitle { font-size: 0.75rem; }
+      .back-link { font-size: 0.7rem; padding: 5px 10px; }
+      .card { padding: 16px; margin-bottom: 16px; border-radius: 8px; }
+      .section-title { font-size: 0.85rem; margin-bottom: 12px; }
+      .chart-wrap { height: 280px; }
+      .profile-grid { grid-template-columns: 1fr; gap: 16px; }
+      .profile-img-wrap { width: 140px; height: 140px; margin: 0; }
+      .profile-info-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .profile-item { padding: 10px 12px; }
+      .profile-item-label { font-size: 0.65rem; }
+      .profile-item-value { font-size: 0.95rem; }
+      .hexa-list { grid-template-columns: 1fr; }
+      .hexa-item { padding: 8px 12px; }
+      .hexa-name { font-size: 0.75rem; }
+      .hexa-level { font-size: 0.85rem; }
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-box { padding: 10px 12px; }
+      .stat-box-label { font-size: 0.65rem; }
+      .stat-box-value { font-size: 1rem; }
+      table { font-size: 0.75rem; }
+      th { font-size: 0.65rem; padding: 8px 10px; }
+      td { padding: 7px 10px; }
+      .fine-badge { font-size: 0.78rem; padding: 7px 14px; }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 16px; font-size: 13px; }
+      header { padding-bottom: 12px; margin-bottom: 16px; }
+      h1 { font-size: 1.2rem; }
+      .subtitle { font-size: 0.65rem; }
+      .back-link { font-size: 0.65rem; padding: 4px 8px; }
+      .card { padding: 12px; margin-bottom: 12px; }
+      .section-title { font-size: 0.75rem; margin-bottom: 10px; }
+      .chart-wrap { height: 220px; }
+      .profile-grid { gap: 12px; }
+      .profile-img-wrap { width: 120px; height: 120px; }
+      .profile-img-wrap img { transform: scale(1.5); }
+      .profile-info-grid { grid-template-columns: 1fr; gap: 10px; }
+      .profile-item { padding: 8px 10px; }
+      .profile-item-label { font-size: 0.6rem; }
+      .profile-item-value { font-size: 0.85rem; }
+      .profile-item-value.combat { font-size: 1rem; }
+      .hexa-list { gap: 8px; }
+      .hexa-item { padding: 6px 10px; }
+      .hexa-name { font-size: 0.7rem; }
+      .hexa-level { font-size: 0.75rem; }
+      .hexa-type-tag { font-size: 0.55rem; padding: 1px 5px; }
+      .stats-row { grid-template-columns: 1fr; gap: 8px; }
+      .stat-box { padding: 8px 10px; }
+      .stat-box-label { font-size: 0.6rem; }
+      .stat-box-value { font-size: 0.9rem; }
+      table { font-size: 0.7rem; }
+      th { font-size: 0.6rem; padding: 6px 8px; }
+      td { padding: 6px 8px; }
+      .fine-badge { font-size: 0.72rem; padding: 6px 12px; }
+      .fine-badge-wrap { margin-bottom: 10px; }
+    }
+
+    /* 환산 분석 외부 링크 버튼 */
+    .external-link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      background: rgba(79,142,247,0.10);
+      border: 1px solid rgba(79,142,247,0.35);
+      border-radius: 5px;
+      color: #4f8ef7;
+      cursor: pointer;
+      white-space: nowrap;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .external-link-btn:hover {
+      background: rgba(79,142,247,0.22);
+      border-color: #4f8ef7;
     }
 
     .loading {
@@ -261,9 +386,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    @media (max-width: 700px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-    }
+
   </style>
 </head>
 <body>
@@ -278,7 +401,10 @@
   </header>
 
   <div class="card" id="profileCard">
-    <div class="section-title">캐릭터 정보</div>
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      캐릭터 정보
+      <a id="mapleScouterLink" class="external-link-btn" target="_blank" rel="noopener">환산 사이트 ↗</a>
+    </div>
     <div id="profileContainer">
       <div class="loading"><div class="spinner"></div> 캐릭터 정보 불러오는 중</div>
     </div>
@@ -293,6 +419,7 @@
 
   <div class="card">
     <div class="section-title">상세 기록</div>
+    <div class="fine-badge-wrap" id="fineBadgeWrap"></div>
     <table id="histTable">
       <thead>
         <tr>
@@ -300,6 +427,7 @@
           <th>순위</th>
           <th>직업</th>
           <th>점수</th>
+          <th id="fineCountHeader">누적 납부 횟수</th>
         </tr>
       </thead>
       <tbody id="histTbody"></tbody>
@@ -318,6 +446,11 @@ if (!name) {
   document.querySelector('.wrapper').innerHTML = '<div class="empty">name 파라미터가 필요합니다.</div>';
 } else {
   document.title = `${name} - 길드원 히스토리`;
+  // 환산 분석(MapleScouter) 외부 링크 설정
+  const scouterLink = document.getElementById('mapleScouterLink');
+  if (scouterLink) {
+    scouterLink.href = `https://maplescouter.com/ko/info?name=${encodeURIComponent(name)}`;
+  }
   fetch(`/api/member/${encodeURIComponent(name)}`)
     .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
     .then(render)
@@ -406,6 +539,9 @@ function renderProfile(p) {
 
 function render(data) {
   const hist = data.history;
+  // 벌금 누적 횟수는 관리자 응답에만 포함됨. 공개 접근 시 fine_count 키 자체가 없음 → 표시 안 함.
+  const showFine = ('fine_count' in data);
+  const fineCount = data.fine_count || 0;
   document.getElementById('memberName').textContent = data.name;
 
   if (!hist || !hist.length) {
@@ -416,6 +552,15 @@ function render(data) {
 
   const latest = hist[hist.length - 1];
   document.getElementById('memberJob').textContent = `${latest.job} · 최근 ${latest.week_display} (현 순위 ${latest.rank}위)`;
+
+  // 누적 벌금 배지 (관리자 접근 시에만)
+  if (showFine) {
+    const badgeClass = fineCount > 0 ? 'alert' : 'clean';
+    document.getElementById('fineBadgeWrap').innerHTML =
+      `<button type="button" class="fine-badge ${badgeClass}" disabled aria-disabled="true">누적 납부 횟수 ${fineCount}회</button>`;
+  } else {
+    document.getElementById('fineBadgeWrap').innerHTML = '';
+  }
 
   // 차트
   document.getElementById('chartContainer').innerHTML = `
@@ -483,13 +628,17 @@ function render(data) {
     <div class="stat-box"><div class="stat-box-label">기록 변화</div><div class="stat-box-value" style="color:${growthColor}">${growthSign}${fmt(growth)}</div></div>
   `;
 
-  // 상세표 (최신 주차 위로)
+  // 상세표 (최신 주차 위로) — 누적 납부 횟수 컬럼은 관리자 접근 시에만
+  const fineHeader = document.getElementById('fineCountHeader');
+  if (fineHeader) fineHeader.style.display = showFine ? '' : 'none';
+
   const tbody = document.getElementById('histTbody');
   tbody.innerHTML = hist.slice().reverse().map(h => `<tr>
     <td>${h.week_display}</td>
     <td>${h.rank}</td>
     <td><span class="rank-job-tag">${h.job}</span></td>
     <td class="${h.score === 0 ? 'zero' : 'score-cell'}">${h.score === 0 ? '—' : fmt(h.score)}</td>
+    ${showFine ? `<td style="text-align:center;">${h.fine_count > 0 ? h.fine_count + '회' : '—'}</td>` : ''}
   </tr>`).join('');
 }
 </script>
