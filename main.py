@@ -834,6 +834,12 @@ def rename_member(payload: dict = Body(...), _admin: str = Depends(require_admin
 
     old_items = scan_by_name(old)
     if not old_items:
+        # 기존 닉네임 기록이 없고 신규 닉네임이 이미 존재하면 이미 변경 완료된 것으로 안내
+        if scan_by_name(new):
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "already_changed", "message": f"이미 '{new}'(으)로 수정한 닉네임입니다."},
+            )
         raise HTTPException(status_code=404, detail=f"'{old}' 닉네임을 가진 길드원을 찾을 수 없습니다.")
 
     new_items_before = scan_by_name(new)
