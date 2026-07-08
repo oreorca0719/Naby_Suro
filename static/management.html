@@ -1173,12 +1173,39 @@
   <nav class="page-tabs">
     <a href="/admin" class="page-tab">개요</a>
     <a href="/manage" class="page-tab active">관리</a>
+    <button type="button" class="rename-tool-btn" onclick="showRenameModal()" title="닉네임을 바꾼 길드원의 기존 히스토리를 신규 닉네임으로 이관">
+      ✏️ 닉네임 변경
+    </button>
     <a href="/event" class="event-link-btn" title="신규/기존 연합원 조회 (달빛·연꽃·꽃잎·꿀벌)">
       <span class="event-link-badge">EVENT</span>
       <span class="event-link-text">신규/기존 연합원 조회</span>
     </a>
   </nav>
   <style>
+    .rename-tool-btn {
+      align-self: center;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(79,142,247,0.12);
+      border: 1px solid rgba(79,142,247,0.4);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .rename-tool-btn:hover {
+      border-color: var(--accent);
+      background: rgba(79,142,247,0.22);
+    }
+    @media (max-width: 600px) {
+      .rename-tool-btn { padding: 6px 10px; font-size: 0.74rem; }
+    }
     .event-link-btn {
       margin-left: auto;
       display: inline-flex;
@@ -1423,6 +1450,30 @@
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeGuildBaselineModal()">취소</button>
       <button class="modal-btn primary" onclick="confirmGuildBaseline()">네, 보약 효과 종료</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="renameModal">
+  <div class="modal-content">
+    <div class="modal-header">닉네임 변경 (히스토리 이관)</div>
+    <div class="modal-body">
+      <div style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;line-height:1.6;">
+        닉네임을 바꾼 길드원의 <strong style="color:var(--text);">기존 닉네임의 모든 주차 기록</strong>을
+        신규 닉네임으로 변경합니다.<br>
+        점수·벌금 등 히스토리가 신규 닉네임으로 그대로 이어집니다.
+      </div>
+      <label style="display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px;">기존 닉네임</label>
+      <input type="text" id="renameOld" autocomplete="off" placeholder="예: 나비수로"
+             style="width:100%;box-sizing:border-box;padding:11px 12px;margin-bottom:14px;border:1px solid var(--border);border-radius:8px;background:var(--bg,#111);color:var(--text);font-size:0.95rem;font-family:inherit;">
+      <label style="display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px;">신규 닉네임</label>
+      <input type="text" id="renameNew" autocomplete="off" placeholder="예: 새나비"
+             style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg,#111);color:var(--text);font-size:0.95rem;font-family:inherit;">
+      <div id="renameResult" style="margin-top:14px;font-size:0.85rem;line-height:1.6;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeRenameModal()">취소</button>
+      <button class="modal-btn primary" id="renameSubmitBtn" onclick="confirmRenameMember()">변경 실행</button>
     </div>
   </div>
 </div>
@@ -2287,6 +2338,59 @@ async function dismissGuildAlert() {
     document.getElementById('guildAlertBanner').style.display = 'none';
   } catch (e) {
     alert('통신 오류가 발생했습니다.');
+  }
+}
+
+// ── 닉네임 변경(이관) ──
+function showRenameModal() {
+  document.getElementById('renameOld').value = '';
+  document.getElementById('renameNew').value = '';
+  document.getElementById('renameResult').innerHTML = '';
+  document.getElementById('renameSubmitBtn').disabled = false;
+  document.getElementById('renameModal').classList.add('show');
+  setTimeout(() => document.getElementById('renameOld').focus(), 50);
+}
+function closeRenameModal() {
+  document.getElementById('renameModal').classList.remove('show');
+}
+async function confirmRenameMember() {
+  const oldName = document.getElementById('renameOld').value.trim();
+  const newName = document.getElementById('renameNew').value.trim();
+  const resultEl = document.getElementById('renameResult');
+  const btn = document.getElementById('renameSubmitBtn');
+  if (!oldName || !newName) {
+    resultEl.innerHTML = '<span style="color:#f87171;">기존/신규 닉네임을 모두 입력하세요.</span>';
+    return;
+  }
+  if (oldName === newName) {
+    resultEl.innerHTML = '<span style="color:#f87171;">기존과 신규 닉네임이 동일합니다.</span>';
+    return;
+  }
+  if (!confirm(`'${oldName}' → '${newName}' 로 모든 기록을 변경합니다.\n계속하시겠습니까?`)) return;
+
+  btn.disabled = true;
+  resultEl.innerHTML = '<span style="color:var(--muted);">변경 중...</span>';
+  try {
+    const res = await fetch('/api/rename-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ old_name: oldName, new_name: newName }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      resultEl.innerHTML = `<span style="color:#f87171;">오류: ${err.detail || '요청이 실패했습니다.'}</span>`;
+      btn.disabled = false;
+      return;
+    }
+    const r = await res.json();
+    resultEl.innerHTML =
+      `<span style="color:#4ade80;">✓ 완료 — <strong>${r.new_name}</strong>(으)로 ${r.updated_count}건 변경`
+      + ` (${r.updated_weeks.length}개 주차). 누적 벌금 ${r.fine_count}회 이관됨.</span>`;
+    alert(`닉네임이 '${r.old_name}' → '${r.new_name}'(으)로 변경되었습니다. (${r.updated_count}건)`);
+    await init();
+  } catch (e) {
+    resultEl.innerHTML = '<span style="color:#f87171;">통신 오류가 발생했습니다.</span>';
+    btn.disabled = false;
   }
 }
 

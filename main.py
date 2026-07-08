@@ -800,6 +800,105 @@ def dismiss_baseline_alert(_admin: str = Depends(require_admin)):
     return {"dismissed_baseline_alert_week": latest}
 
 
+@app.post("/api/rename-member")
+def rename_member(payload: dict = Body(...), _admin: str = Depends(require_admin)):
+    """닉네임 변경(이관) — 기존 닉네임의 모든 주차 레코드를 신규 닉네임으로 변경.
+
+    - 점수/벌금 등 모든 히스토리는 레코드에 그대로 붙어 있으므로 name 필드만
+      바꾸면 신규 닉네임이 히스토리를 그대로 인수받는다.
+    - 이름 변경으로 끊긴 벌금 carry-forward를 복원하기 위해, 통합된 회원의
+      누적 상태(fine_count/last_fine_week/spec_down/면제주차)를 최신 주차 레코드에
+      반영한다. (max/min/합집합 기반이라 재실행해도 안전)
+    - 같은 주차에 두 닉네임이 모두 존재하면 자동 병합은 위험하므로 차단한다.
+    """
+    from boto3.dynamodb.conditions import Attr
+
+    old = unicodedata.normalize("NFC", (payload.get("old_name") or "").strip())
+    new = unicodedata.normalize("NFC", (payload.get("new_name") or "").strip())
+    if not old or not new:
+        raise HTTPException(status_code=400, detail="기존/신규 닉네임을 모두 입력하세요.")
+    if old == new:
+        raise HTTPException(status_code=400, detail="기존과 신규 닉네임이 동일합니다.")
+
+    def scan_by_name(nm: str) -> list[dict]:
+        items: list[dict] = []
+        resp = table.scan(FilterExpression=Attr("name").eq(nm))
+        items += resp.get("Items", [])
+        while "LastEvaluatedKey" in resp:
+            resp = table.scan(
+                FilterExpression=Attr("name").eq(nm),
+                ExclusiveStartKey=resp["LastEvaluatedKey"],
+            )
+            items += resp.get("Items", [])
+        return [i for i in items if i.get("week") != "METADATA"]
+
+    old_items = scan_by_name(old)
+    if not old_items:
+        raise HTTPException(status_code=404, detail=f"'{old}' 닉네임을 가진 길드원을 찾을 수 없습니다.")
+
+    new_items_before = scan_by_name(new)
+    old_weeks = {i["week"] for i in old_items}
+    new_weeks = {i["week"] for i in new_items_before}
+    collision_weeks = sorted(old_weeks & new_weeks)
+    if collision_weeks:
+        pretty = ", ".join(get_week_display(w) for w in collision_weeks)
+        raise HTTPException(
+            status_code=409,
+            detail=f"같은 주차에 두 닉네임이 모두 존재해 자동 변경할 수 없습니다 ({pretty}). 수동 확인이 필요합니다.",
+        )
+
+    # 1) 이름 변경 (조건부 업데이트로 경합 방지)
+    for i in old_items:
+        table.update_item(
+            Key={"week": i["week"], "rank": int(i["rank"])},
+            UpdateExpression="SET #n = :new",
+            ConditionExpression="#n = :old",
+            ExpressionAttributeNames={"#n": "name"},
+            ExpressionAttributeValues={":new": new, ":old": old},
+        )
+
+    # 2) 벌금/상태 히스토리 인수 — 통합된 회원의 누적 상태를 최신 주차 레코드에 반영
+    unified = scan_by_name(new)
+    real = [i for i in unified if int(i.get("rank", 0)) > 0 and not i.get("is_ghost")]
+
+    max_fine = max((int(i.get("fine_count", 0)) for i in unified), default=0)
+    last_fines = [i.get("last_fine_week") for i in unified if i.get("last_fine_week")]
+    last_fine = max(last_fines) if last_fines else None
+    spec_downs = [i.get("spec_down_from_week") for i in unified if i.get("spec_down_from_week")]
+    spec_down = min(spec_downs) if spec_downs else None
+    exempt = sorted({w for i in unified for w in (i.get("fine_exempt_weeks") or [])})
+
+    reconciled_week = None
+    if real:
+        latest_rec = max(real, key=lambda i: i["week"])
+        expr_set, vals = [], {}
+        if max_fine > int(latest_rec.get("fine_count", 0)):
+            expr_set.append("fine_count = :fc"); vals[":fc"] = max_fine
+        if last_fine and last_fine != latest_rec.get("last_fine_week"):
+            expr_set.append("last_fine_week = :lfw"); vals[":lfw"] = last_fine
+        if spec_down and not latest_rec.get("spec_down_from_week"):
+            expr_set.append("spec_down_from_week = :sd"); vals[":sd"] = spec_down
+        if exempt and exempt != sorted(latest_rec.get("fine_exempt_weeks") or []):
+            expr_set.append("fine_exempt_weeks = :fe"); vals[":fe"] = exempt
+        if expr_set:
+            table.update_item(
+                Key={"week": latest_rec["week"], "rank": int(latest_rec["rank"])},
+                UpdateExpression="SET " + ", ".join(expr_set),
+                ExpressionAttributeValues=vals,
+            )
+            reconciled_week = latest_rec["week"]
+
+    _cache_clear()
+    return {
+        "old_name":      old,
+        "new_name":      new,
+        "updated_weeks": sorted(old_weeks),
+        "updated_count": len(old_items),
+        "fine_count":    max_fine,
+        "reconciled_week": reconciled_week,
+    }
+
+
 @app.post("/api/fine-exempt/{week}/{name}")
 def exempt_fine(week: str, name: str, _admin: str = Depends(require_admin)):
     """이번 주 벌금 면제 (신규 가입·부득이한 사유로 마감 임박 미참)
