@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 로그인 — 나비 길드</title>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:      #0a0c10;
+      --card:    #161b27;
+      --border:  #1e2740;
+      --accent:  #4f8ef7;
+      --text:    #d4dff5;
+      --muted:   #5a6a8a;
+      --danger:  #f75f5f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    .login-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 32px;
+    }
+    .login-logo {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1.6rem;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .login-sub {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+    .field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.95rem;
+      transition: border-color 0.15s;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .login-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 13px;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+    .login-btn:hover { background: #3d7de8; }
+    .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .login-error {
+      color: var(--danger);
+      font-size: 0.82rem;
+      text-align: center;
+      margin-top: 14px;
+      min-height: 18px;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <form class="login-card" id="loginForm" onsubmit="return doLogin(event)">
+    <div class="login-logo">🦋 나비 길드</div>
+    <div class="login-sub">관리자 로그인</div>
+
+    <div class="field">
+      <label for="username">아이디 (닉네임)</label>
+      <input type="text" id="username" autocomplete="username" autofocus />
+    </div>
+    <div class="field">
+      <label for="password">비밀번호</label>
+      <input type="password" id="password" autocomplete="current-password" />
+    </div>
+
+    <button type="submit" class="login-btn" id="loginBtn">로그인</button>
+    <div class="login-error" id="loginError"></div>
+
+    <a class="back-link" href="/">← 공개 페이지로 돌아가기</a>
+  </form>
+
+  <script>
+    async function doLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errEl = document.getElementById('loginError');
+      const btn = document.getElementById('loginBtn');
+      errEl.textContent = '';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        if (res.ok) {
+          location.href = '/admin';
+        } else {
+          const err = await res.json();
+          errEl.textContent = err.detail || '로그인에 실패했습니다.';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        errEl.textContent = '통신 오류가 발생했습니다.';
+        btn.disabled = false;
+      }
+      return false;
+    }
+  </script>
+</body>
+</html>

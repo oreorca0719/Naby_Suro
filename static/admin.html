@@ -47,36 +47,23 @@
 
     .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; width: 100%; box-sizing: border-box; }
 
-    /* ── 관리자 버튼 (헤더) ── */
-    .admin-link-btn {
-      display: inline-flex;
-      align-items: center;
+    /* ── 로그아웃 버튼 ── */
+    .logout-btn {
       font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 600;
       padding: 6px 14px;
       border-radius: 6px;
-      background: rgba(79,142,247,0.12);
-      border: 1px solid rgba(79,142,247,0.4);
-      color: var(--accent);
-      text-decoration: none;
+      background: rgba(247,95,95,0.12);
+      border: 1px solid rgba(247,95,95,0.4);
+      color: var(--danger);
+      cursor: pointer;
       white-space: nowrap;
       transition: background 0.15s, border-color 0.15s;
     }
-    .admin-link-btn:hover {
-      background: rgba(79,142,247,0.25);
-      border-color: var(--accent);
-    }
-
-    /* ── 공개 페이지 2열 리더보드 ── */
-    .leaderboard-row-public {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 32px;
-    }
-    @media (max-width: 768px) {
-      .leaderboard-row-public { grid-template-columns: 1fr; gap: 16px; }
+    .logout-btn:hover {
+      background: rgba(247,95,95,0.25);
+      border-color: var(--danger);
     }
 
     /* ── PAGE TABS (개요/인사이트/관리) ── */
@@ -1105,17 +1092,34 @@
   <!-- HEADER -->
   <header>
     <div class="header-left">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-        <h1>🦋 나비 길드</h1>
-        <a href="/login" class="admin-link-btn">관리자</a>
-      </div>
+      <h1>🦋 나비 길드</h1>
       <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
     </div>
     <div class="header-right">
       <div class="live-badge"><span class="live-dot"></span> LIVE</div>
       <div class="updated-at" id="updatedAt">불러오는 중...</div>
+      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </header>
+
+  <!-- 페이지 탭 -->
+  <nav class="page-tabs">
+    <a href="/admin" class="page-tab active">개요</a>
+    <a href="/manage" class="page-tab">관리</a>
+  </nav>
+
+  <!-- 보약 효과 알림 배너 (조건부) -->
+  <div id="guildAlertBanner" class="guild-alert-banner" style="display:none;">
+    <div class="guild-alert-icon">⚠️</div>
+    <div class="guild-alert-text">
+      <div class="guild-alert-title">이번 주 길드원 <strong id="guildAlertCount">0</strong>명이 전주 대비 점수 감소</div>
+      <div class="guild-alert-desc">혹시 보약 효과가 종료되었나요? 확인 시 이번 주 이후 데이터를 새 기준선으로 적용합니다.</div>
+    </div>
+    <div class="guild-alert-actions">
+      <button class="alert-btn alert-btn-secondary" onclick="dismissGuildAlert()">무시</button>
+      <button class="alert-btn alert-btn-primary" onclick="showGuildBaselineModal()">네, 확인</button>
+    </div>
+  </div>
 
   <!-- STAT CARDS -->
   <div class="stat-grid">
@@ -1155,144 +1159,6 @@
     </div>
   </div>
 
-  <!-- 이번 주 TOP 5 -->
-  <div class="card" style="margin-bottom:32px;">
-    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
-      <span>🏆 이번 주 TOP 5</span>
-      <span id="top5WeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
-    </div>
-    <div class="top5-wrap" id="top5Wrap">
-      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
-    </div>
-  </div>
-  <style>
-    .top5-wrap { margin-top: 6px; }
-    .top5-champion {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 22px;
-      padding: 24px 26px;
-      margin-bottom: 14px;
-      background: linear-gradient(135deg, rgba(232,184,75,0.18), rgba(232,184,75,0.04));
-      border: 1px solid rgba(232,184,75,0.55);
-      border-radius: 16px;
-      overflow: hidden;
-    }
-    .top5-champion::before {
-      content: '';
-      position: absolute;
-      top: -40%; right: -10%;
-      width: 60%; height: 180%;
-      background: radial-gradient(ellipse, rgba(232,184,75,0.20), transparent 70%);
-      pointer-events: none;
-    }
-    .top5-crown {
-      font-size: 2.4rem;
-      filter: drop-shadow(0 2px 6px rgba(232,184,75,0.4));
-      position: relative; z-index: 1;
-    }
-    .top5-champion-meta { flex: 1; min-width: 0; position: relative; z-index: 1; }
-    .top5-champion-label {
-      display: inline-block;
-      background: linear-gradient(90deg, #e8b84b, #f4d678);
-      color: #1a1206;
-      font-size: 0.68rem; font-weight: 900;
-      padding: 2px 10px; border-radius: 999px;
-      letter-spacing: 0.06em;
-      margin-bottom: 8px;
-    }
-    .top5-champion-name {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.7rem;
-      color: var(--text);
-      letter-spacing: -0.01em;
-      margin-bottom: 4px;
-      line-height: 1.1;
-    }
-    .top5-champion-job {
-      font-size: 0.74rem; color: var(--muted);
-      background: rgba(255,255,255,0.06);
-      display: inline-block;
-      padding: 2px 8px; border-radius: 6px;
-    }
-    .top5-champion-score {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 2.2rem; color: #e8b84b;
-      text-shadow: 0 2px 12px rgba(232,184,75,0.35);
-      letter-spacing: -0.02em;
-      position: relative; z-index: 1;
-      white-space: nowrap;
-    }
-    .top5-champion-score-unit {
-      font-size: 0.45em; color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
-      margin-left: 4px; font-weight: 700;
-    }
-
-    .top5-list { display: flex; flex-direction: column; gap: 8px; }
-    .top5-row {
-      display: flex; align-items: center; gap: 16px;
-      padding: 14px 18px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      transition: transform 0.15s, border-color 0.15s, background 0.15s;
-    }
-    .top5-row:hover { transform: translateX(2px); border-color: var(--accent); background: #1a2236; }
-    .top5-row.rank-2 { border-left: 3px solid #c5d0e0; }
-    .top5-row.rank-3 { border-left: 3px solid #cd7f4e; }
-    .top5-medal {
-      font-size: 1.5rem; width: 40px;
-      text-align: center; flex-shrink: 0;
-    }
-    .top5-row.rank-4 .top5-medal,
-    .top5-row.rank-5 .top5-medal {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.3rem; color: var(--muted);
-    }
-    .top5-meta { flex: 1; min-width: 0; }
-    .top5-name {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.1rem; color: var(--text);
-      letter-spacing: -0.01em;
-      margin-bottom: 3px; line-height: 1.1;
-    }
-    .top5-job {
-      font-size: 0.72rem; color: var(--muted);
-      display: inline-block;
-      background: rgba(255,255,255,0.04);
-      padding: 1px 7px; border-radius: 4px;
-    }
-    .top5-score {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.3rem; color: var(--text);
-      letter-spacing: -0.01em; white-space: nowrap;
-    }
-    .top5-score-unit {
-      font-size: 0.55em; color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
-      margin-left: 3px; font-weight: 700;
-    }
-    .top5-row.rank-2 .top5-score { color: #d6e0ee; }
-    .top5-row.rank-3 .top5-score { color: #e1956b; }
-    .top5-row.rank-4 .top5-score,
-    .top5-row.rank-5 .top5-score { color: #38bdf8; }
-
-    @media (max-width: 600px) {
-      .top5-champion { padding: 18px 16px; gap: 14px; }
-      .top5-crown { font-size: 1.8rem; }
-      .top5-champion-name { font-size: 1.35rem; }
-      .top5-champion-score { font-size: 1.7rem; }
-      .top5-row { padding: 12px 14px; gap: 12px; }
-      .top5-medal { font-size: 1.2rem; width: 32px; }
-      .top5-row.rank-4 .top5-medal,
-      .top5-row.rank-5 .top5-medal { font-size: 1.05rem; }
-      .top5-name { font-size: 1rem; }
-      .top5-score { font-size: 1.1rem; }
-    }
-  </style>
-
   <!-- 통계 분석 + 주간 통계 추이 (전체 너비) -->
   <div class="card" style="margin-bottom:32px;">
     <div class="section-title">길드원 점수 통계 분석</div>
@@ -1301,50 +1167,6 @@
     <div class="section-title" style="font-size:0.85rem;margin-bottom:10px;">주간 통계 추이</div>
     <div class="stat-trend-wrap">
       <canvas id="statTrendChart"></canvas>
-    </div>
-  </div>
-
-  <!-- 리더보드 (공개: 평균 등수 + 상승폭 2열) -->
-  <div class="leaderboard-row-public">
-    <div class="card">
-      <div class="section-title">수로 점수 평균 등수 TOP 10</div>
-      <div id="lbAvgRank">
-        <div class="loading"><div class="spinner"></div> 불러오는 중</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="section-title" style="color:#4ade80;">점수 상승폭 TOP 10</div>
-      <div id="lbRise">
-        <div class="loading"><div class="spinner"></div> 불러오는 중</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 전체 길드원 현황 -->
-  <div class="full-table-section">
-    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
-      전체 길드원 현황
-      <span id="tableWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
-    </div>
-    <div class="card">
-      <div class="table-controls">
-        <input class="search-input" id="searchInput" type="text" placeholder="닉네임 / 직업 검색..." />
-        <span class="table-info" id="tableInfo"></span>
-      </div>
-      <div class="full-table-wrap">
-        <table class="full-table" id="fullTable">
-          <thead>
-            <tr>
-              <th>순위</th>
-              <th>닉네임</th>
-              <th>직업</th>
-              <th style="text-align:right">지하수로 점수</th>
-              <th style="text-align:right">히스토리</th>
-            </tr>
-          </thead>
-          <tbody id="fullTbody"></tbody>
-        </table>
-      </div>
     </div>
   </div>
 
@@ -1419,6 +1241,20 @@
 </div>
 
 <script>
+// ── 인증 가드: 비로그인 시 로그인 페이지로 ──
+(async function authGuard() {
+  try {
+    const res = await fetch('/api/auth-status');
+    const data = await res.json();
+    if (!data.is_admin) { location.replace('/login'); }
+  } catch (e) { location.replace('/login'); }
+})();
+
+async function doLogout() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+  location.href = '/';
+}
+
 const JOB_COLORS = [
   '#4f8ef7','#f7c04f','#a78bfa','#4ade80','#f87171',
   '#fb923c','#38bdf8','#e879f9','#facc15','#34d399',
@@ -1528,8 +1364,6 @@ function renderJobChart(dist) {
     type: 'doughnut',
     data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       cutout: '68%',
       plugins: { legend: { display: false }, tooltip: {
         callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}명` }
@@ -1560,47 +1394,6 @@ function renderJobChart(dist) {
   document.getElementById('legendNext').onclick = () => { if (legendPage < totalPages - 1) { legendPage++; renderLegendPage(); } };
 
   renderLegendPage();
-}
-
-// 이번 주 지하수로 점수 TOP 5 — 1등 챔피언 카드 + 2~5등 row
-function renderTop5(members) {
-  const wrap = document.getElementById('top5Wrap');
-  if (!wrap) return;
-  const sorted = members
-    .filter(m => m.score > 0)
-    .sort((a, b) => (a.rank || 0) - (b.rank || 0));
-  const top5 = sorted.slice(0, 5);
-  if (!top5.length) {
-    wrap.innerHTML = '<div class="lb-empty">데이터 없음</div>';
-    return;
-  }
-  const [first, ...rest] = top5;
-  const REST_MEDALS = ['🥈', '🥉', '4', '5'];
-  const championHTML = `
-    <div class="top5-champion">
-      <div class="top5-crown">👑</div>
-      <div class="top5-champion-meta">
-        <div class="top5-champion-label">1ST PLACE</div>
-        <div class="top5-champion-name">${escapeAttr(first.name)}</div>
-        <div class="top5-champion-job">${escapeAttr(normalizeJob(first.job))}</div>
-      </div>
-      <div class="top5-champion-score">${fmt(first.score)}<span class="top5-champion-score-unit">점</span></div>
-    </div>
-  `;
-  const listHTML = rest.map((r, i) => {
-    const rank = i + 2;
-    return `
-      <div class="top5-row rank-${rank}">
-        <div class="top5-medal">${REST_MEDALS[i]}</div>
-        <div class="top5-meta">
-          <div class="top5-name">${escapeAttr(r.name)}</div>
-          <div class="top5-job">${escapeAttr(normalizeJob(r.job))}</div>
-        </div>
-        <div class="top5-score">${fmt(r.score)}<span class="top5-score-unit">점</span></div>
-      </div>
-    `;
-  }).join('');
-  wrap.innerHTML = championHTML + `<div class="top5-list">${listHTML}</div>`;
 }
 
 function renderDistChart(members) {
@@ -2067,7 +1860,7 @@ async function confirmUndoFine() {
   }
 }
 
-const MEDALS = ['🥇', '🥈', '🥉', '4', '5', '6', '7', '8', '9', '10'];
+const MEDALS = ['🥇', '🥈', '🥉', '4', '5'];
 
 async function fetchAndRenderLeaderboards() {
   const elAvg  = document.getElementById('lbAvgRank');
@@ -2266,11 +2059,9 @@ function renderDeltaList(rows, kind) {
 }
 
 async function init() {
-  // 공개 페이지: 통계 + 차트 + 통계 분석 + 평균등수/상승폭 TOP 5 + 전체 길드원
+  // 개요 페이지: 통계 + 차트 + 통계 분석 + 보약 효과 알림
   const [data, history] = await Promise.all([fetchData(), fetch('/api/history').then(r => r.json())]);
   data.all_members = normalizeMembers(data.all_members);
-  allMembers = data.all_members;
-  filteredMembers = [...allMembers];
   currentWeek = data.stats.week;
 
   renderStats(data.stats);
@@ -2281,22 +2072,14 @@ async function init() {
   renderAnalysis(data.all_members);
   renderDistChart(data.all_members);
 
-  // 이번 주 TOP 5 — top30(없으면 all_members) 기반
-  const top5Source = (data.top30 && data.top30.length) ? data.top30 : data.all_members;
-  renderTop5(top5Source);
-  const top5Badge = document.getElementById('top5WeekBadge');
-  if (top5Badge && data.stats) {
-    top5Badge.textContent = data.stats.week_display
-      ? `${data.stats.week_display} 기준`
-      : `${data.stats.week} 기준`;
-  }
-
-  // 공개 리더보드 (평균등수 + 상승폭만 응답에 포함됨)
-  await fetchAndRenderLeaderboards();
-
-  // 전체 길드원 현황
-  renderFullTable(data.all_members);
-  document.getElementById('searchInput').addEventListener('input', e => filterTable(e.target.value));
+  // 보약 효과 알림만 받기 위해 leaderboards 호출
+  try {
+    const res = await fetch('/api/leaderboards');
+    if (res.ok) {
+      const lb = await res.json();
+      renderGuildAlert(lb.guild_alert || null);
+    }
+  } catch (e) { /* 무시 */ }
 }
 
 // 핸들러: 페이지마다 DOM 요소 유무 다름. null-safe 처리.

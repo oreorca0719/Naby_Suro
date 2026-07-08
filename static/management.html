@@ -47,36 +47,23 @@
 
     .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; width: 100%; box-sizing: border-box; }
 
-    /* ── 관리자 버튼 (헤더) ── */
-    .admin-link-btn {
-      display: inline-flex;
-      align-items: center;
+    /* ── 로그아웃 버튼 ── */
+    .logout-btn {
       font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 600;
       padding: 6px 14px;
       border-radius: 6px;
-      background: rgba(79,142,247,0.12);
-      border: 1px solid rgba(79,142,247,0.4);
-      color: var(--accent);
-      text-decoration: none;
+      background: rgba(247,95,95,0.12);
+      border: 1px solid rgba(247,95,95,0.4);
+      color: var(--danger);
+      cursor: pointer;
       white-space: nowrap;
       transition: background 0.15s, border-color 0.15s;
     }
-    .admin-link-btn:hover {
-      background: rgba(79,142,247,0.25);
-      border-color: var(--accent);
-    }
-
-    /* ── 공개 페이지 2열 리더보드 ── */
-    .leaderboard-row-public {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 32px;
-    }
-    @media (max-width: 768px) {
-      .leaderboard-row-public { grid-template-columns: 1fr; gap: 16px; }
+    .logout-btn:hover {
+      background: rgba(247,95,95,0.25);
+      border-color: var(--danger);
     }
 
     /* ── PAGE TABS (개요/인사이트/관리) ── */
@@ -165,6 +152,50 @@
     }
 
     .updated-at { font-size: 0.72rem; color: var(--muted); }
+
+    /* ── CUTOFF CARDS (관리 페이지 상단) ── */
+    .cutoff-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .cutoff-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 26px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cutoff-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .cutoff-card-green::before  { background: linear-gradient(90deg, #4ade80, transparent); }
+    .cutoff-card-yellow::before { background: linear-gradient(90deg, #facc15, transparent); }
+    .cutoff-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+    .cutoff-value {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 2.2rem;
+      line-height: 1.1;
+    }
+    .cutoff-value span {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-left: 6px;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-weight: 400;
+    }
+    .cutoff-value-green  { color: #4ade80; }
+    .cutoff-value-yellow { color: #facc15; }
 
     /* ── STAT CARDS ── */
     .stat-grid {
@@ -824,6 +855,24 @@
       border-color: #9ca3af;
     }
 
+    /* 예외 처리 버튼 (이번 주 벌금 면제) */
+    .exempt-btn {
+      background: rgba(79,142,247,0.10);
+      border: 1px solid rgba(79,142,247,0.35);
+      border-radius: 6px;
+      color: #4f8ef7;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .exempt-btn:hover {
+      background: rgba(79,142,247,0.22);
+      border-color: #4f8ef7;
+    }
+
     /* ── MODAL ── */
     .modal {
       display: none;
@@ -996,6 +1045,9 @@
       .stat-card { padding: 16px 20px; }
       .stat-label { font-size: 0.65rem; }
       .stat-value { font-size: 1.5rem; }
+      .cutoff-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
+      .cutoff-card { padding: 18px 20px; }
+      .cutoff-value { font-size: 1.8rem; }
       .section-title { font-size: 0.9rem; margin-bottom: 12px; }
       .main-grid { grid-template-columns: 1fr; gap: 20px; }
       .chart-wrap { height: 280px; }
@@ -1016,6 +1068,7 @@
       .miss-badge { font-size: 0.6rem; padding: 2px 6px; margin-left: 6px; }
       .carryover-badge { font-size: 0.6rem; padding: 2px 6px; margin-left: 6px; }
       .leave-btn { font-size: 0.7rem; padding: 6px 10px; min-height: 32px; }
+      .exempt-btn { font-size: 0.7rem; padding: 6px 10px; min-height: 32px; }
       .fine-action-group { gap: 5px; }
       /* 보약 효과 알림 배너 모바일 */
       .guild-alert-banner { flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px 16px; }
@@ -1072,6 +1125,7 @@
       .miss-badge { font-size: 0.55rem; padding: 2px 5px; margin-left: 4px; }
       .carryover-badge { font-size: 0.55rem; padding: 2px 5px; margin-left: 4px; }
       .leave-btn { font-size: 0.68rem; padding: 7px 10px; min-height: 36px; width: 100%; }
+      .exempt-btn { font-size: 0.68rem; padding: 7px 10px; min-height: 36px; width: 100%; }
       .fine-action-group { flex-direction: column; gap: 5px; align-items: stretch; }
       .guild-alert-banner { padding: 12px 14px; }
       .guild-alert-icon { font-size: 1.4rem; }
@@ -1105,210 +1159,84 @@
   <!-- HEADER -->
   <header>
     <div class="header-left">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-        <h1>🦋 나비 길드</h1>
-        <a href="/login" class="admin-link-btn">관리자</a>
-      </div>
+      <h1>🦋 나비 길드</h1>
       <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
     </div>
     <div class="header-right">
       <div class="live-badge"><span class="live-dot"></span> LIVE</div>
       <div class="updated-at" id="updatedAt">불러오는 중...</div>
+      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </header>
 
-  <!-- STAT CARDS -->
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-label" id="labelTotal">총 길드원</div>
-      <div class="stat-value" id="statTotal">—<span>명</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label" id="labelActive">수로 참여자</div>
-      <div class="stat-value" id="statActive">—<span>명</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label" id="labelScore">수로 총 점수</div>
-      <div class="stat-value" id="statTotalScore">—</div>
-    </div>
-  </div>
-
-  <!-- 브리핑 보드 -->
-  <div id="briefingBoard" style="margin-bottom:32px;"></div>
-
-  <!-- 주간 총점수 추이 -->
-  <div class="card" style="margin-bottom:32px;">
-    <div class="section-title">주간 길드 총점수 추이</div>
-    <div class="chart-wrap">
-      <canvas id="historyChart"></canvas>
-    </div>
-  </div>
-
-  <!-- 점수 분포 차트 -->
-  <div class="card" style="margin-bottom:32px;">
-    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
-      점수 분포 (구간별 인원)
-      <span id="distWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
-    </div>
-    <div class="chart-wrap">
-      <canvas id="distChart"></canvas>
-    </div>
-  </div>
-
-  <!-- 이번 주 TOP 5 -->
-  <div class="card" style="margin-bottom:32px;">
-    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
-      <span>🏆 이번 주 TOP 5</span>
-      <span id="top5WeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
-    </div>
-    <div class="top5-wrap" id="top5Wrap">
-      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
-    </div>
-  </div>
+  <!-- 페이지 탭 -->
+  <nav class="page-tabs">
+    <a href="/admin" class="page-tab">개요</a>
+    <a href="/manage" class="page-tab active">관리</a>
+    <a href="/event" class="event-link-btn" title="신규/기존 연합원 조회 (달빛·연꽃·꽃잎·꿀벌)">
+      <span class="event-link-badge">EVENT</span>
+      <span class="event-link-text">신규/기존 연합원 조회</span>
+    </a>
+  </nav>
   <style>
-    .top5-wrap { margin-top: 6px; }
-    .top5-champion {
-      position: relative;
-      display: flex;
+    .event-link-btn {
+      margin-left: auto;
+      display: inline-flex;
       align-items: center;
-      gap: 22px;
-      padding: 24px 26px;
-      margin-bottom: 14px;
-      background: linear-gradient(135deg, rgba(232,184,75,0.18), rgba(232,184,75,0.04));
-      border: 1px solid rgba(232,184,75,0.55);
-      border-radius: 16px;
-      overflow: hidden;
-    }
-    .top5-champion::before {
-      content: '';
-      position: absolute;
-      top: -40%; right: -10%;
-      width: 60%; height: 180%;
-      background: radial-gradient(ellipse, rgba(232,184,75,0.20), transparent 70%);
-      pointer-events: none;
-    }
-    .top5-crown {
-      font-size: 2.4rem;
-      filter: drop-shadow(0 2px 6px rgba(232,184,75,0.4));
-      position: relative; z-index: 1;
-    }
-    .top5-champion-meta { flex: 1; min-width: 0; position: relative; z-index: 1; }
-    .top5-champion-label {
-      display: inline-block;
-      background: linear-gradient(90deg, #e8b84b, #f4d678);
-      color: #1a1206;
-      font-size: 0.68rem; font-weight: 900;
-      padding: 2px 10px; border-radius: 999px;
-      letter-spacing: 0.06em;
-      margin-bottom: 8px;
-    }
-    .top5-champion-name {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.7rem;
+      gap: 8px;
+      padding: 8px 14px;
+      align-self: center;
+      background: linear-gradient(90deg, rgba(79,142,247,0.15), rgba(167,139,250,0.15));
+      border: 1px solid rgba(79,142,247,0.4);
+      border-radius: 8px;
       color: var(--text);
-      letter-spacing: -0.01em;
-      margin-bottom: 4px;
-      line-height: 1.1;
-    }
-    .top5-champion-job {
-      font-size: 0.74rem; color: var(--muted);
-      background: rgba(255,255,255,0.06);
-      display: inline-block;
-      padding: 2px 8px; border-radius: 6px;
-    }
-    .top5-champion-score {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 2.2rem; color: #e8b84b;
-      text-shadow: 0 2px 12px rgba(232,184,75,0.35);
-      letter-spacing: -0.02em;
-      position: relative; z-index: 1;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 700;
       white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s;
     }
-    .top5-champion-score-unit {
-      font-size: 0.45em; color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
-      margin-left: 4px; font-weight: 700;
+    .event-link-btn:hover {
+      border-color: var(--accent);
+      background: linear-gradient(90deg, rgba(79,142,247,0.25), rgba(167,139,250,0.25));
     }
-
-    .top5-list { display: flex; flex-direction: column; gap: 8px; }
-    .top5-row {
-      display: flex; align-items: center; gap: 16px;
-      padding: 14px 18px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      transition: transform 0.15s, border-color 0.15s, background 0.15s;
+    .event-link-badge {
+      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.66rem;
+      letter-spacing: 0.04em;
     }
-    .top5-row:hover { transform: translateX(2px); border-color: var(--accent); background: #1a2236; }
-    .top5-row.rank-2 { border-left: 3px solid #c5d0e0; }
-    .top5-row.rank-3 { border-left: 3px solid #cd7f4e; }
-    .top5-medal {
-      font-size: 1.5rem; width: 40px;
-      text-align: center; flex-shrink: 0;
-    }
-    .top5-row.rank-4 .top5-medal,
-    .top5-row.rank-5 .top5-medal {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.3rem; color: var(--muted);
-    }
-    .top5-meta { flex: 1; min-width: 0; }
-    .top5-name {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.1rem; color: var(--text);
-      letter-spacing: -0.01em;
-      margin-bottom: 3px; line-height: 1.1;
-    }
-    .top5-job {
-      font-size: 0.72rem; color: var(--muted);
-      display: inline-block;
-      background: rgba(255,255,255,0.04);
-      padding: 1px 7px; border-radius: 4px;
-    }
-    .top5-score {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.3rem; color: var(--text);
-      letter-spacing: -0.01em; white-space: nowrap;
-    }
-    .top5-score-unit {
-      font-size: 0.55em; color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
-      margin-left: 3px; font-weight: 700;
-    }
-    .top5-row.rank-2 .top5-score { color: #d6e0ee; }
-    .top5-row.rank-3 .top5-score { color: #e1956b; }
-    .top5-row.rank-4 .top5-score,
-    .top5-row.rank-5 .top5-score { color: #38bdf8; }
-
     @media (max-width: 600px) {
-      .top5-champion { padding: 18px 16px; gap: 14px; }
-      .top5-crown { font-size: 1.8rem; }
-      .top5-champion-name { font-size: 1.35rem; }
-      .top5-champion-score { font-size: 1.7rem; }
-      .top5-row { padding: 12px 14px; gap: 12px; }
-      .top5-medal { font-size: 1.2rem; width: 32px; }
-      .top5-row.rank-4 .top5-medal,
-      .top5-row.rank-5 .top5-medal { font-size: 1.05rem; }
-      .top5-name { font-size: 1rem; }
-      .top5-score { font-size: 1.1rem; }
+      .event-link-btn { padding: 6px 10px; font-size: 0.72rem; }
+      .event-link-text { display: none; }
     }
   </style>
 
-  <!-- 통계 분석 + 주간 통계 추이 (전체 너비) -->
-  <div class="card" style="margin-bottom:32px;">
-    <div class="section-title">길드원 점수 통계 분석</div>
-    <div id="statsAnalysisWrap"><div class="loading"><div class="spinner"></div> 불러오는 중</div></div>
-    <hr class="analysis-divider">
-    <div class="section-title" style="font-size:0.85rem;margin-bottom:10px;">주간 통계 추이</div>
-    <div class="stat-trend-wrap">
-      <canvas id="statTrendChart"></canvas>
+  <!-- 커트라인 — 가로 2열 -->
+  <div class="cutoff-row">
+    <div class="cutoff-card cutoff-card-green">
+      <div class="cutoff-label">현재 커트라인</div>
+      <div class="cutoff-value cutoff-value-green">33,000<span>점</span></div>
+    </div>
+    <div class="cutoff-card cutoff-card-yellow">
+      <div class="cutoff-label">신규 가입 커트라인</div>
+      <div class="cutoff-value cutoff-value-yellow" id="cutoffJoin">—</div>
     </div>
   </div>
 
-  <!-- 리더보드 (공개: 평균 등수 + 상승폭 2열) -->
-  <div class="leaderboard-row-public">
+  <!-- 리더보드 — 가로 4열 -->
+  <div class="leaderboard-row">
     <div class="card">
       <div class="section-title">수로 점수 평균 등수 TOP 10</div>
       <div id="lbAvgRank">
+        <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="color:#f87171;">수로 미참 횟수 TOP 10</div>
+      <div id="lbFine">
         <div class="loading"><div class="spinner"></div> 불러오는 중</div>
       </div>
     </div>
@@ -1318,9 +1246,78 @@
         <div class="loading"><div class="spinner"></div> 불러오는 중</div>
       </div>
     </div>
+    <div class="card">
+      <div class="section-title" style="color:#f87171;">점수 하락폭 TOP 10</div>
+      <div id="lbDrop">
+        <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+      </div>
+    </div>
   </div>
 
-  <!-- 전체 길드원 현황 -->
+  <!-- 불성실 참여 의심 횟수 TOP 10 (전체 현 길드원 누적, 메달형) -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title" style="color:#fb923c;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      불성실 참여 의심 횟수 TOP 10
+      <span class="suspect-hint">직전 3주 평균 대비 10% 이상 하락한 주차의 누적 발생 횟수</span>
+    </div>
+    <div id="lbSuspectCount">
+      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+    </div>
+  </div>
+
+  <!-- 불성실 참여 의심 섹션 (이상치 발생 회원, 조건부 표시) -->
+  <div class="full-table-section" id="suspectSection" style="display:none;margin-bottom:32px;">
+    <div class="section-title" style="color:#fb923c;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      불성실 참여 의심
+      <span class="suspect-hint">직전 3주 평균 대비 10% 이상 하락한 주차가 1회 이상 발생</span>
+      <span id="suspectWeekRef" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;margin-left:auto;"></span>
+    </div>
+    <div class="card">
+      <div class="full-table-wrap">
+        <table class="fine-table" id="suspectTable">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>닉네임</th>
+              <th>직업</th>
+              <th style="text-align:right">본인 평균</th>
+              <th style="text-align:right">이상치 발생</th>
+              <th style="text-align:right">최근 이상치</th>
+              <th style="text-align:right">작업</th>
+            </tr>
+          </thead>
+          <tbody id="suspectTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINE PAYMENT SECTION -->
+  <div class="full-table-section" id="fineSection" style="display:none;margin-bottom:32px;">
+    <div class="section-title" style="color:#f87171;display:flex;align-items:center;gap:10px;">
+      벌금 납부
+      <span id="fineWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+    </div>
+    <div class="card">
+      <div class="full-table-wrap">
+        <table class="fine-table" id="fineTable">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>닉네임</th>
+              <th>직업</th>
+              <th>누적 납부 횟수</th>
+              <th>처리자</th>
+              <th>작업</th>
+            </tr>
+          </thead>
+          <tbody id="fineTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL TABLE -->
   <div class="full-table-section">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;">
       전체 길드원 현황
@@ -1347,7 +1344,6 @@
       </div>
     </div>
   </div>
-
 
 </div>
 
@@ -1392,6 +1388,19 @@
   </div>
 </div>
 
+<div class="modal" id="exemptModal">
+  <div class="modal-content">
+    <div class="modal-header">이번 주 벌금 면제</div>
+    <div class="modal-body">
+      <div id="exemptText"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeExemptModal()">취소</button>
+      <button class="modal-btn primary" onclick="confirmExempt()">면제 처리</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="specDownModal">
   <div class="modal-content">
     <div class="modal-header">스펙 다운 확인</div>
@@ -1419,6 +1428,20 @@
 </div>
 
 <script>
+// ── 인증 가드: 비로그인 시 로그인 페이지로 ──
+(async function authGuard() {
+  try {
+    const res = await fetch('/api/auth-status');
+    const data = await res.json();
+    if (!data.is_admin) { location.replace('/login'); }
+  } catch (e) { location.replace('/login'); }
+})();
+
+async function doLogout() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+  location.href = '/';
+}
+
 const JOB_COLORS = [
   '#4f8ef7','#f7c04f','#a78bfa','#4ade80','#f87171',
   '#fb923c','#38bdf8','#e879f9','#facc15','#34d399',
@@ -1467,6 +1490,20 @@ function renderStats(stats) {
   document.getElementById('statActive').innerHTML = `${fmt(stats.active)}<span>명</span>`;
   document.getElementById('statTotalScore').textContent = fmt(stats.total_score);
   document.getElementById('updatedAt').textContent = `업데이트: ${stats.updated_at}`;
+}
+
+// 신규 가입 커트라인 — 참여자(점수>0) 정렬 후 하위 20% 위치 회원 한 명의 점수
+function renderCutoffs(members) {
+  const el = document.getElementById('cutoffJoin');
+  if (!el) return;
+  const scores = members.map(m => m.score).filter(s => s > 0).sort((a, b) => a - b);
+  const n = scores.length;
+  if (n === 0) {
+    el.innerHTML = '—';
+    return;
+  }
+  const idx = Math.max(0, Math.ceil(n * 0.2) - 1);
+  el.innerHTML = `${fmt(scores[idx])}<span>점</span>`;
 }
 
 function calcAnalysis(members) {
@@ -1528,8 +1565,6 @@ function renderJobChart(dist) {
     type: 'doughnut',
     data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       cutout: '68%',
       plugins: { legend: { display: false }, tooltip: {
         callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}명` }
@@ -1560,47 +1595,6 @@ function renderJobChart(dist) {
   document.getElementById('legendNext').onclick = () => { if (legendPage < totalPages - 1) { legendPage++; renderLegendPage(); } };
 
   renderLegendPage();
-}
-
-// 이번 주 지하수로 점수 TOP 5 — 1등 챔피언 카드 + 2~5등 row
-function renderTop5(members) {
-  const wrap = document.getElementById('top5Wrap');
-  if (!wrap) return;
-  const sorted = members
-    .filter(m => m.score > 0)
-    .sort((a, b) => (a.rank || 0) - (b.rank || 0));
-  const top5 = sorted.slice(0, 5);
-  if (!top5.length) {
-    wrap.innerHTML = '<div class="lb-empty">데이터 없음</div>';
-    return;
-  }
-  const [first, ...rest] = top5;
-  const REST_MEDALS = ['🥈', '🥉', '4', '5'];
-  const championHTML = `
-    <div class="top5-champion">
-      <div class="top5-crown">👑</div>
-      <div class="top5-champion-meta">
-        <div class="top5-champion-label">1ST PLACE</div>
-        <div class="top5-champion-name">${escapeAttr(first.name)}</div>
-        <div class="top5-champion-job">${escapeAttr(normalizeJob(first.job))}</div>
-      </div>
-      <div class="top5-champion-score">${fmt(first.score)}<span class="top5-champion-score-unit">점</span></div>
-    </div>
-  `;
-  const listHTML = rest.map((r, i) => {
-    const rank = i + 2;
-    return `
-      <div class="top5-row rank-${rank}">
-        <div class="top5-medal">${REST_MEDALS[i]}</div>
-        <div class="top5-meta">
-          <div class="top5-name">${escapeAttr(r.name)}</div>
-          <div class="top5-job">${escapeAttr(normalizeJob(r.job))}</div>
-        </div>
-        <div class="top5-score">${fmt(r.score)}<span class="top5-score-unit">점</span></div>
-      </div>
-    `;
-  }).join('');
-  wrap.innerHTML = championHTML + `<div class="top5-list">${listHTML}</div>`;
 }
 
 function renderDistChart(members) {
@@ -1913,14 +1907,29 @@ function renderFineTable(members, week) {
       ? `<button type="button" class="carryover-badge" disabled aria-disabled="true">지난주 미납부 인원</button>`
       : '';
 
+    // 처리자: 닉네임 · M/D (액션). 미처리(필드 없음)면 dash.
+    let processedCell = '<span style="color:var(--muted);opacity:0.4;">—</span>';
+    if (m.processed_by) {
+      let dateStr = '';
+      if (m.processed_at) {
+        const d = new Date(m.processed_at);
+        if (!isNaN(d)) dateStr = ` · ${d.getMonth()+1}/${d.getDate()}`;
+      }
+      const action = m.processed_action || '';
+      const actionLabel = action ? ` <span style="color:var(--muted);font-size:0.72rem;">(${action})</span>` : '';
+      processedCell = `<span style="color:var(--text);">${escapeAttr(m.processed_by)}${dateStr}</span>${actionLabel}`;
+    }
+
     return `<tr>
       <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
       <td>${m.name}${carryoverBadge}${missBadge}</td>
       <td><span class="rank-job">${m.job}</span></td>
-      <td style="text-align:right;font-family:'Black Han Sans',sans-serif">${m.fine_count}</td>
-      <td style="text-align:right">
-        <div class="fine-action-group">
+      <td style="font-family:'Black Han Sans',sans-serif">${m.fine_count}</td>
+      <td style="font-size:0.78rem;white-space:nowrap;">${processedCell}</td>
+      <td>
+        <div class="fine-action-group" style="justify-content:center;">
           <button type="button" class="${btnClass}" data-name="${escapeAttr(m.name)}" data-rank="${m.rank}" data-fine-count="${m.fine_count}" data-pending-count="${pendingCount}" data-is-fined="${isAlreadyFined}">${btnText}</button>
+          <button type="button" class="exempt-btn" data-name="${escapeAttr(m.name)}">예외 처리</button>
           <button type="button" class="leave-btn" data-name="${escapeAttr(m.name)}">길드 탈퇴</button>
         </div>
       </td>
@@ -2004,6 +2013,43 @@ async function confirmLeaveGuild() {
   }
 }
 
+let currentExemptData = null;
+
+function showExemptModal(name) {
+  currentExemptData = { name };
+  document.getElementById('exemptText').innerHTML = `
+    <strong>${name}</strong> 길드원을 이번 주 벌금 면제 처리하시겠습니까?<br><br>
+    <span style="color:var(--muted);font-size:0.85rem;">
+      신규 가입·부득이한 사유로 미참한 경우에 사용합니다.<br>
+      이번 주 벌금 섹션에서만 제외되며, 다음 주 미참 시 다시 표시됩니다.
+    </span>
+  `;
+  document.getElementById('exemptModal').classList.add('show');
+}
+
+function closeExemptModal() {
+  document.getElementById('exemptModal').classList.remove('show');
+  currentExemptData = null;
+}
+
+async function confirmExempt() {
+  if (!currentExemptData) return;
+  const { name } = currentExemptData;
+  try {
+    const res = await fetch(`/api/fine-exempt/${currentWeek}/${encodeURIComponent(name)}`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(`오류: ${err.detail || '요청이 실패했습니다.'}`);
+      return;
+    }
+    closeExemptModal();
+    alert(`${name} 회원이 이번 주 벌금 면제 처리되었습니다.`);
+    await init();
+  } catch (e) {
+    alert('통신 오류가 발생했습니다.');
+  }
+}
+
 async function confirmFinePayment() {
   if (!currentFineData) return;
   const { name, week } = currentFineData;
@@ -2067,13 +2113,14 @@ async function confirmUndoFine() {
   }
 }
 
-const MEDALS = ['🥇', '🥈', '🥉', '4', '5', '6', '7', '8', '9', '10'];
+const MEDALS = ['🥇', '🥈', '🥉', '4', '5'];
 
 async function fetchAndRenderLeaderboards() {
   const elAvg  = document.getElementById('lbAvgRank');
   const elFine = document.getElementById('lbFine');
   const elRise = document.getElementById('lbRise');
   const elDrop = document.getElementById('lbDrop');
+  const elSuspectCount = document.getElementById('lbSuspectCount');
   try {
     const res = await fetch('/api/leaderboards');
     if (!res.ok) throw new Error(res.status);
@@ -2082,25 +2129,50 @@ async function fetchAndRenderLeaderboards() {
     if (elFine) elFine.innerHTML = renderFineList(data.fine_top3 || []);
     if (elRise) elRise.innerHTML = renderDeltaList(data.rise_top5 || [], 'rise');
     if (elDrop) elDrop.innerHTML = renderDeltaList(data.drop_top5 || [], 'drop');
-    renderSuspectSection(data.suspect_list || []);
+    if (elSuspectCount) elSuspectCount.innerHTML = renderSuspectCountList(data.suspect_count_top || []);
+    renderSuspectSection(data.suspect_list || [], data.latest_week);
     renderGuildAlert(data.guild_alert || null);
   } catch (e) {
     if (elAvg)  elAvg.innerHTML  = '<div class="lb-empty">불러오기 실패</div>';
     if (elFine) elFine.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
     if (elRise) elRise.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
     if (elDrop) elDrop.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
+    if (elSuspectCount) elSuspectCount.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
   }
 }
 
-function renderSuspectSection(list) {
+function renderSuspectCountList(rows) {
+  if (!rows.length) return '<div class="lb-empty">의심 회원 없음</div>';
+  return `<div class="lb-list">` + rows.map((r, i) => `
+    <div class="lb-row rank-${i + 1}">
+      <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
+      <div class="lb-meta">
+        <div class="lb-name">${escapeAttr(r.name)}</div>
+        <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
+      </div>
+      <div class="lb-value" style="color:#fb923c;">${r.suspect_count}회</div>
+    </div>
+  `).join('') + `</div>`;
+}
+
+function dropPctColor(p) {
+  // 하락률(p, 음수) 심각도별 색상
+  if (p < -20) return '#ef4444';   // 빨강: -20% 미만
+  if (p < -10) return '#fb923c';   // 주황: -20% 이상 ~ -10% 미만
+  return '#facc15';                // 노랑: -10% 이상 ~ 0% 이하
+}
+
+function renderSuspectSection(list, latestWeek) {
   const section = document.getElementById('suspectSection');
   const tbody = document.getElementById('suspectTbody');
+  const weekRef = document.getElementById('suspectWeekRef');
   if (!section || !tbody) return;  // 페이지에 의심 섹션 없으면 무시
   if (!list.length) {
     section.style.display = 'none';
     return;
   }
   section.style.display = 'block';
+  if (weekRef) weekRef.textContent = latestWeek ? `기준 주차: ${weekLabel(latestWeek)}` : '';
   tbody.innerHTML = list.map((m, i) => {
     const specTag = m.spec_down_suspected
       ? `<span class="spec-down-suspected-tag">스펙 다운 추정</span>`
@@ -2111,15 +2183,15 @@ function renderSuspectSection(list) {
            data-from-week="${escapeAttr(m.spec_down_candidate_from_week || '')}"
            data-outlier-count="${m.outlier_count}">스펙 다운 확인</button>`
       : '';
+    const dropColor = dropPctColor(m.latest_outlier_drop_pct);
     return `<tr data-name="${escapeAttr(m.name)}">
       <td style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
       <td>${escapeAttr(m.name)}${specTag}</td>
       <td><span class="rank-job">${escapeAttr(normalizeJob(m.job))}</span></td>
       <td style="text-align:right;font-family:'Black Han Sans',sans-serif">${fmt(m.personal_avg)}</td>
       <td style="text-align:right;color:#fb923c;font-weight:700">${m.outlier_count}회</td>
-      <td style="text-align:right;font-size:0.78rem;color:var(--muted)">
-        <strong style="color:#fb923c">${weekLabel(m.latest_outlier_week)}</strong>
-        · ${fmt(m.latest_outlier_score)} (${m.latest_outlier_drop_pct}%)
+      <td style="text-align:right;font-weight:700;color:${dropColor}">
+        ${fmt(m.latest_outlier_score)} (${m.latest_outlier_drop_pct}%)
       </td>
       <td style="text-align:right">${specBtn}</td>
     </tr>`;
@@ -2266,62 +2338,25 @@ function renderDeltaList(rows, kind) {
 }
 
 async function init() {
-  // 공개 페이지: 통계 + 차트 + 통계 분석 + 평균등수/상승폭 TOP 5 + 전체 길드원
-  const [data, history] = await Promise.all([fetchData(), fetch('/api/history').then(r => r.json())]);
+  // 관리 페이지: 리더보드 4열 + 의심 명단 + 벌금 + 전체 길드원
+  const data = await fetchData();
   data.all_members = normalizeMembers(data.all_members);
   allMembers = data.all_members;
   filteredMembers = [...allMembers];
   currentWeek = data.stats.week;
 
-  renderStats(data.stats);
-  setStatLabels(data.stats.week);
-  renderBriefing(history);
-  renderHistoryChart(history);
-  renderStatTrendChart(history);
-  renderAnalysis(data.all_members);
-  renderDistChart(data.all_members);
+  // 커트라인 카드 (현재 / 신규 가입)
+  renderCutoffs(data.all_members);
 
-  // 이번 주 TOP 5 — top30(없으면 all_members) 기반
-  const top5Source = (data.top30 && data.top30.length) ? data.top30 : data.all_members;
-  renderTop5(top5Source);
-  const top5Badge = document.getElementById('top5WeekBadge');
-  if (top5Badge && data.stats) {
-    top5Badge.textContent = data.stats.week_display
-      ? `${data.stats.week_display} 기준`
-      : `${data.stats.week} 기준`;
-  }
-
-  // 공개 리더보드 (평균등수 + 상승폭만 응답에 포함됨)
+  // 리더보드 4열 + 의심 명단 한 번에 처리 (응답 공유)
   await fetchAndRenderLeaderboards();
 
-  // 전체 길드원 현황
+  zeroScoreMembers = await fetchZeroScoreMembers(data.stats.week);
+  renderFineTable(zeroScoreMembers, data.stats.week);
   renderFullTable(data.all_members);
+
   document.getElementById('searchInput').addEventListener('input', e => filterTable(e.target.value));
 }
-
-// 핸들러: 페이지마다 DOM 요소 유무 다름. null-safe 처리.
-const _suspectTbodyEl = document.getElementById('suspectTbody');
-if (_suspectTbodyEl) _suspectTbodyEl.addEventListener('click', e => {
-  const btn = e.target.closest('.spec-down-btn');
-  if (btn) {
-    showSpecDownModal(
-      btn.dataset.name,
-      btn.dataset.fromWeek,
-      parseInt(btn.dataset.outlierCount) || 0
-    );
-    return;
-  }
-  const row = e.target.closest('tr[data-name]');
-  if (!row) return;
-  const name = row.dataset.name;
-  if (name) {
-    window.open(
-      `/static/member.html?name=${encodeURIComponent(name)}`,
-      '_blank',
-      'width=1000,height=800,noopener'
-    );
-  }
-});
 
 const _fullTbodyEl = document.getElementById('fullTbody');
 if (_fullTbodyEl) _fullTbodyEl.addEventListener('click', e => {
@@ -2334,8 +2369,38 @@ if (_fullTbodyEl) _fullTbodyEl.addEventListener('click', e => {
   );
 });
 
+const _suspectTbodyEl = document.getElementById('suspectTbody');
+if (_suspectTbodyEl) _suspectTbodyEl.addEventListener('click', e => {
+  // 스펙 다운 확인 버튼 클릭은 모달 처리 (행 클릭과 분리)
+  const btn = e.target.closest('.spec-down-btn');
+  if (btn) {
+    showSpecDownModal(
+      btn.dataset.name,
+      btn.dataset.fromWeek,
+      parseInt(btn.dataset.outlierCount) || 0
+    );
+    return;
+  }
+  // 그 외 행 영역 클릭 → 회원 히스토리 페이지 새 창
+  const row = e.target.closest('tr[data-name]');
+  if (!row) return;
+  const name = row.dataset.name;
+  if (name) {
+    window.open(
+      `/static/member.html?name=${encodeURIComponent(name)}`,
+      '_blank',
+      'width=1000,height=800,noopener'
+    );
+  }
+});
+
 const _fineTbodyEl = document.getElementById('fineTbody');
 if (_fineTbodyEl) _fineTbodyEl.addEventListener('click', e => {
+  const exemptBtn = e.target.closest('.exempt-btn');
+  if (exemptBtn) {
+    showExemptModal(exemptBtn.dataset.name);
+    return;
+  }
   const leaveBtn = e.target.closest('.leave-btn');
   if (leaveBtn) {
     showLeaveGuildModal(leaveBtn.dataset.name);
