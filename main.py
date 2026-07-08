@@ -771,15 +771,20 @@ def confirm_spec_down(name: str, _admin: str = Depends(require_admin)):
 
 @app.post("/api/guild-baseline")
 def set_guild_baseline(_admin: str = Depends(require_admin)):
-    """보약 효과 종료 인정 — METADATA에 guild_baseline_from_week = 최신 주차 SET"""
+    """보약 효과 종료 인정 — METADATA에 guild_baseline_from_week = 최신 주차 SET.
+
+    baseline 을 설정하면 해당 주차의 보약 알림은 목적을 달성한 것이므로
+    dismissed_baseline_alert_week 도 함께 SET 하여 배너를 즉시 내린다.
+    (이 값이 없으면 배너 표시 조건이 계속 참이라 '확인'을 눌러도 배너가 남는다)
+    """
     latest = get_latest_week()
     table.update_item(
         Key={"week": "METADATA", "rank": 0},
-        UpdateExpression="SET guild_baseline_from_week = :wk",
+        UpdateExpression="SET guild_baseline_from_week = :wk, dismissed_baseline_alert_week = :wk",
         ExpressionAttributeValues={":wk": latest}
     )
     _cache_clear()
-    return {"guild_baseline_from_week": latest}
+    return {"guild_baseline_from_week": latest, "dismissed_baseline_alert_week": latest}
 
 
 @app.post("/api/dismiss-baseline-alert")
