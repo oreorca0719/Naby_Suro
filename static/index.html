@@ -535,7 +535,17 @@
     }
     .history-btn:hover, .spec-down-btn:hover { background: var(--line); }
     .leave-btn { background: var(--danger-weak); color: var(--danger); }
-    .fine-action-group { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+    .fine-action-group {
+      /* 버튼별로 고정 폭 영역을 확보 — 라벨이 '벌금 취소'/'벌금 납부 확인'으로
+         바뀌어도 세 버튼의 위치가 행마다 동일하게 유지된다.
+         (측정 자연폭: 벌금 납부 확인 88px, 나머지 65px) */
+      display: inline-grid;
+      grid-template-columns: 96px 74px 74px;
+      gap: 6px;
+      justify-content: end;
+      align-items: center;
+    }
+    .fine-action-group > button { width: 100%; }
 
     /* ── 로딩 ───────────────────────────── */
     .loading {
