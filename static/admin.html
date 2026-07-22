@@ -173,13 +173,9 @@
     }
 
     .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.2s;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 22px 24px;
     }
 
     .stat-card::before {
@@ -192,20 +188,28 @@
 
     .stat-card:hover { border-color: var(--accent); }
 
-    .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-    .stat-value { font-weight: 800; letter-spacing: -0.035em; font-size: 1.8rem; color: var(--text); }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .stat-value {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+    }
     .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif; }
 
     /* ── SECTION TITLE ── */
     .section-title {
-      font-weight: 800; letter-spacing: -0.035em;
-      font-size: 1rem;
-      
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 18px;
       color: var(--text);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
 
     .section-title::after {
@@ -224,9 +228,8 @@
     }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: var(--surface);
+      border-radius: var(--radius);
       padding: 24px;
     }
 
@@ -249,73 +252,7 @@
       gap: 16px;
       margin-bottom: 32px;
     }
-    .lb-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .lb-row {
-      display: grid;
-      grid-template-columns: 36px 1fr auto;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      background: rgba(49,130,246,0.05);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      transition: background 0.15s;
-    }
     .lb-row:hover { background: rgba(49,130,246,0.10); }
-    .lb-row.rank-1 { background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.35); }
-    .lb-row.rank-2 { background: rgba(192,192,192,0.08); border-color: rgba(192,192,192,0.30); }
-    .lb-row.rank-3 { background: rgba(205,127,50,0.08); border-color: rgba(205,127,50,0.30); }
-    .lb-medal {
-      font-size: 1.5rem;
-      text-align: center;
-      line-height: 1;
-    }
-    .lb-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      min-width: 0;
-    }
-    .lb-name {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .lb-job {
-      font-size: 0.7rem;
-      color: var(--muted);
-      letter-spacing: 0.02em;
-    }
-    .lb-value {
-      font-weight: 800; letter-spacing: -0.035em;
-      font-size: 1.05rem;
-      color: var(--accent2);
-      white-space: nowrap;
-    }
-    .lb-value.fine { color: var(--danger); }
-    .lb-value.rise { color: var(--green); }
-    .lb-value.drop { color: var(--danger); }
-    .lb-value-sub {
-      font-size: 0.65rem;
-      color: var(--muted);
-      margin-left: 4px;
-      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
-      font-weight: 400;
-    }
-    .lb-empty {
-      padding: 20px;
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
 
     .job-legend {
       margin-top: 16px;
@@ -363,15 +300,16 @@
     .analysis-block { margin-bottom: 16px; }
     .analysis-block:last-child { margin-bottom: 0; }
     .analysis-label {
-      font-size: 0.95rem;
-      color: var(--text);
-      font-weight: 700;
-      margin-bottom: 4px;
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 7px;
     }
     .analysis-value {
-      font-size: 1.7rem;
-      font-weight: 800; letter-spacing: -0.035em;
-      color: var(--text);
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
     }
     .analysis-desc {
       font-size: 0.85rem;
@@ -387,26 +325,26 @@
       margin-top: 8px;
     }
     .quartile-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
+      background: var(--fill-2);
+      border-radius: var(--radius-sm);
+      padding: 15px 16px;
     }
     .quartile-tag {
-      font-size: 0.8rem;
-      color: var(--accent);
+      font-size: 0.72rem;
       font-weight: 700;
+      color: var(--muted);
       margin-bottom: 6px;
     }
     .quartile-val {
-      font-size: 1.15rem;
-      font-weight: 800; letter-spacing: -0.035em;
-      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
     }
     .analysis-divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 14px 0;
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 22px 0;
     }
 
     /* ── RANKING TABLE ── */
@@ -470,14 +408,13 @@
     .rank-name { font-weight: 500; color: var(--text); }
 
     .rank-job {
-      font-size: 0.75rem;
-      color: var(--muted);
-      background: rgba(49,130,246,0.08);
-      border: 1px solid rgba(49,130,246,0.15);
-      border-radius: 4px;
-      padding: 2px 8px;
-      display: inline-block;
+      font-size: 0.78rem;
+      color: var(--ink-2);
+      background: var(--fill);
+      padding: 3px 9px;
+      border-radius: 7px;
       white-space: nowrap;
+      font-weight: 600;
     }
 
     .rank-score {
@@ -514,48 +451,48 @@
     }
 
     .search-input {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+      padding: 11px 15px;
+      border-radius: var(--radius-sm);
+      border: 0;
+      background: var(--fill);
       color: var(--text);
-      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
-      font-size: 0.85rem;
-      padding: 8px 14px;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 220px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      letter-spacing: -0.02em;
     }
 
     .search-input:focus { border-color: var(--accent); }
     .search-input::placeholder { color: var(--muted); }
 
-    .table-info { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+    .table-info { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; }
 
     .full-table-wrap { overflow-x: auto; }
 
-    .full-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.83rem;
-    }
+    .full-table { width: 100%; border-collapse: collapse; min-width: 520px; }
 
     .full-table th {
-      text-align: left;
-      font-size: 0.7rem;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
       color: var(--muted);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
       white-space: nowrap;
-      cursor: pointer;
-      user-select: none;
     }
 
     .full-table th:hover { color: var(--accent); }
     
     .full-table th {
       text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
     }
     
     .full-table th:first-child,
@@ -567,10 +504,12 @@
     .full-table td:last-child { text-align: center; }
 
     .full-table td {
-      padding: 9px 14px;
-      border-bottom: 1px solid rgba(30,39,64,0.4);
-      color: var(--text);
       text-align: center;
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.9rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
     }
     
     .full-table th:nth-child(2), .full-table td:nth-child(2) {
@@ -838,37 +777,35 @@
     .modal.show { display: flex; }
 
     .modal-content {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background: var(--surface);
+      border-radius: 22px;
+      padding: 28px 26px 22px;
+      width: 100%;
+      max-width: 400px;
     }
 
     .modal-header {
-      font-weight: 800; letter-spacing: -0.035em;
       font-size: 1.2rem;
-      color: var(--text);
-      margin-bottom: 16px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      margin-bottom: 14px;
     }
 
     .modal-body {
-      font-size: 0.95rem;
-      color: var(--text);
-      line-height: 1.6;
+      font-size: 0.92rem;
+      color: var(--ink-2);
+      line-height: 1.65;
       margin-bottom: 20px;
+      font-weight: 500;
     }
 
     .modal-info {
-      background: rgba(49,130,246,0.1);
-      border-left: 3px solid var(--accent);
-      padding: 12px 14px;
-      border-radius: 4px;
-      margin-bottom: 16px;
+      background: var(--fill);
+      border-radius: var(--radius-sm);
+      padding: 13px 15px;
       font-size: 0.85rem;
-      color: #8899bb;
+      margin-top: 14px;
+      color: var(--text);
     }
 
     .modal-actions {
@@ -878,28 +815,22 @@
     }
 
     .modal-btn {
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      padding: 8px 18px;
-      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
-      font-size: 0.85rem;
+      flex: 1;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 0;
       cursor: pointer;
-      transition: background 0.15s;
+      letter-spacing: -0.025em;
     }
 
-    .modal-btn.primary {
-      background: var(--danger);
-      border-color: var(--danger);
-      color: white;
-      font-weight: 600;
-    }
+    .modal-btn.primary { background: var(--accent); color: #fff; }
 
     .modal-btn.primary:hover { background: #e74747; }
 
-    .modal-btn.secondary {
-      background: var(--card);
-      color: var(--text);
-    }
+    .modal-btn.secondary { background: var(--fill); color: var(--ink-2); }
 
     .modal-btn.secondary:hover { background: var(--border); }
 
@@ -928,13 +859,22 @@
     .brief-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .brief-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .brief-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px 22px;
     }
-    .brief-card-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; }
-    .brief-card-value { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.035em; color: var(--text); margin-bottom: 5px; }
+    .brief-card-label {
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 9px;
+    }
+    .brief-card-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+    }
     .brief-change { font-size: 0.78rem; font-weight: 700; margin-bottom: 8px; }
     .brief-change.up   { color: var(--green); }
     .brief-change.down { color: var(--danger); }
@@ -953,18 +893,19 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 200px;
+      gap: 9px;
+      padding: 40px 0;
       color: var(--muted);
-      font-size: 0.85rem;
-      gap: 10px;
+      font-size: 0.88rem;
+      font-weight: 500;
     }
 
     .spinner {
-      width: 18px; height: 18px;
-      border: 2px solid var(--border);
+      width: 15px; height: 15px;
+      border: 2px solid var(--line);
       border-top-color: var(--accent);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -1030,11 +971,6 @@
       /* 리더보드 모바일 대응 */
       .leaderboard-stack { gap: 16px; }
       .leaderboard-row { grid-template-columns: 1fr; gap: 16px; margin-bottom: 20px; }
-      .lb-row { padding: 10px 12px; grid-template-columns: 32px 1fr auto; gap: 10px; }
-      .lb-medal { font-size: 1.3rem; }
-      .lb-name { font-size: 0.88rem; }
-      .lb-job { font-size: 0.65rem; }
-      .lb-value { font-size: 0.95rem; }
     }
 
     @media (max-width: 480px) {
@@ -1088,12 +1024,62 @@
       /* 리더보드 소형 모바일 대응 */
       .leaderboard-stack { gap: 12px; }
       .leaderboard-row { gap: 12px; margin-bottom: 16px; }
-      .lb-row { padding: 8px 10px; grid-template-columns: 28px 1fr auto; gap: 8px; border-radius: 8px; }
-      .lb-medal { font-size: 1.1rem; }
-      .lb-name { font-size: 0.82rem; }
-      .lb-job { font-size: 0.6rem; }
-      .lb-value { font-size: 0.88rem; }
-      .lb-value-sub { font-size: 0.58rem; }
+    }
+    /* 리더보드 — 메인 페이지와 동일한 스타일 */
+    .lb-list { margin-top: -4px; }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 0;
+    }
+    .lb-row + .lb-row { border-top: 1px solid var(--line); }
+    .lb-medal {
+      width: 22px;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .lb-row.rank-1 .lb-medal,
+    .lb-row.rank-2 .lb-medal,
+    .lb-row.rank-3 .lb-medal { color: var(--accent); }
+    .lb-meta { flex: 1; min-width: 0; }
+    .lb-name {
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lb-job { font-size: 0.76rem; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .lb-value {
+      font-size: 0.94rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .lb-value-sub {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .lb-value.fine { color: var(--danger); }
+    .lb-value.rise { color: var(--up); }
+    .lb-value.drop { color: var(--danger); }
+    .lb-empty {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 26px 0;
+      text-align: center;
+      font-weight: 500;
     }
   </style>
 </head>
