@@ -277,12 +277,13 @@
       font-variant-numeric: tabular-nums;
       text-align: right;
     }
+    /* 단위('점')는 숫자와 같은 크기·굵기로 맞춘다 (색만 한 단계 죽여 위계 유지) */
     .top5-champion-score-unit {
-      font-size: 0.8rem;
-      font-weight: 600;
+      font-size: 1em;
+      font-weight: 800;
       color: var(--ink-2);
-      margin-left: 3px;
-      letter-spacing: -0.02em;
+      margin-left: 4px;
+      letter-spacing: -0.03em;
     }
     .top5-list { background: var(--surface); border-radius: var(--radius); padding: 4px 24px; }
     .top5-row {
@@ -313,10 +314,11 @@
       text-align: right;
     }
     .top5-score-unit {
-      font-size: 0.75rem;
-      font-weight: 600;
+      font-size: 1em;
+      font-weight: 800;
       color: var(--muted);
-      margin-left: 3px;
+      margin-left: 4px;
+      letter-spacing: -0.03em;
     }
 
     /* ── 통계 분석 ──────────────────────── */
@@ -470,7 +472,7 @@
     .full-table-wrap { overflow-x: auto; }
     .full-table { width: 100%; border-collapse: collapse; min-width: 520px; }
     .full-table th {
-      text-align: left;
+      text-align: center;
       font-size: 0.78rem;
       font-weight: 600;
       color: var(--muted);
@@ -479,12 +481,15 @@
       white-space: nowrap;
     }
     .full-table td {
+      text-align: center;
       padding: 13px 12px;
       border-bottom: 1px solid var(--line);
       font-size: 0.9rem;
       font-weight: 500;
       font-variant-numeric: tabular-nums;
     }
+    /* 표 정렬 관례: 모든 열 center, 닉네임 열만 left */
+    .full-table th:nth-child(2), .full-table td:nth-child(2) { text-align: left; }
     .full-table tbody tr:last-child td { border-bottom: 0; }
     .full-table tbody tr:hover td { background: var(--fill-2); }
     .rank-job {
@@ -747,8 +752,8 @@
               <th>순위</th>
               <th>닉네임</th>
               <th>직업</th>
-              <th style="text-align:right">지하수로 점수</th>
-              <th style="text-align:right">히스토리</th>
+              <th >지하수로 점수</th>
+              <th >히스토리</th>
             </tr>
           </thead>
           <tbody id="fullTbody"></tbody>
@@ -1060,13 +1065,13 @@ function escapeAttr(s) {
 function renderFullTable(members) {
   const tbody = document.getElementById('fullTbody');
   tbody.innerHTML = members.map(m => `<tr>
-    <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+    <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
     <td>${m.name}</td>
     <td><span class="rank-job">${m.job}</span></td>
-    <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-weight:800">
+    <td class="${m.score === 0 ? 'zero-score' : ''}"  style="font-weight:800">
       ${m.score === 0 ? '—' : fmt(m.score)}
     </td>
-    <td style="text-align:right">
+    <td >
       <button type="button" class="history-btn" data-name="${escapeAttr(m.name)}">히스토리</button>
     </td>
   </tr>`).join('');
@@ -1324,11 +1329,11 @@ function renderFineTable(members, week) {
       : '';
 
     return `<tr>
-      <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+      <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
       <td>${m.name}${carryoverBadge}${missBadge}</td>
       <td><span class="rank-job">${m.job}</span></td>
-      <td style="text-align:right;font-weight:800">${m.fine_count}</td>
-      <td style="text-align:right">
+      <td  style="font-weight:800">${m.fine_count}</td>
+      <td >
         <div class="fine-action-group">
           <button type="button" class="${btnClass}" data-name="${escapeAttr(m.name)}" data-rank="${m.rank}" data-fine-count="${m.fine_count}" data-pending-count="${pendingCount}" data-is-fined="${isAlreadyFined}">${btnText}</button>
           <button type="button" class="leave-btn" data-name="${escapeAttr(m.name)}">길드 탈퇴</button>
@@ -1522,16 +1527,16 @@ function renderSuspectSection(list) {
            data-outlier-count="${m.outlier_count}">스펙 다운 확인</button>`
       : '';
     return `<tr data-name="${escapeAttr(m.name)}">
-      <td style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
+      <td  style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
       <td>${escapeAttr(m.name)}${specTag}</td>
       <td><span class="rank-job">${escapeAttr(normalizeJob(m.job))}</span></td>
-      <td style="text-align:right;font-weight:800">${fmt(m.personal_avg)}</td>
-      <td style="text-align:right;color:#fb923c;font-weight:700">${m.outlier_count}회</td>
-      <td style="text-align:right;font-size:0.78rem;color:var(--muted)">
+      <td  style="font-weight:800">${fmt(m.personal_avg)}</td>
+      <td  style="color:#fb923c;font-weight:700">${m.outlier_count}회</td>
+      <td  style="font-size:0.78rem;color:var(--muted)">
         <strong style="color:#fb923c">${weekLabel(m.latest_outlier_week)}</strong>
         · ${fmt(m.latest_outlier_score)} (${m.latest_outlier_drop_pct}%)
       </td>
-      <td style="text-align:right">${specBtn}</td>
+      <td >${specBtn}</td>
     </tr>`;
   }).join('');
 }

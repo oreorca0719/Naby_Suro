@@ -432,7 +432,7 @@
     }
     
     .rank-table th:last-child,
-    .rank-table td:last-child { text-align: right; }
+    .rank-table td:last-child { text-align: center; }
 
     .rank-table td {
       padding: 10px 12px;
@@ -441,12 +441,12 @@
       text-align: center;
     }
     
-    .rank-table td:nth-child(2) {
+    .rank-table th:nth-child(2), .rank-table td:nth-child(2) {
       text-align: left;
     }
     
     .rank-table td:last-child {
-      text-align: right;
+      text-align: center;
     }
 
     .rank-table tbody tr {
@@ -564,7 +564,7 @@
     }
     
     .full-table th:last-child,
-    .full-table td:last-child { text-align: right; }
+    .full-table td:last-child { text-align: center; }
 
     .full-table td {
       padding: 9px 14px;
@@ -573,12 +573,12 @@
       text-align: center;
     }
     
-    .full-table td:nth-child(2) {
+    .full-table th:nth-child(2), .full-table td:nth-child(2) {
       text-align: left;
     }
     
     .full-table td:last-child {
-      text-align: right;
+      text-align: center;
     }
 
     .full-table tbody tr:hover { background: rgba(49,130,246,0.04); }
@@ -622,7 +622,7 @@
       text-align: center;
     }
 
-    .fine-table td:nth-child(2) {
+    .fine-table th:nth-child(2), .fine-table td:nth-child(2) {
       text-align: left;
     }
 
@@ -1454,13 +1454,13 @@ function escapeAttr(s) {
 function renderFullTable(members) {
   const tbody = document.getElementById('fullTbody');
   tbody.innerHTML = members.map(m => `<tr>
-    <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+    <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
     <td>${m.name}</td>
     <td><span class="rank-job">${m.job}</span></td>
-    <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-weight:800">
+    <td class="${m.score === 0 ? 'zero-score' : ''}"  style="font-weight:800">
       ${m.score === 0 ? '—' : fmt(m.score)}
     </td>
-    <td style="text-align:right">
+    <td >
       <button type="button" class="history-btn" data-name="${escapeAttr(m.name)}">히스토리</button>
     </td>
   </tr>`).join('');
@@ -1718,11 +1718,11 @@ function renderFineTable(members, week) {
       : '';
 
     return `<tr>
-      <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+      <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
       <td>${m.name}${carryoverBadge}${missBadge}</td>
       <td><span class="rank-job">${m.job}</span></td>
-      <td style="text-align:right;font-weight:800">${m.fine_count}</td>
-      <td style="text-align:right">
+      <td  style="font-weight:800">${m.fine_count}</td>
+      <td >
         <div class="fine-action-group">
           <button type="button" class="${btnClass}" data-name="${escapeAttr(m.name)}" data-rank="${m.rank}" data-fine-count="${m.fine_count}" data-pending-count="${pendingCount}" data-is-fined="${isAlreadyFined}">${btnText}</button>
           <button type="button" class="leave-btn" data-name="${escapeAttr(m.name)}">길드 탈퇴</button>
@@ -1916,16 +1916,16 @@ function renderSuspectSection(list) {
            data-outlier-count="${m.outlier_count}">스펙 다운 확인</button>`
       : '';
     return `<tr data-name="${escapeAttr(m.name)}">
-      <td style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
+      <td  style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
       <td>${escapeAttr(m.name)}${specTag}</td>
       <td><span class="rank-job">${escapeAttr(normalizeJob(m.job))}</span></td>
-      <td style="text-align:right;font-weight:800">${fmt(m.personal_avg)}</td>
-      <td style="text-align:right;color:#fb923c;font-weight:700">${m.outlier_count}회</td>
-      <td style="text-align:right;font-size:0.78rem;color:var(--muted)">
+      <td  style="font-weight:800">${fmt(m.personal_avg)}</td>
+      <td  style="color:#fb923c;font-weight:700">${m.outlier_count}회</td>
+      <td  style="font-size:0.78rem;color:var(--muted)">
         <strong style="color:#fb923c">${weekLabel(m.latest_outlier_week)}</strong>
         · ${fmt(m.latest_outlier_score)} (${m.latest_outlier_drop_pct}%)
       </td>
-      <td style="text-align:right">${specBtn}</td>
+      <td >${specBtn}</td>
     </tr>`;
   }).join('');
 }
