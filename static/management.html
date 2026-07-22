@@ -907,11 +907,13 @@
       padding: 14px 20px;
       margin-bottom: 14px;
       display: flex;
-      align-items: center;
+      align-items: baseline;
       gap: 12px;
       font-size: 0.95rem;
       font-weight: 700;
     }
+    /* .brief-streak 의 margin-top 은 카드 안에서만 필요 — 배너에서는 밑선이 어긋난다 */
+    .brief-banner .brief-streak { margin-top: 0; }
     .brief-banner.up   { background: rgba(0,166,97,0.1); border: 1px solid rgba(0,166,97,0.3); color: var(--green); }
     .brief-banner.down { background: rgba(240,68,82,0.1); border: 1px solid rgba(240,68,82,0.3); color: var(--danger); }
     .brief-banner .brief-icon { font-size: 1.3rem; }

@@ -167,7 +167,7 @@
     /* ── 브리핑 ─────────────────────────── */
     .brief-banner {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       gap: 12px;
       background: var(--accent-weak);
       border-radius: var(--radius);
@@ -184,6 +184,8 @@
       flex-shrink: 0;
     }
     .brief-icon { font-style: normal; }
+    /* .brief-streak 의 margin-top 은 카드 안에서만 필요 — 배너에서는 밑선이 어긋난다 */
+    .brief-banner .brief-streak { margin-top: 0; }
     .brief-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
     .brief-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
     .brief-card {
