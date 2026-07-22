@@ -1120,7 +1120,6 @@
 
   <!-- 보약 효과 알림 배너 (조건부) -->
   <div id="guildAlertBanner" class="guild-alert-banner" style="display:none;">
-    <div class="guild-alert-icon">⚠️</div>
     <div class="guild-alert-text">
       <div class="guild-alert-title">이번 주 길드원 <strong id="guildAlertCount">0</strong>명이 전주 대비 점수 감소</div>
       <div class="guild-alert-desc">혹시 보약 효과가 종료되었나요? 확인 시 이번 주 이후 데이터를 새 기준선으로 적용합니다.</div>
@@ -1869,7 +1868,7 @@ async function confirmUndoFine() {
   }
 }
 
-const MEDALS = ['🥇', '🥈', '🥉', '4', '5'];
+const MEDALS = ['1', '2', '3', '4', '5'];
 
 async function fetchAndRenderLeaderboards() {
   const elAvg  = document.getElementById('lbAvgRank');
