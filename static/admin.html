@@ -1094,6 +1094,45 @@
       text-align: center;
       font-weight: 500;
     }
+    /* ── 모션 ───────────────────────────────
+       장식이 아니라 피드백. 진입할 때 한 번 떠오르고, 조작에는 즉시 반응한다.
+       거리는 짧게(10px), 시간은 짧게(0.4s 이내). */
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .brief-banner,
+    .stat-grid > .stat-card,
+    .brief-grid-3 > .brief-card,
+    .brief-grid-4 > .brief-card,
+    .wrapper > .card,
+    .wrapper > .full-table-section,
+    .leaderboard-row-public > .card {
+      animation: riseIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    /* 순차 등장 — 같은 줄의 카드들이 왼쪽부터 차례로 */
+    .stat-grid > .stat-card:nth-child(2),
+    .brief-grid-3 > .brief-card:nth-child(2),
+    .brief-grid-4 > .brief-card:nth-child(2),
+    .leaderboard-row-public > .card:nth-child(2) { animation-delay: 0.06s; }
+    .stat-grid > .stat-card:nth-child(3),
+    .brief-grid-3 > .brief-card:nth-child(3),
+    .brief-grid-4 > .brief-card:nth-child(3) { animation-delay: 0.12s; }
+    .brief-grid-4 > .brief-card:nth-child(4) { animation-delay: 0.18s; }
+
+    /* 행 hover — 어디를 보고 있는지 알려준다 */
+    .top5-row, .lb-row { transition: background 0.15s; }
+    .top5-row:hover, .lb-row:hover { background: var(--fill-2); }
+
+    /* 누름 반응 */
+    button, .admin-link-btn { transition: background 0.15s, border-color 0.15s, transform 0.08s; }
+    button:active, .admin-link-btn:active { transform: scale(0.97); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation-duration: 2.4s; }
+      * { transition: none !important; }
+      .brief-banner, .stat-card, .brief-card, .card, .full-table-section { animation: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -1290,6 +1329,29 @@ function fmt(n) {
   return Number(n).toLocaleString('ko-KR');
 }
 
+/* 큰 수치를 현재 표시값 → 목표값으로 굴려서 채운다.
+   첫 진입은 0 부터, 갱신 시에는 이전 값부터 이어져 깜빡이지 않는다. */
+function countUp(el, to, suffix = '') {
+  if (!el) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const from = Number(String(el.textContent).replace(/[^\d]/g, '')) || 0;
+  // 배경 탭이면 rAF 가 멈춰 값이 갱신되지 않으므로 곧바로 최종값을 쓴다
+  if (reduce || from === to || document.hidden) { el.innerHTML = fmt(to) + suffix; return; }
+
+  const DURATION = 800;
+  const t0 = performance.now();
+  let done = false;
+  const tick = (now) => {
+    const p = Math.min((now - t0) / DURATION, 1);
+    const eased = 1 - Math.pow(1 - p, 3);          // easeOutCubic
+    el.innerHTML = fmt(Math.round(from + (to - from) * eased)) + suffix;
+    if (p < 1) requestAnimationFrame(tick); else done = true;
+  };
+  requestAnimationFrame(tick);
+  // rAF 가 도중에 멈춰도(탭 전환 등) 최종값은 반드시 표시되도록 보정
+  setTimeout(() => { if (!done) el.innerHTML = fmt(to) + suffix; }, DURATION + 400);
+}
+
 const JOB_NAME_MAP = {
   '아크메이지(불, 독)': '아크메이지(불, 독)',
   '아크메이지(불)': '아크메이지(불, 독)',
@@ -1308,9 +1370,9 @@ function normalizeMembers(members) {
 }
 
 function renderStats(stats) {
-  document.getElementById('statTotal').innerHTML = `${fmt(stats.total)}<span>명</span>`;
-  document.getElementById('statActive').innerHTML = `${fmt(stats.active)}<span>명</span>`;
-  document.getElementById('statTotalScore').textContent = fmt(stats.total_score);
+  countUp(document.getElementById('statTotal'), stats.total, '<span>명</span>');
+  countUp(document.getElementById('statActive'), stats.active, '<span>명</span>');
+  countUp(document.getElementById('statTotalScore'), stats.total_score);
   document.getElementById('updatedAt').textContent = `업데이트: ${stats.updated_at}`;
 }
 
