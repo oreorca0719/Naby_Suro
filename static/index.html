@@ -347,7 +347,8 @@
       border-top: 1px solid var(--line);
       margin: 22px 0;
     }
-    .quartile-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    /* 항목은 Q1/Q2/Q3 3개 — 칸 수를 맞춰 행을 꽉 채운다 */
+    .quartile-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .quartile-item {
       background: var(--fill-2);
       border-radius: var(--radius-sm);
