@@ -143,10 +143,12 @@
       border-bottom: 1px solid rgba(30,39,64,0.4);
       text-align: center;
     }
-    td:nth-child(1) { text-align: center; }
-    td:nth-child(2) { text-align: center; }
-    td:nth-child(3) { text-align: center; }
-    th:last-child, td:last-child { text-align: right; }
+    /* 모든 열 center 정렬로 통일.
+       이전에는 th/td:last-child 를 right 로 뒀는데, 비관리자일 때
+       '누적 납부 횟수' 헤더만 display:none 으로 숨고 DOM 에는 남아
+       th(4/5번째)는 center, td(4/4번째)는 :last-child 로 right 가 되어
+       점수 열의 헤더와 값이 어긋났다. */
+    td { font-variant-numeric: tabular-nums; }
     tbody tr:hover { background: rgba(49,130,246,0.04); }
     .zero { color: var(--muted); }
     .score-cell { font-weight: 800; letter-spacing: -0.035em; color: var(--accent2); }
