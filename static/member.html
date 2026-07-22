@@ -21,6 +21,7 @@
       --text:      #191F28;
       --ink-2:     #4E5968;
       --muted:     #8B95A1;
+      --radius:    18px;
       --danger:    #F04452;
       --green:     #00A661;
       --up:        #00A661;
@@ -92,24 +93,19 @@
     .back-link:hover { background: rgba(49,130,246,0.1); }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: var(--surface);
+      border-radius: var(--radius, 18px);
       padding: 24px;
       margin-bottom: 20px;
     }
 
     .section-title {
-      font-weight: 800; letter-spacing: -0.035em;
-      font-size: 0.95rem;
-      
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 18px;
       color: var(--text);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
-    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
     .chart-wrap { position: relative; height: 340px; }
 
@@ -140,7 +136,7 @@
     }
     td { 
       padding: 9px 14px; 
-      border-bottom: 1px solid rgba(30,39,64,0.4);
+      border-bottom: 1px solid var(--border);
       text-align: center;
     }
     /* 모든 열 center 정렬로 통일.
