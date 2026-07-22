@@ -4,18 +4,49 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>길드원 히스토리</title>
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg:        #0a0c10;
-      --surface:   #11151e;
-      --card:      #161b27;
-      --border:    #1e2740;
-      --accent:    #4f8ef7;
-      --accent2:   #f7c04f;
-      --text:      #d4dff5;
-      --muted:     #5a6a8a;
+      --bg:        #F7F8FA;
+      --surface:   #FFFFFF;
+      --card:      #FFFFFF;
+      --fill:      #F2F4F6;
+      --border:    #E9ECEF;
+      --accent:    #3182F6;
+      --accent2:   #FFB020;
+      --gold:      #3182F6;
+      --silver:    #8B95A1;
+      --bronze:    #8B95A1;
+      --text:      #191F28;
+      --ink-2:     #4E5968;
+      --muted:     #8B95A1;
+      --radius:    18px;
+      --danger:    #F04452;
+      --green:     #00A661;
+      --up:        #00A661;
+      --yellow:    #FFB020;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #15171A;
+        --surface: #1B1E22;
+        --card:    #1B1E22;
+        --fill:    #24282E;
+        --border:  #2E333A;
+        --accent:  #4D93F8;
+        --accent2: #FFC14D;
+        --gold:    #4D93F8;
+        --silver:  #7B848F;
+        --bronze:  #7B848F;
+        --text:    #EDEFF2;
+        --ink-2:   #B0B8C1;
+        --muted:   #7B848F;
+        --danger:  #FF6B75;
+        --green:   #2FCB86;
+        --up:      #2FCB86;
+        --yellow:  #FFC14D;
+      }
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,21 +54,9 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       min-height: 100vh;
       padding: 32px;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
     }
 
     .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; width: 100%; box-sizing: border-box; }
@@ -54,12 +73,10 @@
     }
 
     h1 {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 1.8rem;
       letter-spacing: 0.04em;
-      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text);
     }
 
     .subtitle { font-size: 0.85rem; color: var(--muted); margin-top: 4px; letter-spacing: 0.04em; }
@@ -73,27 +90,22 @@
       padding: 6px 12px;
       transition: background 0.15s;
     }
-    .back-link:hover { background: rgba(79,142,247,0.1); }
+    .back-link:hover { background: rgba(49,130,246,0.1); }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: var(--surface);
+      border-radius: var(--radius, 18px);
       padding: 24px;
       margin-bottom: 20px;
     }
 
     .section-title {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 0.95rem;
-      letter-spacing: 0.08em;
-      color: var(--accent);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 18px;
+      color: var(--text);
     }
-    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
     .chart-wrap { position: relative; height: 340px; }
 
@@ -110,7 +122,7 @@
       padding: 12px 14px;
     }
     .stat-box-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; }
-    .stat-box-value { font-size: 1.15rem; font-family: 'Black Han Sans', sans-serif; color: var(--text); margin-top: 4px; }
+    .stat-box-value { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.035em; color: var(--text); margin-top: 4px; }
 
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     th {
@@ -124,22 +136,24 @@
     }
     td { 
       padding: 9px 14px; 
-      border-bottom: 1px solid rgba(30,39,64,0.4);
+      border-bottom: 1px solid var(--border);
       text-align: center;
     }
-    td:nth-child(1) { text-align: center; }
-    td:nth-child(2) { text-align: center; }
-    td:nth-child(3) { text-align: center; }
-    th:last-child, td:last-child { text-align: right; }
-    tbody tr:hover { background: rgba(79,142,247,0.04); }
+    /* 모든 열 center 정렬로 통일.
+       이전에는 th/td:last-child 를 right 로 뒀는데, 비관리자일 때
+       '누적 납부 횟수' 헤더만 display:none 으로 숨고 DOM 에는 남아
+       th(4/5번째)는 center, td(4/4번째)는 :last-child 로 right 가 되어
+       점수 열의 헤더와 값이 어긋났다. */
+    td { font-variant-numeric: tabular-nums; }
+    tbody tr:hover { background: rgba(49,130,246,0.04); }
     .zero { color: var(--muted); }
-    .score-cell { font-family: 'Black Han Sans', sans-serif; color: var(--accent2); }
+    .score-cell { font-weight: 800; letter-spacing: -0.035em; color: var(--accent2); }
 
     .rank-job-tag {
       font-size: 0.72rem;
       color: var(--muted);
-      background: rgba(79,142,247,0.08);
-      border: 1px solid rgba(79,142,247,0.15);
+      background: rgba(49,130,246,0.08);
+      border: 1px solid rgba(49,130,246,0.15);
       border-radius: 4px;
       padding: 2px 8px;
       display: inline-block;
@@ -151,7 +165,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.85rem;
       font-weight: 600;
       padding: 8px 16px;
@@ -163,14 +177,14 @@
     }
     .fine-badge:disabled { opacity: 1; cursor: default; }
     .fine-badge.clean {
-      background: rgba(74,222,128,0.12);
-      border-color: rgba(74,222,128,0.4);
-      color: #4ade80;
+      background: rgba(0,166,97,0.12);
+      border-color: rgba(0,166,97,0.4);
+      color: var(--green);
     }
     .fine-badge.alert {
-      background: rgba(248,113,113,0.12);
-      border-color: rgba(248,113,113,0.4);
-      color: #f87171;
+      background: rgba(240,68,82,0.12);
+      border-color: rgba(240,68,82,0.4);
+      color: var(--danger);
     }
 
     .empty {
@@ -227,11 +241,11 @@
     }
     .profile-item-value {
       font-size: 1.05rem;
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       color: var(--text);
     }
     .profile-item-value.combat { color: var(--accent2); font-size: 1.2rem; }
-    .profile-item-sub { font-size: 0.7rem; color: var(--muted); margin-left: 6px; font-family: 'Noto Sans KR', sans-serif; }
+    .profile-item-sub { font-size: 0.7rem; color: var(--muted); margin-left: 6px; font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif; }
 
     .hexa-list {
       display: grid;
@@ -250,7 +264,7 @@
     }
     .hexa-name { font-size: 0.82rem; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .hexa-level {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 0.95rem;
       color: var(--accent);
       flex-shrink: 0;
@@ -258,8 +272,8 @@
     .hexa-type-tag {
       font-size: 0.65rem;
       color: var(--muted);
-      background: rgba(79,142,247,0.08);
-      border: 1px solid rgba(79,142,247,0.15);
+      background: rgba(49,130,246,0.08);
+      border: 1px solid rgba(49,130,246,0.15);
       border-radius: 4px;
       padding: 1px 6px;
       flex-shrink: 0;
@@ -351,22 +365,22 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.75rem;
       font-weight: 600;
       padding: 5px 12px;
-      background: rgba(79,142,247,0.10);
-      border: 1px solid rgba(79,142,247,0.35);
+      background: rgba(49,130,246,0.10);
+      border: 1px solid rgba(49,130,246,0.35);
       border-radius: 5px;
-      color: #4f8ef7;
+      color: var(--accent);
       cursor: pointer;
       white-space: nowrap;
       text-decoration: none;
       transition: background 0.15s, border-color 0.15s;
     }
     .external-link-btn:hover {
-      background: rgba(79,142,247,0.22);
-      border-color: #4f8ef7;
+      background: rgba(49,130,246,0.22);
+      border-color: var(--accent);
     }
 
     .loading {
@@ -437,6 +451,7 @@
 </div>
 
 <script>
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function fmt(n) { return Number(n).toLocaleString('ko-KR'); }
 
 const params = new URLSearchParams(window.location.search);
@@ -578,8 +593,8 @@ function render(data) {
       datasets: [{
         label: '지하수로 점수',
         data: scores,
-        borderColor: '#4f8ef7',
-        backgroundColor: 'rgba(79,142,247,0.12)',
+        borderColor: '#3182F6',
+        backgroundColor: 'rgba(49,130,246,0.12)',
         borderWidth: 2,
         pointRadius: 5,
         pointHoverRadius: 9,
@@ -604,8 +619,8 @@ function render(data) {
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
-        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted') } },
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted'), callback: v => fmt(v) } }
       }
     }
   });
@@ -618,7 +633,7 @@ function render(data) {
   const first = active[0] ?? 0;
   const last  = active[active.length - 1] ?? 0;
   const growth = active.length >= 2 ? last - first : 0;
-  const growthColor = growth > 0 ? '#4ade80' : growth < 0 ? '#f87171' : 'var(--muted)';
+  const growthColor = growth > 0 ? '#00A661' : growth < 0 ? '#F04452' : 'var(--muted)';
   const growthSign  = growth > 0 ? '+' : '';
 
   document.getElementById('statsRow').innerHTML = `

@@ -4,22 +4,48 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>나비 길드 대시보드</title>
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg:        #0a0c10;
-      --surface:   #11151e;
-      --card:      #161b27;
-      --border:    #1e2740;
-      --accent:    #4f8ef7;
-      --accent2:   #f7c04f;
-      --gold:      #e8b84b;
-      --silver:    #9aaabf;
-      --bronze:    #cd7f4e;
-      --text:      #d4dff5;
-      --muted:     #5a6a8a;
-      --danger:    #f75f5f;
+      --bg:        #F7F8FA;
+      --surface:   #FFFFFF;
+      --card:      #FFFFFF;
+      --fill:      #F2F4F6;
+      --border:    #E9ECEF;
+      --accent:    #3182F6;
+      --accent2:   #FFB020;
+      --gold:      #3182F6;
+      --silver:    #8B95A1;
+      --bronze:    #8B95A1;
+      --text:      #191F28;
+      --ink-2:     #4E5968;
+      --muted:     #8B95A1;
+      --danger:    #F04452;
+      --green:     #00A661;
+      --up:        #00A661;
+      --yellow:    #FFB020;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #15171A;
+        --surface: #1B1E22;
+        --card:    #1B1E22;
+        --fill:    #24282E;
+        --border:  #2E333A;
+        --accent:  #4D93F8;
+        --accent2: #FFC14D;
+        --gold:    #4D93F8;
+        --silver:  #7B848F;
+        --bronze:  #7B848F;
+        --text:    #EDEFF2;
+        --ink-2:   #B0B8C1;
+        --muted:   #7B848F;
+        --danger:  #FF6B75;
+        --green:   #2FCB86;
+        --up:      #2FCB86;
+        --yellow:  #FFC14D;
+      }
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,29 +53,16 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       min-height: 100vh;
       overflow-x: hidden;
-    }
-
-    /* 배경 그리드 효과 */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
     }
 
     .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; width: 100%; box-sizing: border-box; }
 
     /* ── 로그아웃 버튼 ── */
     .logout-btn {
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.75rem;
       font-weight: 600;
       padding: 6px 14px;
@@ -78,7 +91,7 @@
       padding: 12px 22px;
       color: var(--muted);
       text-decoration: none;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.92rem;
       font-weight: 700;
       letter-spacing: -0.01em;
@@ -107,12 +120,10 @@
     }
 
     .header-left h1 {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 2rem;
       letter-spacing: 0.05em;
-      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text);
     }
 
     .header-left .subtitle {
@@ -141,7 +152,7 @@
 
     .live-dot {
       width: 7px; height: 7px;
-      background: #4ade80;
+      background: var(--green);
       border-radius: 50%;
       animation: pulse 2s infinite;
     }
@@ -162,13 +173,9 @@
     }
 
     .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.2s;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 22px 24px;
     }
 
     .stat-card::before {
@@ -176,25 +183,33 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--accent), transparent);
+      display: none;
     }
 
     .stat-card:hover { border-color: var(--accent); }
 
-    .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-    .stat-value { font-family: 'Black Han Sans', sans-serif; font-size: 1.8rem; color: var(--text); }
-    .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Noto Sans KR', sans-serif; }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .stat-value {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+    }
+    .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif; }
 
     /* ── SECTION TITLE ── */
     .section-title {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1rem;
-      letter-spacing: 0.08em;
-      color: var(--accent);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 18px;
+      color: var(--text);
     }
 
     .section-title::after {
@@ -213,9 +228,8 @@
     }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: var(--surface);
+      border-radius: var(--radius);
       padding: 24px;
     }
 
@@ -238,73 +252,7 @@
       gap: 16px;
       margin-bottom: 32px;
     }
-    .lb-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .lb-row {
-      display: grid;
-      grid-template-columns: 36px 1fr auto;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      background: rgba(79,142,247,0.05);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      transition: background 0.15s;
-    }
-    .lb-row:hover { background: rgba(79,142,247,0.10); }
-    .lb-row.rank-1 { background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.35); }
-    .lb-row.rank-2 { background: rgba(192,192,192,0.08); border-color: rgba(192,192,192,0.30); }
-    .lb-row.rank-3 { background: rgba(205,127,50,0.08); border-color: rgba(205,127,50,0.30); }
-    .lb-medal {
-      font-size: 1.5rem;
-      text-align: center;
-      line-height: 1;
-    }
-    .lb-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      min-width: 0;
-    }
-    .lb-name {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .lb-job {
-      font-size: 0.7rem;
-      color: var(--muted);
-      letter-spacing: 0.02em;
-    }
-    .lb-value {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 1.05rem;
-      color: var(--accent2);
-      white-space: nowrap;
-    }
-    .lb-value.fine { color: #f87171; }
-    .lb-value.rise { color: #4ade80; }
-    .lb-value.drop { color: #f87171; }
-    .lb-value-sub {
-      font-size: 0.65rem;
-      color: var(--muted);
-      margin-left: 4px;
-      font-family: 'Noto Sans KR', sans-serif;
-      font-weight: 400;
-    }
-    .lb-empty {
-      padding: 20px;
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
+    .lb-row:hover { background: rgba(49,130,246,0.10); }
 
     .job-legend {
       margin-top: 16px;
@@ -352,19 +300,20 @@
     .analysis-block { margin-bottom: 16px; }
     .analysis-block:last-child { margin-bottom: 0; }
     .analysis-label {
-      font-size: 0.95rem;
-      color: #ffffff;
-      font-weight: 700;
-      margin-bottom: 4px;
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 7px;
     }
     .analysis-value {
-      font-size: 1.7rem;
-      font-family: 'Black Han Sans', sans-serif;
-      color: var(--text);
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
     }
     .analysis-desc {
       font-size: 0.85rem;
-      color: #ffffff;
+      color: var(--ink-2);
       font-weight: 600;
       line-height: 1.6;
       margin: 5px 0 8px;
@@ -376,26 +325,26 @@
       margin-top: 8px;
     }
     .quartile-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
+      background: var(--fill-2);
+      border-radius: var(--radius-sm);
+      padding: 15px 16px;
     }
     .quartile-tag {
-      font-size: 0.8rem;
-      color: var(--accent);
+      font-size: 0.72rem;
       font-weight: 700;
+      color: var(--muted);
       margin-bottom: 6px;
     }
     .quartile-val {
-      font-size: 1.15rem;
-      font-family: 'Black Han Sans', sans-serif;
-      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
     }
     .analysis-divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 14px 0;
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 22px 0;
     }
 
     /* ── RANKING TABLE ── */
@@ -421,31 +370,31 @@
     }
     
     .rank-table th:last-child,
-    .rank-table td:last-child { text-align: right; }
+    .rank-table td:last-child { text-align: center; }
 
     .rank-table td {
       padding: 10px 12px;
       font-size: 0.85rem;
-      border-bottom: 1px solid rgba(30,39,64,0.5);
+      border-bottom: 1px solid var(--border);
       text-align: center;
     }
     
-    .rank-table td:nth-child(2) {
+    .rank-table th:nth-child(2), .rank-table td:nth-child(2) {
       text-align: left;
     }
     
     .rank-table td:last-child {
-      text-align: right;
+      text-align: center;
     }
 
     .rank-table tbody tr {
       transition: background 0.15s;
     }
 
-    .rank-table tbody tr:hover { background: rgba(79,142,247,0.05); }
+    .rank-table tbody tr:hover { background: rgba(49,130,246,0.05); }
 
     .rank-num {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 0.9rem;
       color: var(--muted);
       width: 36px;
@@ -459,18 +408,17 @@
     .rank-name { font-weight: 500; color: var(--text); }
 
     .rank-job {
-      font-size: 0.75rem;
-      color: var(--muted);
-      background: rgba(79,142,247,0.08);
-      border: 1px solid rgba(79,142,247,0.15);
-      border-radius: 4px;
-      padding: 2px 8px;
-      display: inline-block;
+      font-size: 0.78rem;
+      color: var(--ink-2);
+      background: var(--fill);
+      padding: 3px 9px;
+      border-radius: 7px;
       white-space: nowrap;
+      font-weight: 600;
     }
 
     .rank-score {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 0.95rem;
       color: var(--accent2);
     }
@@ -487,7 +435,7 @@
 
     .score-bar {
       height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      background: var(--accent);
       border-radius: 2px;
       transition: width 0.6s ease;
     }
@@ -503,48 +451,48 @@
     }
 
     .search-input {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+      padding: 11px 15px;
+      border-radius: var(--radius-sm);
+      border: 0;
+      background: var(--fill);
       color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.85rem;
-      padding: 8px 14px;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 220px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      letter-spacing: -0.02em;
     }
 
     .search-input:focus { border-color: var(--accent); }
     .search-input::placeholder { color: var(--muted); }
 
-    .table-info { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+    .table-info { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; }
 
     .full-table-wrap { overflow-x: auto; }
 
-    .full-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.83rem;
-    }
+    .full-table { width: 100%; border-collapse: collapse; min-width: 520px; }
 
     .full-table th {
-      text-align: left;
-      font-size: 0.7rem;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
       color: var(--muted);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
       white-space: nowrap;
-      cursor: pointer;
-      user-select: none;
     }
 
     .full-table th:hover { color: var(--accent); }
     
     .full-table th {
       text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
     }
     
     .full-table th:first-child,
@@ -553,41 +501,43 @@
     }
     
     .full-table th:last-child,
-    .full-table td:last-child { text-align: right; }
+    .full-table td:last-child { text-align: center; }
 
     .full-table td {
-      padding: 9px 14px;
-      border-bottom: 1px solid rgba(30,39,64,0.4);
-      color: var(--text);
       text-align: center;
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.9rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
     }
     
-    .full-table td:nth-child(2) {
+    .full-table th:nth-child(2), .full-table td:nth-child(2) {
       text-align: left;
     }
     
     .full-table td:last-child {
-      text-align: right;
+      text-align: center;
     }
 
-    .full-table tbody tr:hover { background: rgba(79,142,247,0.04); }
+    .full-table tbody tr:hover { background: rgba(49,130,246,0.04); }
 
     .zero-score { color: var(--muted) !important; }
 
     .history-btn {
-      background: rgba(79,142,247,0.1);
-      border: 1px solid rgba(79,142,247,0.3);
+      background: rgba(49,130,246,0.1);
+      border: 1px solid rgba(49,130,246,0.3);
       border-radius: 6px;
       color: var(--accent);
       cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       padding: 4px 10px;
       transition: background 0.15s, border-color 0.15s;
       white-space: nowrap;
     }
     .history-btn:hover {
-      background: rgba(79,142,247,0.2);
+      background: rgba(49,130,246,0.2);
       border-color: var(--accent);
     }
 
@@ -607,23 +557,23 @@
     .fine-table td {
       padding: 10px 12px;
       font-size: 0.85rem;
-      border-bottom: 1px solid rgba(30,39,64,0.5);
+      border-bottom: 1px solid var(--border);
       text-align: center;
     }
 
-    .fine-table td:nth-child(2) {
+    .fine-table th:nth-child(2), .fine-table td:nth-child(2) {
       text-align: left;
     }
 
-    .fine-table tbody tr:hover { background: rgba(248,113,113,0.05); }
+    .fine-table tbody tr:hover { background: rgba(240,68,82,0.05); }
 
     .fine-btn {
-      background: rgba(248,113,113,0.1);
-      border: 1px solid rgba(248,113,113,0.3);
+      background: rgba(240,68,82,0.1);
+      border: 1px solid rgba(240,68,82,0.3);
       border-radius: 6px;
-      color: #f87171;
+      color: var(--danger);
       cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       padding: 4px 10px;
       transition: background 0.15s, border-color 0.15s;
@@ -631,17 +581,17 @@
     }
 
     .fine-btn:hover {
-      background: rgba(248,113,113,0.2);
-      border-color: #f87171;
+      background: rgba(240,68,82,0.2);
+      border-color: var(--danger);
     }
 
     .fine-btn-cancel {
-      background: rgba(248,113,113,0.2) !important;
-      border-color: #f87171 !important;
+      background: rgba(240,68,82,0.2) !important;
+      border-color: var(--danger) !important;
     }
 
     .fine-btn-cancel:hover {
-      background: rgba(248,113,113,0.35) !important;
+      background: rgba(240,68,82,0.35) !important;
     }
 
     /* 연속 미참 배지 (벌금 납부 섹션 닉네임 옆 인라인) */
@@ -649,14 +599,14 @@
       display: inline-flex;
       align-items: center;
       margin-left: 8px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.65rem;
       font-weight: 700;
       padding: 3px 8px;
       border-radius: 5px;
-      background: rgba(248,113,113,0.15);
-      border: 1px solid rgba(248,113,113,0.4);
-      color: #f87171;
+      background: rgba(240,68,82,0.15);
+      border: 1px solid rgba(240,68,82,0.4);
+      color: var(--danger);
       pointer-events: none;
       user-select: none;
       letter-spacing: 0.02em;
@@ -679,7 +629,7 @@
     .guild-alert-icon { font-size: 1.6rem; }
     .guild-alert-text { flex: 1; }
     .guild-alert-title {
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.95rem;
       font-weight: 700;
       color: #fb923c;
@@ -692,7 +642,7 @@
     }
     .guild-alert-actions { display: flex; gap: 8px; flex-shrink: 0; }
     .alert-btn {
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.82rem;
       font-weight: 600;
       padding: 8px 16px;
@@ -730,7 +680,7 @@
       border: 1px solid rgba(251,146,60,0.4);
       border-radius: 5px;
       color: #fb923c;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       font-weight: 600;
       padding: 4px 10px;
@@ -760,7 +710,7 @@
     .suspect-hint {
       font-size: 0.72rem;
       color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-weight: 400;
     }
 
@@ -769,7 +719,7 @@
       display: inline-flex;
       align-items: center;
       margin-left: 8px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.65rem;
       font-weight: 700;
       padding: 3px 8px;
@@ -787,11 +737,16 @@
 
     /* 작업 컬럼 두 버튼 그룹 */
     .fine-action-group {
-      display: inline-flex;
+      /* 버튼별로 고정 폭 영역을 확보 — 라벨이 '벌금 취소'/'벌금 납부 확인'으로
+         바뀌어도 세 버튼의 위치가 행마다 동일하게 유지된다.
+         (측정 자연폭: 벌금 납부 확인 88px, 나머지 65px) */
+      display: inline-grid;
+      grid-template-columns: 96px 74px 74px;
       gap: 6px;
-      justify-content: flex-end;
-      flex-wrap: nowrap;
+      justify-content: end;
+      align-items: center;
     }
+    .fine-action-group > button { width: 100%; }
 
     /* 길드 탈퇴 버튼 */
     .leave-btn {
@@ -800,7 +755,7 @@
       border-radius: 6px;
       color: #9ca3af;
       cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       padding: 4px 10px;
       transition: background 0.15s, border-color 0.15s;
@@ -827,37 +782,35 @@
     .modal.show { display: flex; }
 
     .modal-content {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background: var(--surface);
+      border-radius: 22px;
+      padding: 28px 26px 22px;
+      width: 100%;
+      max-width: 400px;
     }
 
     .modal-header {
-      font-family: 'Black Han Sans', sans-serif;
       font-size: 1.2rem;
-      color: var(--text);
-      margin-bottom: 16px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      margin-bottom: 14px;
     }
 
     .modal-body {
-      font-size: 0.95rem;
-      color: var(--text);
-      line-height: 1.6;
+      font-size: 0.92rem;
+      color: var(--ink-2);
+      line-height: 1.65;
       margin-bottom: 20px;
+      font-weight: 500;
     }
 
     .modal-info {
-      background: rgba(79,142,247,0.1);
-      border-left: 3px solid #4f8ef7;
-      padding: 12px 14px;
-      border-radius: 4px;
-      margin-bottom: 16px;
+      background: var(--fill);
+      border-radius: var(--radius-sm);
+      padding: 13px 15px;
       font-size: 0.85rem;
-      color: #8899bb;
+      margin-top: 14px;
+      color: var(--text);
     }
 
     .modal-actions {
@@ -867,28 +820,22 @@
     }
 
     .modal-btn {
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      padding: 8px 18px;
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.85rem;
+      flex: 1;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 0;
       cursor: pointer;
-      transition: background 0.15s;
+      letter-spacing: -0.025em;
     }
 
-    .modal-btn.primary {
-      background: var(--danger);
-      border-color: var(--danger);
-      color: white;
-      font-weight: 600;
-    }
+    .modal-btn.primary { background: var(--accent); color: #fff; }
 
     .modal-btn.primary:hover { background: #e74747; }
 
-    .modal-btn.secondary {
-      background: var(--card);
-      color: var(--text);
-    }
+    .modal-btn.secondary { background: var(--fill); color: var(--ink-2); }
 
     .modal-btn.secondary:hover { background: var(--border); }
 
@@ -903,8 +850,8 @@
       font-size: 0.95rem;
       font-weight: 700;
     }
-    .brief-banner.up   { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); color: #4ade80; }
-    .brief-banner.down { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+    .brief-banner.up   { background: rgba(0,166,97,0.1); border: 1px solid rgba(0,166,97,0.3); color: var(--green); }
+    .brief-banner.down { background: rgba(240,68,82,0.1); border: 1px solid rgba(240,68,82,0.3); color: var(--danger); }
     .brief-banner .brief-icon { font-size: 1.3rem; }
     .brief-streak { font-size: 0.8rem; font-weight: 400; opacity: 0.85; margin-left: auto; }
     .brief-group-label {
@@ -917,16 +864,25 @@
     .brief-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .brief-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .brief-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px 22px;
     }
-    .brief-card-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; }
-    .brief-card-value { font-size: 1.2rem; font-family: 'Black Han Sans', sans-serif; color: var(--text); margin-bottom: 5px; }
+    .brief-card-label {
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 9px;
+    }
+    .brief-card-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+    }
     .brief-change { font-size: 0.78rem; font-weight: 700; margin-bottom: 8px; }
-    .brief-change.up   { color: #4ade80; }
-    .brief-change.down { color: #f87171; }
+    .brief-change.up   { color: var(--green); }
+    .brief-change.down { color: var(--danger); }
     .brief-change.flat { color: var(--muted); }
     .brief-record { font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
     .brief-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
@@ -942,18 +898,19 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 200px;
+      gap: 9px;
+      padding: 40px 0;
       color: var(--muted);
-      font-size: 0.85rem;
-      gap: 10px;
+      font-size: 0.88rem;
+      font-weight: 500;
     }
 
     .spinner {
-      width: 18px; height: 18px;
-      border: 2px solid var(--border);
+      width: 15px; height: 15px;
+      border: 2px solid var(--line);
       border-top-color: var(--accent);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -1019,11 +976,6 @@
       /* 리더보드 모바일 대응 */
       .leaderboard-stack { gap: 16px; }
       .leaderboard-row { grid-template-columns: 1fr; gap: 16px; margin-bottom: 20px; }
-      .lb-row { padding: 10px 12px; grid-template-columns: 32px 1fr auto; gap: 10px; }
-      .lb-medal { font-size: 1.3rem; }
-      .lb-name { font-size: 0.88rem; }
-      .lb-job { font-size: 0.65rem; }
-      .lb-value { font-size: 0.95rem; }
     }
 
     @media (max-width: 480px) {
@@ -1059,7 +1011,7 @@
       .miss-badge { font-size: 0.55rem; padding: 2px 5px; margin-left: 4px; }
       .carryover-badge { font-size: 0.55rem; padding: 2px 5px; margin-left: 4px; }
       .leave-btn { font-size: 0.68rem; padding: 7px 10px; min-height: 36px; width: 100%; }
-      .fine-action-group { flex-direction: column; gap: 5px; align-items: stretch; }
+      .fine-action-group { grid-template-columns: 1fr; gap: 5px; }
       .guild-alert-banner { padding: 12px 14px; }
       .guild-alert-icon { font-size: 1.4rem; }
       .guild-alert-title { font-size: 0.88rem; }
@@ -1077,12 +1029,62 @@
       /* 리더보드 소형 모바일 대응 */
       .leaderboard-stack { gap: 12px; }
       .leaderboard-row { gap: 12px; margin-bottom: 16px; }
-      .lb-row { padding: 8px 10px; grid-template-columns: 28px 1fr auto; gap: 8px; border-radius: 8px; }
-      .lb-medal { font-size: 1.1rem; }
-      .lb-name { font-size: 0.82rem; }
-      .lb-job { font-size: 0.6rem; }
-      .lb-value { font-size: 0.88rem; }
-      .lb-value-sub { font-size: 0.58rem; }
+    }
+    /* 리더보드 — 메인 페이지와 동일한 스타일 */
+    .lb-list { margin-top: -4px; }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 0;
+    }
+    .lb-row + .lb-row { border-top: 1px solid var(--line); }
+    .lb-medal {
+      width: 22px;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .lb-row.rank-1 .lb-medal,
+    .lb-row.rank-2 .lb-medal,
+    .lb-row.rank-3 .lb-medal { color: var(--accent); }
+    .lb-meta { flex: 1; min-width: 0; }
+    .lb-name {
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lb-job { font-size: 0.76rem; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .lb-value {
+      font-size: 0.94rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .lb-value-sub {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .lb-value.fine { color: var(--danger); }
+    .lb-value.rise { color: var(--up); }
+    .lb-value.drop { color: var(--danger); }
+    .lb-empty {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 26px 0;
+      text-align: center;
+      font-weight: 500;
     }
   </style>
 </head>
@@ -1092,11 +1094,10 @@
   <!-- HEADER -->
   <header>
     <div class="header-left">
-      <h1>🦋 나비 길드</h1>
+      <h1>나비 길드</h1>
       <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
     </div>
     <div class="header-right">
-      <div class="live-badge"><span class="live-dot"></span> LIVE</div>
       <div class="updated-at" id="updatedAt">불러오는 중...</div>
       <button class="logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
@@ -1110,7 +1111,6 @@
 
   <!-- 보약 효과 알림 배너 (조건부) -->
   <div id="guildAlertBanner" class="guild-alert-banner" style="display:none;">
-    <div class="guild-alert-icon">⚠️</div>
     <div class="guild-alert-text">
       <div class="guild-alert-title">이번 주 길드원 <strong id="guildAlertCount">0</strong>명이 전주 대비 점수 감소</div>
       <div class="guild-alert-desc">혹시 보약 효과가 종료되었나요? 확인 시 이번 주 이후 데이터를 새 기준선으로 적용합니다.</div>
@@ -1152,7 +1152,7 @@
   <div class="card" style="margin-bottom:32px;">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;">
       점수 분포 (구간별 인원)
-      <span id="distWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+      <span id="distWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;"></span>
     </div>
     <div class="chart-wrap">
       <canvas id="distChart"></canvas>
@@ -1241,6 +1241,7 @@
 </div>
 
 <script>
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 // ── 인증 가드: 비로그인 시 로그인 페이지로 ──
 (async function authGuard() {
   try {
@@ -1256,8 +1257,8 @@ async function doLogout() {
 }
 
 const JOB_COLORS = [
-  '#4f8ef7','#f7c04f','#a78bfa','#4ade80','#f87171',
-  '#fb923c','#38bdf8','#e879f9','#facc15','#34d399',
+  '#3182F6','#FFB020','#8B95A1','#00A661','#F04452',
+  '#fb923c','#38bdf8','#e879f9','#FFB020','#34d399',
   '#60a5fa','#f472b6','#a3e635','#fb7185','#c084fc',
   '#22d3ee','#fbbf24','#86efac','#818cf8','#f9a8d4',
 ];
@@ -1330,13 +1331,11 @@ function renderAnalysis(members) {
     <hr class="analysis-divider">
     <div class="analysis-block">
       <div class="analysis-label">표준편차</div>
-      <div class="analysis-desc">점수가 평균으로부터 얼마나 퍼져 있는지를 나타냅니다. 값이 클수록 길드원 간 점수 격차가 크고, 작을수록 고르게 분포되어 있습니다.</div>
       <div class="analysis-value">${fmt(r.stddev)}</div>
     </div>
     <hr class="analysis-divider">
     <div class="analysis-block">
       <div class="analysis-label">사분위 구간</div>
-      <div class="analysis-desc">참여자를 점수 순으로 나열했을 때 하위 25%(Q1), 50%(Q2), 75%(Q3) 지점의 점수입니다. Q1~Q3 사이에 전체 참여자의 절반이 분포합니다.</div>
       <div class="quartile-row">
         <div class="quartile-item">
           <div class="quartile-tag">Q1 · 하위 25%</div>
@@ -1417,8 +1416,8 @@ function renderDistChart(members) {
       datasets: [{
         label: '인원 수',
         data: brackets.map(b => b.count),
-        backgroundColor: 'rgba(79,142,247,0.6)',
-        borderColor: '#4f8ef7',
+        backgroundColor: 'rgba(49,130,246,0.6)',
+        borderColor: '#3182F6',
         borderWidth: 1,
         borderRadius: 4,
       }]
@@ -1429,8 +1428,8 @@ function renderDistChart(members) {
         callbacks: { label: ctx => ` ${ctx.parsed.y}명` }
       }},
       scales: {
-        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
-        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', stepSize: 1 } }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted') } },
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted'), stepSize: 1 } }
       }
     }
   });
@@ -1443,13 +1442,13 @@ function escapeAttr(s) {
 function renderFullTable(members) {
   const tbody = document.getElementById('fullTbody');
   tbody.innerHTML = members.map(m => `<tr>
-    <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+    <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
     <td>${m.name}</td>
     <td><span class="rank-job">${m.job}</span></td>
-    <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-family:'Black Han Sans',sans-serif">
+    <td class="${m.score === 0 ? 'zero-score' : ''}"  style="font-weight:800">
       ${m.score === 0 ? '—' : fmt(m.score)}
     </td>
-    <td style="text-align:right">
+    <td >
       <button type="button" class="history-btn" data-name="${escapeAttr(m.name)}">히스토리</button>
     </td>
   </tr>`).join('');
@@ -1532,10 +1531,10 @@ function renderStatTrendChart(history) {
     data: {
       labels,
       datasets: [
-        mk('Q3 (상위 25%)',  history.map(h => h.q3),           '#a78bfa'),
-        mk('평균',           history.map(h => h.mean),          '#4ade80'),
-        mk('중간값 (Q2)',    history.map(h => h.median_score),  '#4f8ef7'),
-        mk('Q1 (하위 25%)', history.map(h => h.q1),            '#f87171', [4,3]),
+        mk('Q3 (상위 25%)',  history.map(h => h.q3),           '#8B95A1'),
+        mk('평균',           history.map(h => h.mean),          '#00A661'),
+        mk('중간값 (Q2)',    history.map(h => h.median_score),  '#3182F6'),
+        mk('Q1 (하위 25%)', history.map(h => h.q1),            '#F04452', [4,3]),
       ]
     },
     options: {
@@ -1548,8 +1547,8 @@ function renderStatTrendChart(history) {
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
-        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted') } },
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted'), callback: v => fmt(v) } }
       }
     }
   });
@@ -1603,7 +1602,7 @@ function renderBriefing(history) {
 
   el.innerHTML = `
     <div class="brief-banner ${isUp ? 'up' : 'down'}">
-      <span class="brief-icon">${isUp ? '📈' : '📉'}</span>
+      <span class="brief-icon">${isUp ? '↑' : '↓'}</span>
       <span>이번 주 길드는 지난 주보다 ${isUp ? '성장했습니다' : '하향됐습니다'}</span>
       <span class="brief-streak">${streak}주 연속 ${isUp ? '성장' : '하락'} 중</span>
     </div>
@@ -1636,8 +1635,8 @@ function renderHistoryChart(history) {
       datasets: [{
         label: '길드 총점수',
         data: totals,
-        borderColor: '#4f8ef7',
-        backgroundColor: 'rgba(79,142,247,0.12)',
+        borderColor: '#3182F6',
+        backgroundColor: 'rgba(49,130,246,0.12)',
         borderWidth: 2,
         pointRadius: 6,
         pointHoverRadius: 10,
@@ -1671,8 +1670,8 @@ function renderHistoryChart(history) {
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
-        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted') } },
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted'), callback: v => fmt(v) } }
       }
     }
   });
@@ -1707,11 +1706,11 @@ function renderFineTable(members, week) {
       : '';
 
     return `<tr>
-      <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
+      <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
       <td>${m.name}${carryoverBadge}${missBadge}</td>
       <td><span class="rank-job">${m.job}</span></td>
-      <td style="text-align:right;font-family:'Black Han Sans',sans-serif">${m.fine_count}</td>
-      <td style="text-align:right">
+      <td  style="font-weight:800">${m.fine_count}</td>
+      <td >
         <div class="fine-action-group">
           <button type="button" class="${btnClass}" data-name="${escapeAttr(m.name)}" data-rank="${m.rank}" data-fine-count="${m.fine_count}" data-pending-count="${pendingCount}" data-is-fined="${isAlreadyFined}">${btnText}</button>
           <button type="button" class="leave-btn" data-name="${escapeAttr(m.name)}">길드 탈퇴</button>
@@ -1860,7 +1859,7 @@ async function confirmUndoFine() {
   }
 }
 
-const MEDALS = ['🥇', '🥈', '🥉', '4', '5'];
+const MEDALS = ['1', '2', '3', '4', '5'];
 
 async function fetchAndRenderLeaderboards() {
   const elAvg  = document.getElementById('lbAvgRank');
@@ -1905,16 +1904,16 @@ function renderSuspectSection(list) {
            data-outlier-count="${m.outlier_count}">스펙 다운 확인</button>`
       : '';
     return `<tr data-name="${escapeAttr(m.name)}">
-      <td style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
+      <td  style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
       <td>${escapeAttr(m.name)}${specTag}</td>
       <td><span class="rank-job">${escapeAttr(normalizeJob(m.job))}</span></td>
-      <td style="text-align:right;font-family:'Black Han Sans',sans-serif">${fmt(m.personal_avg)}</td>
-      <td style="text-align:right;color:#fb923c;font-weight:700">${m.outlier_count}회</td>
-      <td style="text-align:right;font-size:0.78rem;color:var(--muted)">
+      <td  style="font-weight:800">${fmt(m.personal_avg)}</td>
+      <td  style="color:#fb923c;font-weight:700">${m.outlier_count}회</td>
+      <td  style="font-size:0.78rem;color:var(--muted)">
         <strong style="color:#fb923c">${weekLabel(m.latest_outlier_week)}</strong>
         · ${fmt(m.latest_outlier_score)} (${m.latest_outlier_drop_pct}%)
       </td>
-      <td style="text-align:right">${specBtn}</td>
+      <td >${specBtn}</td>
     </tr>`;
   }).join('');
 }
