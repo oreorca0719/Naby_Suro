@@ -1595,13 +1595,11 @@ function renderAnalysis(members) {
     <hr class="analysis-divider">
     <div class="analysis-block">
       <div class="analysis-label">표준편차</div>
-      <div class="analysis-desc">점수가 평균으로부터 얼마나 퍼져 있는지를 나타냅니다. 값이 클수록 길드원 간 점수 격차가 크고, 작을수록 고르게 분포되어 있습니다.</div>
       <div class="analysis-value">${fmt(r.stddev)}</div>
     </div>
     <hr class="analysis-divider">
     <div class="analysis-block">
       <div class="analysis-label">사분위 구간</div>
-      <div class="analysis-desc">참여자를 점수 순으로 나열했을 때 하위 25%(Q1), 50%(Q2), 75%(Q3) 지점의 점수입니다. Q1~Q3 사이에 전체 참여자의 절반이 분포합니다.</div>
       <div class="quartile-row">
         <div class="quartile-item">
           <div class="quartile-tag">Q1 · 하위 25%</div>
