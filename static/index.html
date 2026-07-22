@@ -684,7 +684,7 @@
   <div class="card" style="margin-bottom:32px;">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;">
       점수 분포 (구간별 인원)
-      <span id="distWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+      <span id="distWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;"></span>
     </div>
     <div class="chart-wrap">
       <canvas id="distChart"></canvas>
@@ -695,7 +695,7 @@
   <div class="card" style="margin-bottom:32px;">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;">
       <span>이번 주 TOP 5</span>
-      <span id="top5WeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+      <span id="top5WeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;"></span>
     </div>
     <div class="top5-wrap" id="top5Wrap">
       <div class="loading"><div class="spinner"></div> 불러오는 중</div>
@@ -733,7 +733,7 @@
   <div class="full-table-section">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;">
       전체 길드원 현황
-      <span id="tableWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+      <span id="tableWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;"></span>
     </div>
     <div class="card">
       <div class="table-controls">
@@ -831,7 +831,7 @@
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const JOB_COLORS = [
   '#3182F6','#FFB020','#8B95A1','#00A661','#F04452',
-  '#fb923c','#38bdf8','#e879f9','#facc15','#34d399',
+  '#fb923c','#38bdf8','#e879f9','var(--yellow)','#34d399',
   '#60a5fa','#f472b6','#a3e635','#fb7185','#c084fc',
   '#22d3ee','#fbbf24','#86efac','#818cf8','#f9a8d4',
 ];
@@ -1034,7 +1034,7 @@ function renderDistChart(members) {
       datasets: [{
         label: '인원 수',
         data: brackets.map(b => b.count),
-        backgroundColor: 'rgba(79,142,247,0.6)',
+        backgroundColor: 'rgba(49,130,246,0.6)',
         borderColor: '#3182F6',
         borderWidth: 1,
         borderRadius: 4,
@@ -1254,7 +1254,7 @@ function renderHistoryChart(history) {
         label: '길드 총점수',
         data: totals,
         borderColor: '#3182F6',
-        backgroundColor: 'rgba(79,142,247,0.12)',
+        backgroundColor: 'rgba(49,130,246,0.12)',
         borderWidth: 2,
         pointRadius: 6,
         pointHoverRadius: 10,

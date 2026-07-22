@@ -4,22 +4,48 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>나비 길드 대시보드</title>
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg:        #0a0c10;
-      --surface:   #11151e;
-      --card:      #161b27;
-      --border:    #1e2740;
-      --accent:    #4f8ef7;
-      --accent2:   #f7c04f;
-      --gold:      #e8b84b;
-      --silver:    #9aaabf;
-      --bronze:    #cd7f4e;
-      --text:      #d4dff5;
-      --muted:     #5a6a8a;
-      --danger:    #f75f5f;
+      --bg:        #F7F8FA;
+      --surface:   #FFFFFF;
+      --card:      #FFFFFF;
+      --fill:      #F2F4F6;
+      --border:    #E9ECEF;
+      --accent:    #3182F6;
+      --accent2:   #FFB020;
+      --gold:      #3182F6;
+      --silver:    #8B95A1;
+      --bronze:    #8B95A1;
+      --text:      #191F28;
+      --ink-2:     #4E5968;
+      --muted:     #8B95A1;
+      --danger:    #F04452;
+      --green:     #00A661;
+      --up:        #00A661;
+      --yellow:    #FFB020;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #15171A;
+        --surface: #1B1E22;
+        --card:    #1B1E22;
+        --fill:    #24282E;
+        --border:  #2E333A;
+        --accent:  #4D93F8;
+        --accent2: #FFC14D;
+        --gold:    #4D93F8;
+        --silver:  #7B848F;
+        --bronze:  #7B848F;
+        --text:    #EDEFF2;
+        --ink-2:   #B0B8C1;
+        --muted:   #7B848F;
+        --danger:  #FF6B75;
+        --green:   #2FCB86;
+        --up:      #2FCB86;
+        --yellow:  #FFC14D;
+      }
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,29 +53,16 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       min-height: 100vh;
       overflow-x: hidden;
-    }
-
-    /* 배경 그리드 효과 */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
     }
 
     .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; width: 100%; box-sizing: border-box; }
 
     /* ── 로그아웃 버튼 ── */
     .logout-btn {
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.75rem;
       font-weight: 600;
       padding: 6px 14px;
@@ -78,7 +91,7 @@
       padding: 12px 22px;
       color: var(--muted);
       text-decoration: none;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.92rem;
       font-weight: 700;
       letter-spacing: -0.01em;
@@ -107,12 +120,10 @@
     }
 
     .header-left h1 {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 2rem;
       letter-spacing: 0.05em;
-      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text);
     }
 
     .header-left .subtitle {
@@ -141,7 +152,7 @@
 
     .live-dot {
       width: 7px; height: 7px;
-      background: #4ade80;
+      background: var(--green);
       border-radius: 50%;
       animation: pulse 2s infinite;
     }
@@ -174,8 +185,8 @@
       top: 0; left: 0; right: 0;
       height: 2px;
     }
-    .cutoff-card-green::before  { background: linear-gradient(90deg, #4ade80, transparent); }
-    .cutoff-card-yellow::before { background: linear-gradient(90deg, #facc15, transparent); }
+    .cutoff-card-green::before  { background: var(--green); }
+    .cutoff-card-yellow::before { background: var(--yellow); }
     .cutoff-label {
       font-size: 0.78rem;
       color: var(--muted);
@@ -183,7 +194,7 @@
       margin-bottom: 10px;
     }
     .cutoff-value {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 2.2rem;
       line-height: 1.1;
     }
@@ -191,11 +202,11 @@
       font-size: 0.95rem;
       color: var(--muted);
       margin-left: 6px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-weight: 400;
     }
-    .cutoff-value-green  { color: #4ade80; }
-    .cutoff-value-yellow { color: #facc15; }
+    .cutoff-value-green  { color: var(--green); }
+    .cutoff-value-yellow { color: var(--yellow); }
 
     /* ── STAT CARDS ── */
     .stat-grid {
@@ -220,21 +231,21 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--accent), transparent);
+      display: none;
     }
 
     .stat-card:hover { border-color: var(--accent); }
 
     .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-    .stat-value { font-family: 'Black Han Sans', sans-serif; font-size: 1.8rem; color: var(--text); }
-    .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Noto Sans KR', sans-serif; }
+    .stat-value { font-weight: 800; letter-spacing: -0.035em; font-size: 1.8rem; color: var(--text); }
+    .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif; }
 
     /* ── SECTION TITLE ── */
     .section-title {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 1rem;
-      letter-spacing: 0.08em;
-      color: var(--accent);
+      
+      color: var(--text);
       margin-bottom: 16px;
       display: flex;
       align-items: center;
@@ -294,12 +305,12 @@
       align-items: center;
       gap: 12px;
       padding: 12px 14px;
-      background: rgba(79,142,247,0.05);
+      background: rgba(49,130,246,0.05);
       border: 1px solid var(--border);
       border-radius: 10px;
       transition: background 0.15s;
     }
-    .lb-row:hover { background: rgba(79,142,247,0.10); }
+    .lb-row:hover { background: rgba(49,130,246,0.10); }
     .lb-row.rank-1 { background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.35); }
     .lb-row.rank-2 { background: rgba(192,192,192,0.08); border-color: rgba(192,192,192,0.30); }
     .lb-row.rank-3 { background: rgba(205,127,50,0.08); border-color: rgba(205,127,50,0.30); }
@@ -328,19 +339,19 @@
       letter-spacing: 0.02em;
     }
     .lb-value {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 1.05rem;
       color: var(--accent2);
       white-space: nowrap;
     }
-    .lb-value.fine { color: #f87171; }
-    .lb-value.rise { color: #4ade80; }
-    .lb-value.drop { color: #f87171; }
+    .lb-value.fine { color: var(--danger); }
+    .lb-value.rise { color: var(--green); }
+    .lb-value.drop { color: var(--danger); }
     .lb-value-sub {
       font-size: 0.65rem;
       color: var(--muted);
       margin-left: 4px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-weight: 400;
     }
     .lb-empty {
@@ -403,7 +414,7 @@
     }
     .analysis-value {
       font-size: 1.7rem;
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       color: var(--text);
     }
     .analysis-desc {
@@ -433,7 +444,7 @@
     }
     .quartile-val {
       font-size: 1.15rem;
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       color: var(--text);
     }
     .analysis-divider {
@@ -486,10 +497,10 @@
       transition: background 0.15s;
     }
 
-    .rank-table tbody tr:hover { background: rgba(79,142,247,0.05); }
+    .rank-table tbody tr:hover { background: rgba(49,130,246,0.05); }
 
     .rank-num {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 0.9rem;
       color: var(--muted);
       width: 36px;
@@ -505,8 +516,8 @@
     .rank-job {
       font-size: 0.75rem;
       color: var(--muted);
-      background: rgba(79,142,247,0.08);
-      border: 1px solid rgba(79,142,247,0.15);
+      background: rgba(49,130,246,0.08);
+      border: 1px solid rgba(49,130,246,0.15);
       border-radius: 4px;
       padding: 2px 8px;
       display: inline-block;
@@ -514,7 +525,7 @@
     }
 
     .rank-score {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 0.95rem;
       color: var(--accent2);
     }
@@ -531,7 +542,7 @@
 
     .score-bar {
       height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      background: var(--accent);
       border-radius: 2px;
       transition: width 0.6s ease;
     }
@@ -551,7 +562,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.85rem;
       padding: 8px 14px;
       outline: none;
@@ -614,24 +625,24 @@
       text-align: right;
     }
 
-    .full-table tbody tr:hover { background: rgba(79,142,247,0.04); }
+    .full-table tbody tr:hover { background: rgba(49,130,246,0.04); }
 
     .zero-score { color: var(--muted) !important; }
 
     .history-btn {
-      background: rgba(79,142,247,0.1);
-      border: 1px solid rgba(79,142,247,0.3);
+      background: rgba(49,130,246,0.1);
+      border: 1px solid rgba(49,130,246,0.3);
       border-radius: 6px;
       color: var(--accent);
       cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       padding: 4px 10px;
       transition: background 0.15s, border-color 0.15s;
       white-space: nowrap;
     }
     .history-btn:hover {
-      background: rgba(79,142,247,0.2);
+      background: rgba(49,130,246,0.2);
       border-color: var(--accent);
     }
 
@@ -659,15 +670,15 @@
       text-align: left;
     }
 
-    .fine-table tbody tr:hover { background: rgba(248,113,113,0.05); }
+    .fine-table tbody tr:hover { background: rgba(240,68,82,0.05); }
 
     .fine-btn {
-      background: rgba(248,113,113,0.1);
-      border: 1px solid rgba(248,113,113,0.3);
+      background: rgba(240,68,82,0.1);
+      border: 1px solid rgba(240,68,82,0.3);
       border-radius: 6px;
-      color: #f87171;
+      color: var(--danger);
       cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       padding: 4px 10px;
       transition: background 0.15s, border-color 0.15s;
@@ -675,17 +686,17 @@
     }
 
     .fine-btn:hover {
-      background: rgba(248,113,113,0.2);
-      border-color: #f87171;
+      background: rgba(240,68,82,0.2);
+      border-color: var(--danger);
     }
 
     .fine-btn-cancel {
-      background: rgba(248,113,113,0.2) !important;
-      border-color: #f87171 !important;
+      background: rgba(240,68,82,0.2) !important;
+      border-color: var(--danger) !important;
     }
 
     .fine-btn-cancel:hover {
-      background: rgba(248,113,113,0.35) !important;
+      background: rgba(240,68,82,0.35) !important;
     }
 
     /* 연속 미참 배지 (벌금 납부 섹션 닉네임 옆 인라인) */
@@ -693,14 +704,14 @@
       display: inline-flex;
       align-items: center;
       margin-left: 8px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.65rem;
       font-weight: 700;
       padding: 3px 8px;
       border-radius: 5px;
-      background: rgba(248,113,113,0.15);
-      border: 1px solid rgba(248,113,113,0.4);
-      color: #f87171;
+      background: rgba(240,68,82,0.15);
+      border: 1px solid rgba(240,68,82,0.4);
+      color: var(--danger);
       pointer-events: none;
       user-select: none;
       letter-spacing: 0.02em;
@@ -723,7 +734,7 @@
     .guild-alert-icon { font-size: 1.6rem; }
     .guild-alert-text { flex: 1; }
     .guild-alert-title {
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.95rem;
       font-weight: 700;
       color: #fb923c;
@@ -736,7 +747,7 @@
     }
     .guild-alert-actions { display: flex; gap: 8px; flex-shrink: 0; }
     .alert-btn {
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.82rem;
       font-weight: 600;
       padding: 8px 16px;
@@ -774,7 +785,7 @@
       border: 1px solid rgba(251,146,60,0.4);
       border-radius: 5px;
       color: #fb923c;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       font-weight: 600;
       padding: 4px 10px;
@@ -804,7 +815,7 @@
     .suspect-hint {
       font-size: 0.72rem;
       color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-weight: 400;
     }
 
@@ -813,7 +824,7 @@
       display: inline-flex;
       align-items: center;
       margin-left: 8px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.65rem;
       font-weight: 700;
       padding: 3px 8px;
@@ -844,7 +855,7 @@
       border-radius: 6px;
       color: #9ca3af;
       cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       padding: 4px 10px;
       transition: background 0.15s, border-color 0.15s;
@@ -857,20 +868,20 @@
 
     /* 예외 처리 버튼 (이번 주 벌금 면제) */
     .exempt-btn {
-      background: rgba(79,142,247,0.10);
-      border: 1px solid rgba(79,142,247,0.35);
+      background: rgba(49,130,246,0.10);
+      border: 1px solid rgba(49,130,246,0.35);
       border-radius: 6px;
-      color: #4f8ef7;
+      color: var(--accent);
       cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.72rem;
       padding: 4px 10px;
       transition: background 0.15s, border-color 0.15s;
       white-space: nowrap;
     }
     .exempt-btn:hover {
-      background: rgba(79,142,247,0.22);
-      border-color: #4f8ef7;
+      background: rgba(49,130,246,0.22);
+      border-color: var(--accent);
     }
 
     /* ── MODAL ── */
@@ -899,7 +910,7 @@
     }
 
     .modal-header {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 1.2rem;
       color: var(--text);
       margin-bottom: 16px;
@@ -913,8 +924,8 @@
     }
 
     .modal-info {
-      background: rgba(79,142,247,0.1);
-      border-left: 3px solid #4f8ef7;
+      background: rgba(49,130,246,0.1);
+      border-left: 3px solid var(--accent);
       padding: 12px 14px;
       border-radius: 4px;
       margin-bottom: 16px;
@@ -932,7 +943,7 @@
       border-radius: 6px;
       border: 1px solid var(--border);
       padding: 8px 18px;
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-size: 0.85rem;
       cursor: pointer;
       transition: background 0.15s;
@@ -965,8 +976,8 @@
       font-size: 0.95rem;
       font-weight: 700;
     }
-    .brief-banner.up   { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); color: #4ade80; }
-    .brief-banner.down { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+    .brief-banner.up   { background: rgba(0,166,97,0.1); border: 1px solid rgba(0,166,97,0.3); color: var(--green); }
+    .brief-banner.down { background: rgba(240,68,82,0.1); border: 1px solid rgba(240,68,82,0.3); color: var(--danger); }
     .brief-banner .brief-icon { font-size: 1.3rem; }
     .brief-streak { font-size: 0.8rem; font-weight: 400; opacity: 0.85; margin-left: auto; }
     .brief-group-label {
@@ -985,10 +996,10 @@
       padding: 14px 16px;
     }
     .brief-card-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; }
-    .brief-card-value { font-size: 1.2rem; font-family: 'Black Han Sans', sans-serif; color: var(--text); margin-bottom: 5px; }
+    .brief-card-value { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.035em; color: var(--text); margin-bottom: 5px; }
     .brief-change { font-size: 0.78rem; font-weight: 700; margin-bottom: 8px; }
-    .brief-change.up   { color: #4ade80; }
-    .brief-change.down { color: #f87171; }
+    .brief-change.up   { color: var(--green); }
+    .brief-change.down { color: var(--danger); }
     .brief-change.flat { color: var(--muted); }
     .brief-record { font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
     .brief-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
@@ -1159,11 +1170,10 @@
   <!-- HEADER -->
   <header>
     <div class="header-left">
-      <h1>🦋 나비 길드</h1>
+      <h1>나비 길드</h1>
       <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
     </div>
     <div class="header-right">
-      <div class="live-badge"><span class="live-dot"></span> LIVE</div>
       <div class="updated-at" id="updatedAt">불러오는 중...</div>
       <button class="logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
@@ -1174,7 +1184,7 @@
     <a href="/admin" class="page-tab">개요</a>
     <a href="/manage" class="page-tab active">관리</a>
     <button type="button" class="rename-tool-btn" onclick="showRenameModal()" title="닉네임을 바꾼 길드원의 기존 히스토리를 신규 닉네임으로 이관">
-      ✏️ 닉네임 변경
+      닉네임 변경
     </button>
     <a href="/event" class="event-link-btn" title="신규/기존 연합원 조회 (달빛·연꽃·꽃잎·꿀벌)">
       <span class="event-link-badge">EVENT</span>
@@ -1189,8 +1199,8 @@
       align-items: center;
       gap: 6px;
       padding: 8px 14px;
-      background: rgba(79,142,247,0.12);
-      border: 1px solid rgba(79,142,247,0.4);
+      background: rgba(49,130,246,0.12);
+      border: 1px solid rgba(49,130,246,0.4);
       border-radius: 8px;
       color: var(--text);
       font-size: 0.82rem;
@@ -1202,7 +1212,7 @@
     }
     .rename-tool-btn:hover {
       border-color: var(--accent);
-      background: rgba(79,142,247,0.22);
+      background: rgba(49,130,246,0.22);
     }
     @media (max-width: 600px) {
       .rename-tool-btn { padding: 6px 10px; font-size: 0.74rem; }
@@ -1214,8 +1224,8 @@
       gap: 8px;
       padding: 8px 14px;
       align-self: center;
-      background: linear-gradient(90deg, rgba(79,142,247,0.15), rgba(167,139,250,0.15));
-      border: 1px solid rgba(79,142,247,0.4);
+      background: var(--fill);
+      border: 1px solid rgba(49,130,246,0.4);
       border-radius: 8px;
       color: var(--text);
       text-decoration: none;
@@ -1226,10 +1236,10 @@
     }
     .event-link-btn:hover {
       border-color: var(--accent);
-      background: linear-gradient(90deg, rgba(79,142,247,0.25), rgba(167,139,250,0.25));
+      background: var(--border);
     }
     .event-link-badge {
-      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      color: var(--text);
       color: #fff;
       padding: 2px 8px;
       border-radius: 4px;
@@ -1263,19 +1273,19 @@
       </div>
     </div>
     <div class="card">
-      <div class="section-title" style="color:#f87171;">수로 미참 횟수 TOP 10</div>
+      <div class="section-title" style="color:var(--danger);">수로 미참 횟수 TOP 10</div>
       <div id="lbFine">
         <div class="loading"><div class="spinner"></div> 불러오는 중</div>
       </div>
     </div>
     <div class="card">
-      <div class="section-title" style="color:#4ade80;">점수 상승폭 TOP 10</div>
+      <div class="section-title" style="color:var(--up);">점수 상승폭 TOP 10</div>
       <div id="lbRise">
         <div class="loading"><div class="spinner"></div> 불러오는 중</div>
       </div>
     </div>
     <div class="card">
-      <div class="section-title" style="color:#f87171;">점수 하락폭 TOP 10</div>
+      <div class="section-title" style="color:var(--danger);">점수 하락폭 TOP 10</div>
       <div id="lbDrop">
         <div class="loading"><div class="spinner"></div> 불러오는 중</div>
       </div>
@@ -1298,7 +1308,7 @@
     <div class="section-title" style="color:#fb923c;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       불성실 참여 의심
       <span class="suspect-hint">직전 3주 평균 대비 10% 이상 하락한 주차가 1회 이상 발생</span>
-      <span id="suspectWeekRef" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;margin-left:auto;"></span>
+      <span id="suspectWeekRef" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;margin-left:auto;"></span>
     </div>
     <div class="card">
       <div class="full-table-wrap">
@@ -1322,9 +1332,9 @@
 
   <!-- FINE PAYMENT SECTION -->
   <div class="full-table-section" id="fineSection" style="display:none;margin-bottom:32px;">
-    <div class="section-title" style="color:#f87171;display:flex;align-items:center;gap:10px;">
+    <div class="section-title" style="color:var(--danger);display:flex;align-items:center;gap:10px;">
       벌금 납부
-      <span id="fineWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+      <span id="fineWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;"></span>
     </div>
     <div class="card">
       <div class="full-table-wrap">
@@ -1349,7 +1359,7 @@
   <div class="full-table-section">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;">
       전체 길드원 현황
-      <span id="tableWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:400;"></span>
+      <span id="tableWeekBadge" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;"></span>
     </div>
     <div class="card">
       <div class="table-controls">
@@ -1480,6 +1490,7 @@
 </div>
 
 <script>
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 // ── 인증 가드: 비로그인 시 로그인 페이지로 ──
 (async function authGuard() {
   try {
@@ -1495,8 +1506,8 @@ async function doLogout() {
 }
 
 const JOB_COLORS = [
-  '#4f8ef7','#f7c04f','#a78bfa','#4ade80','#f87171',
-  '#fb923c','#38bdf8','#e879f9','#facc15','#34d399',
+  '#3182F6','#FFB020','#8B95A1','#00A661','#F04452',
+  '#fb923c','#38bdf8','#e879f9','#FFB020','#34d399',
   '#60a5fa','#f472b6','#a3e635','#fb7185','#c084fc',
   '#22d3ee','#fbbf24','#86efac','#818cf8','#f9a8d4',
 ];
@@ -1670,8 +1681,8 @@ function renderDistChart(members) {
       datasets: [{
         label: '인원 수',
         data: brackets.map(b => b.count),
-        backgroundColor: 'rgba(79,142,247,0.6)',
-        borderColor: '#4f8ef7',
+        backgroundColor: 'rgba(49,130,246,0.6)',
+        borderColor: '#3182F6',
         borderWidth: 1,
         borderRadius: 4,
       }]
@@ -1682,8 +1693,8 @@ function renderDistChart(members) {
         callbacks: { label: ctx => ` ${ctx.parsed.y}명` }
       }},
       scales: {
-        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
-        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', stepSize: 1 } }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted') } },
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted'), stepSize: 1 } }
       }
     }
   });
@@ -1699,7 +1710,7 @@ function renderFullTable(members) {
     <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
     <td>${m.name}</td>
     <td><span class="rank-job">${m.job}</span></td>
-    <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-family:'Black Han Sans',sans-serif">
+    <td class="${m.score === 0 ? 'zero-score' : ''}" style="text-align:right;font-weight:800">
       ${m.score === 0 ? '—' : fmt(m.score)}
     </td>
     <td style="text-align:right">
@@ -1785,10 +1796,10 @@ function renderStatTrendChart(history) {
     data: {
       labels,
       datasets: [
-        mk('Q3 (상위 25%)',  history.map(h => h.q3),           '#a78bfa'),
-        mk('평균',           history.map(h => h.mean),          '#4ade80'),
-        mk('중간값 (Q2)',    history.map(h => h.median_score),  '#4f8ef7'),
-        mk('Q1 (하위 25%)', history.map(h => h.q1),            '#f87171', [4,3]),
+        mk('Q3 (상위 25%)',  history.map(h => h.q3),           '#8B95A1'),
+        mk('평균',           history.map(h => h.mean),          '#00A661'),
+        mk('중간값 (Q2)',    history.map(h => h.median_score),  '#3182F6'),
+        mk('Q1 (하위 25%)', history.map(h => h.q1),            '#F04452', [4,3]),
       ]
     },
     options: {
@@ -1801,8 +1812,8 @@ function renderStatTrendChart(history) {
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
-        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted') } },
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted'), callback: v => fmt(v) } }
       }
     }
   });
@@ -1856,7 +1867,7 @@ function renderBriefing(history) {
 
   el.innerHTML = `
     <div class="brief-banner ${isUp ? 'up' : 'down'}">
-      <span class="brief-icon">${isUp ? '📈' : '📉'}</span>
+      <span class="brief-icon">${isUp ? '↑' : '↓'}</span>
       <span>이번 주 길드는 지난 주보다 ${isUp ? '성장했습니다' : '하향됐습니다'}</span>
       <span class="brief-streak">${streak}주 연속 ${isUp ? '성장' : '하락'} 중</span>
     </div>
@@ -1889,8 +1900,8 @@ function renderHistoryChart(history) {
       datasets: [{
         label: '길드 총점수',
         data: totals,
-        borderColor: '#4f8ef7',
-        backgroundColor: 'rgba(79,142,247,0.12)',
+        borderColor: '#3182F6',
+        backgroundColor: 'rgba(49,130,246,0.12)',
         borderWidth: 2,
         pointRadius: 6,
         pointHoverRadius: 10,
@@ -1924,8 +1935,8 @@ function renderHistoryChart(history) {
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a' } },
-        y: { grid: { color: 'rgba(30,39,64,0.8)' }, ticks: { color: '#5a6a8a', callback: v => fmt(v) } }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted') } },
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--muted'), callback: v => fmt(v) } }
       }
     }
   });
@@ -1976,7 +1987,7 @@ function renderFineTable(members, week) {
       <td style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
       <td>${m.name}${carryoverBadge}${missBadge}</td>
       <td><span class="rank-job">${m.job}</span></td>
-      <td style="font-family:'Black Han Sans',sans-serif">${m.fine_count}</td>
+      <td style="font-weight:800">${m.fine_count}</td>
       <td style="font-size:0.78rem;white-space:nowrap;">${processedCell}</td>
       <td>
         <div class="fine-action-group" style="justify-content:center;">
@@ -2211,7 +2222,7 @@ function dropPctColor(p) {
   // 하락률(p, 음수) 심각도별 색상
   if (p < -20) return '#ef4444';   // 빨강: -20% 미만
   if (p < -10) return '#fb923c';   // 주황: -20% 이상 ~ -10% 미만
-  return '#facc15';                // 노랑: -10% 이상 ~ 0% 이하
+  return '#FFB020';                // 노랑: -10% 이상 ~ 0% 이하
 }
 
 function renderSuspectSection(list, latestWeek) {
@@ -2240,7 +2251,7 @@ function renderSuspectSection(list, latestWeek) {
       <td style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
       <td>${escapeAttr(m.name)}${specTag}</td>
       <td><span class="rank-job">${escapeAttr(normalizeJob(m.job))}</span></td>
-      <td style="text-align:right;font-family:'Black Han Sans',sans-serif">${fmt(m.personal_avg)}</td>
+      <td style="text-align:right;font-weight:800">${fmt(m.personal_avg)}</td>
       <td style="text-align:right;color:#fb923c;font-weight:700">${m.outlier_count}회</td>
       <td style="text-align:right;font-weight:700;color:${dropColor}">
         ${fmt(m.latest_outlier_score)} (${m.latest_outlier_drop_pct}%)
@@ -2360,11 +2371,11 @@ async function confirmRenameMember() {
   const resultEl = document.getElementById('renameResult');
   const btn = document.getElementById('renameSubmitBtn');
   if (!oldName || !newName) {
-    resultEl.innerHTML = '<span style="color:#f87171;">기존/신규 닉네임을 모두 입력하세요.</span>';
+    resultEl.innerHTML = '<span style="color:var(--danger);">기존/신규 닉네임을 모두 입력하세요.</span>';
     return;
   }
   if (oldName === newName) {
-    resultEl.innerHTML = '<span style="color:#f87171;">기존과 신규 닉네임이 동일합니다.</span>';
+    resultEl.innerHTML = '<span style="color:var(--danger);">기존과 신규 닉네임이 동일합니다.</span>';
     return;
   }
   if (!confirm(`'${oldName}' → '${newName}' 로 모든 기록을 변경합니다.\n계속하시겠습니까?`)) return;
@@ -2384,23 +2395,23 @@ async function confirmRenameMember() {
         resultEl.innerHTML = `<span style="color:#60a5fa;">ℹ️ ${d.message}</span>`;
         alert(d.message);
       } else if (d && typeof d === 'object' && d.code === 'not_found') {
-        resultEl.innerHTML = `<span style="color:#fbbf24;">⚠️ ${d.message}</span>`;
+        resultEl.innerHTML = `<span style="color:#fbbf24;">${d.message}</span>`;
         alert(d.message);
       } else {
         const msg = (d && typeof d === 'object') ? (d.message || '요청이 실패했습니다.') : (d || '요청이 실패했습니다.');
-        resultEl.innerHTML = `<span style="color:#f87171;">오류: ${msg}</span>`;
+        resultEl.innerHTML = `<span style="color:var(--danger);">오류: ${msg}</span>`;
       }
       btn.disabled = false;
       return;
     }
     const r = await res.json();
     resultEl.innerHTML =
-      `<span style="color:#4ade80;">✓ 완료 — <strong>${r.new_name}</strong>(으)로 ${r.updated_count}건 변경`
+      `<span style="color:var(--up);">✓ 완료 — <strong>${r.new_name}</strong>(으)로 ${r.updated_count}건 변경`
       + ` (${r.updated_weeks.length}개 주차). 누적 벌금 ${r.fine_count}회 이관됨.</span>`;
     alert(`닉네임이 '${r.old_name}' → '${r.new_name}'(으)로 변경되었습니다. (${r.updated_count}건)`);
     await init();
   } catch (e) {
-    resultEl.innerHTML = '<span style="color:#f87171;">통신 오류가 발생했습니다.</span>';
+    resultEl.innerHTML = '<span style="color:var(--danger);">통신 오류가 발생했습니다.</span>';
     btn.disabled = false;
   }
 }

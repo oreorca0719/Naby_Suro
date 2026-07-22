@@ -4,18 +4,47 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>신규/기존 연합원 조회 — 나비 길드</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" rel="stylesheet" />
   <style>
     :root {
-      --bg:        #0a0c10;
-      --surface:   #11151e;
-      --card:      #161b27;
-      --border:    #1e2740;
-      --accent:    #4f8ef7;
-      --text:      #d4dff5;
-      --muted:     #5a6a8a;
-      --green:     #4ade80;
-      --yellow:    #facc15;
+      --bg:        #F7F8FA;
+      --surface:   #FFFFFF;
+      --card:      #FFFFFF;
+      --fill:      #F2F4F6;
+      --border:    #E9ECEF;
+      --accent:    #3182F6;
+      --accent2:   #FFB020;
+      --gold:      #3182F6;
+      --silver:    #8B95A1;
+      --bronze:    #8B95A1;
+      --text:      #191F28;
+      --ink-2:     #4E5968;
+      --muted:     #8B95A1;
+      --danger:    #F04452;
+      --green:     #00A661;
+      --up:        #00A661;
+      --yellow:    #FFB020;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #15171A;
+        --surface: #1B1E22;
+        --card:    #1B1E22;
+        --fill:    #24282E;
+        --border:  #2E333A;
+        --accent:  #4D93F8;
+        --accent2: #FFC14D;
+        --gold:    #4D93F8;
+        --silver:  #7B848F;
+        --bronze:  #7B848F;
+        --text:    #EDEFF2;
+        --ink-2:   #B0B8C1;
+        --muted:   #7B848F;
+        --danger:  #FF6B75;
+        --green:   #2FCB86;
+        --up:      #2FCB86;
+        --yellow:  #FFC14D;
+      }
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
@@ -23,7 +52,7 @@
       min-height: 100vh;
       background: radial-gradient(circle at 50% 0%, #1a2240 0%, var(--bg) 60%) fixed;
       color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
       font-weight: 400;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
@@ -68,7 +97,7 @@
     }
     .hero-badge {
       display: inline-block;
-      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
+      color: var(--text);
       color: #fff;
       padding: 4px 14px;
       border-radius: 999px;
@@ -78,13 +107,11 @@
       margin-bottom: 14px;
     }
     .hero h1 {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 2.2rem;
       margin: 0 0 10px;
       letter-spacing: -0.01em;
-      background: linear-gradient(90deg, #4f8ef7, #a78bfa);
-      -webkit-background-clip: text;
-      background-clip: text;
+      color: var(--text);
       color: transparent;
     }
     .hero p {
@@ -153,11 +180,11 @@
     }
     .result.show { display: block; }
     .result.match {
-      background: linear-gradient(180deg, rgba(74,222,128,0.10), rgba(74,222,128,0.02));
-      border: 1px solid rgba(74,222,128,0.35);
+      background: var(--fill);
+      border: 1px solid rgba(0,166,97,0.35);
     }
     .result.nomatch {
-      background: linear-gradient(180deg, rgba(250,204,21,0.10), rgba(250,204,21,0.02));
+      background: var(--fill);
       border: 1px solid rgba(250,204,21,0.35);
     }
     .result-icon {
@@ -178,7 +205,7 @@
       line-height: 1.7;
     }
     .result-score {
-      font-family: 'Black Han Sans', sans-serif;
+      font-weight: 800; letter-spacing: -0.035em;
       font-size: 1.55rem;
       letter-spacing: -0.01em;
       vertical-align: -2px;
