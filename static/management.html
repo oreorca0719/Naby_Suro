@@ -715,54 +715,8 @@
     }
     .alert-btn-primary:hover { background: #f97316; }
 
-    /* 의심 명단 행 클릭 가능 (히스토리 페이지 이동) */
-    #suspectTbody tr {
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    #suspectTbody tr:hover {
-      background: rgba(251,146,60,0.08);
-    }
 
-    /* 스펙 다운 확인 버튼 (의심 명단 행 내부) */
-    .spec-down-btn {
-      background: rgba(251,146,60,0.15);
-      border: 1px solid rgba(251,146,60,0.4);
-      border-radius: 5px;
-      color: #fb923c;
-      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 4px 10px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .spec-down-btn:hover {
-      background: rgba(251,146,60,0.25);
-      border-color: #fb923c;
-    }
-    .spec-down-suspected-tag {
-      display: inline-block;
-      font-size: 0.62rem;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(251,146,60,0.18);
-      border: 1px solid rgba(251,146,60,0.4);
-      color: #fb923c;
-      margin-left: 6px;
-      vertical-align: middle;
-      white-space: nowrap;
-    }
 
-    /* 불성실 참여 의심 섹션 — 헤더 보조 텍스트 */
-    .suspect-hint {
-      font-size: 0.72rem;
-      color: var(--muted);
-      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
-      font-weight: 400;
-    }
 
     /* 이월 미해결 라벨 (지난주 미납부 인원) */
     .carryover-badge {
@@ -1039,8 +993,6 @@
       .guild-alert-banner { flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px 16px; }
       .guild-alert-actions { width: 100%; }
       .alert-btn { flex: 1; padding: 9px 12px; font-size: 0.8rem; }
-      .spec-down-btn { font-size: 0.68rem; padding: 5px 10px; }
-      .spec-down-suspected-tag { font-size: 0.58rem; padding: 2px 5px; }
       /* 모달 모바일 대응 */
       .modal-content { padding: 24px 20px; width: 92%; }
       .modal-header { font-size: 1.05rem; margin-bottom: 14px; }
@@ -1092,8 +1044,6 @@
       .guild-alert-title { font-size: 0.88rem; }
       .guild-alert-desc { font-size: 0.72rem; }
       .alert-btn { padding: 9px 10px; font-size: 0.75rem; min-height: 38px; }
-      .spec-down-btn { font-size: 0.65rem; padding: 5px 8px; }
-      .spec-down-suspected-tag { font-size: 0.52rem; padding: 1px 4px; }
       /* 모달 소형 모바일 대응 */
       .modal-content { padding: 20px 16px; width: 94%; border-radius: 10px; }
       .modal-header { font-size: 1rem; margin-bottom: 12px; }
@@ -1331,43 +1281,7 @@
     </div>
   </div>
 
-  <!-- 불성실 참여 의심 횟수 TOP 10 (전체 현 길드원 누적, 메달형) -->
-  <div class="card" style="margin-bottom:32px;">
-    <div class="section-title" style="color:#fb923c;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      불성실 참여 의심 횟수 TOP 10
-      <span class="suspect-hint">직전 3주 평균 대비 10% 이상 하락한 주차의 누적 발생 횟수</span>
-    </div>
-    <div id="lbSuspectCount">
-      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
-    </div>
-  </div>
 
-  <!-- 불성실 참여 의심 섹션 (이상치 발생 회원, 조건부 표시) -->
-  <div class="full-table-section" id="suspectSection" style="display:none;margin-bottom:32px;">
-    <div class="section-title" style="color:#fb923c;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      불성실 참여 의심
-      <span class="suspect-hint">직전 3주 평균 대비 10% 이상 하락한 주차가 1회 이상 발생</span>
-      <span id="suspectWeekRef" style="font-size:0.72rem;color:var(--muted);font-family:'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;font-weight:400;margin-left:auto;"></span>
-    </div>
-    <div class="card">
-      <div class="full-table-wrap">
-        <table class="fine-table" id="suspectTable">
-          <thead>
-            <tr>
-              <th>순위</th>
-              <th>닉네임</th>
-              <th>직업</th>
-              <th >본인 평균</th>
-              <th >이상치 발생</th>
-              <th >최근 이상치</th>
-              <th >작업</th>
-            </tr>
-          </thead>
-          <tbody id="suspectTbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 
   <!-- FINE PAYMENT SECTION -->
   <div class="full-table-section" id="fineSection" style="display:none;margin-bottom:32px;">
@@ -1478,18 +1392,6 @@
   </div>
 </div>
 
-<div class="modal" id="specDownModal">
-  <div class="modal-content">
-    <div class="modal-header">스펙 다운 확인</div>
-    <div class="modal-body">
-      <div id="specDownText"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn secondary" onclick="closeSpecDownModal()">취소</button>
-      <button class="modal-btn primary" onclick="confirmSpecDown()">스펙 다운 인정</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal" id="guildBaselineModal">
   <div class="modal-content">
@@ -2243,7 +2145,6 @@ async function fetchAndRenderLeaderboards() {
   const elFine = document.getElementById('lbFine');
   const elRise = document.getElementById('lbRise');
   const elDrop = document.getElementById('lbDrop');
-  const elSuspectCount = document.getElementById('lbSuspectCount');
   try {
     const res = await fetch('/api/leaderboards');
     if (!res.ok) throw new Error(res.status);
@@ -2252,31 +2153,15 @@ async function fetchAndRenderLeaderboards() {
     if (elFine) elFine.innerHTML = renderFineList(data.fine_top3 || []);
     if (elRise) elRise.innerHTML = renderDeltaList(data.rise_top5 || [], 'rise');
     if (elDrop) elDrop.innerHTML = renderDeltaList(data.drop_top5 || [], 'drop');
-    if (elSuspectCount) elSuspectCount.innerHTML = renderSuspectCountList(data.suspect_count_top || []);
-    renderSuspectSection(data.suspect_list || [], data.latest_week);
     renderGuildAlert(data.guild_alert || null);
   } catch (e) {
     if (elAvg)  elAvg.innerHTML  = '<div class="lb-empty">불러오기 실패</div>';
     if (elFine) elFine.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
     if (elRise) elRise.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
     if (elDrop) elDrop.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
-    if (elSuspectCount) elSuspectCount.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
   }
 }
 
-function renderSuspectCountList(rows) {
-  if (!rows.length) return '<div class="lb-empty">의심 회원 없음</div>';
-  return `<div class="lb-list">` + rows.map((r, i) => `
-    <div class="lb-row rank-${i + 1}">
-      <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
-      <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}</div>
-        <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
-      </div>
-      <div class="lb-value" style="color:#fb923c;">${r.suspect_count}회</div>
-    </div>
-  `).join('') + `</div>`;
-}
 
 function dropPctColor(p) {
   // 하락률(p, 음수) 심각도별 색상
@@ -2285,41 +2170,6 @@ function dropPctColor(p) {
   return '#FFB020';                // 노랑: -10% 이상 ~ 0% 이하
 }
 
-function renderSuspectSection(list, latestWeek) {
-  const section = document.getElementById('suspectSection');
-  const tbody = document.getElementById('suspectTbody');
-  const weekRef = document.getElementById('suspectWeekRef');
-  if (!section || !tbody) return;  // 페이지에 의심 섹션 없으면 무시
-  if (!list.length) {
-    section.style.display = 'none';
-    return;
-  }
-  section.style.display = 'block';
-  if (weekRef) weekRef.textContent = latestWeek ? `기준 주차: ${weekLabel(latestWeek)}` : '';
-  tbody.innerHTML = list.map((m, i) => {
-    const specTag = m.spec_down_suspected
-      ? `<span class="spec-down-suspected-tag">스펙 다운 추정</span>`
-      : '';
-    const specBtn = m.spec_down_suspected
-      ? `<button type="button" class="spec-down-btn"
-           data-name="${escapeAttr(m.name)}"
-           data-from-week="${escapeAttr(m.spec_down_candidate_from_week || '')}"
-           data-outlier-count="${m.outlier_count}">스펙 다운 확인</button>`
-      : '';
-    const dropColor = dropPctColor(m.latest_outlier_drop_pct);
-    return `<tr data-name="${escapeAttr(m.name)}">
-      <td  style="color:var(--muted);font-size:0.8rem">${i + 1}</td>
-      <td>${escapeAttr(m.name)}${specTag}</td>
-      <td><span class="rank-job">${escapeAttr(normalizeJob(m.job))}</span></td>
-      <td  style="font-weight:800">${fmt(m.personal_avg)}</td>
-      <td  style="color:#fb923c;font-weight:700">${m.outlier_count}회</td>
-      <td  style="font-weight:700;color:${dropColor}">
-        ${fmt(m.latest_outlier_score)} (${m.latest_outlier_drop_pct}%)
-      </td>
-      <td >${specBtn}</td>
-    </tr>`;
-  }).join('');
-}
 
 function renderGuildAlert(alert) {
   const banner = document.getElementById('guildAlertBanner');
@@ -2334,40 +2184,6 @@ function renderGuildAlert(alert) {
 }
 
 // 스펙 다운 확인 모달
-let currentSpecDownData = null;
-function showSpecDownModal(name, fromWeek, outlierCount) {
-  currentSpecDownData = { name };
-  document.getElementById('specDownText').innerHTML = `
-    <strong>${escapeAttr(name)}</strong> 길드원의 점수 하락이 <strong>${weekLabel(fromWeek)}</strong>부터 ${outlierCount}회 연속 유지되었습니다.<br><br>
-    스펙 다운(아이템 매각, 능력치 감소 등)으로 인정하시겠습니까?<br><br>
-    <span style="color:var(--muted);font-size:0.85rem;">
-      이후 해당 길드원의 점수 평균은 ${weekLabel(fromWeek)} 이후 데이터로 재산출됩니다.<br>
-      이전 정상 점수는 평균 계산에서 제외되며 히스토리에는 그대로 표시됩니다.
-    </span>
-  `;
-  document.getElementById('specDownModal').classList.add('show');
-}
-function closeSpecDownModal() {
-  document.getElementById('specDownModal').classList.remove('show');
-  currentSpecDownData = null;
-}
-async function confirmSpecDown() {
-  if (!currentSpecDownData) return;
-  const { name } = currentSpecDownData;
-  try {
-    const res = await fetch(`/api/spec-down/${encodeURIComponent(name)}`, { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      alert(`오류: ${err.detail || '요청이 실패했습니다.'}`);
-      return;
-    }
-    closeSpecDownModal();
-    alert(`${name} 스펙 다운 인정 처리되었습니다.`);
-    await init();
-  } catch (e) {
-    alert('통신 오류가 발생했습니다.');
-  }
-}
 
 // 보약 효과 종료 확인 모달
 function showGuildBaselineModal() {
@@ -2524,7 +2340,7 @@ function renderDeltaList(rows, kind) {
 }
 
 async function init() {
-  // 관리 페이지: 리더보드 4열 + 의심 명단 + 벌금 + 전체 길드원
+  // 관리 페이지: 리더보드 4열 + 벌금 + 전체 길드원
   const data = await fetchData();
   data.all_members = normalizeMembers(data.all_members);
   allMembers = data.all_members;
@@ -2534,7 +2350,7 @@ async function init() {
   // 커트라인 카드 (현재 / 신규 가입)
   renderCutoffs(data.all_members);
 
-  // 리더보드 4열 + 의심 명단 한 번에 처리 (응답 공유)
+  // 리더보드 4열 한 번에 처리 (응답 공유)
   await fetchAndRenderLeaderboards();
 
   zeroScoreMembers = await fetchZeroScoreMembers(data.stats.week);
@@ -2555,30 +2371,6 @@ if (_fullTbodyEl) _fullTbodyEl.addEventListener('click', e => {
   );
 });
 
-const _suspectTbodyEl = document.getElementById('suspectTbody');
-if (_suspectTbodyEl) _suspectTbodyEl.addEventListener('click', e => {
-  // 스펙 다운 확인 버튼 클릭은 모달 처리 (행 클릭과 분리)
-  const btn = e.target.closest('.spec-down-btn');
-  if (btn) {
-    showSpecDownModal(
-      btn.dataset.name,
-      btn.dataset.fromWeek,
-      parseInt(btn.dataset.outlierCount) || 0
-    );
-    return;
-  }
-  // 그 외 행 영역 클릭 → 회원 히스토리 페이지 새 창
-  const row = e.target.closest('tr[data-name]');
-  if (!row) return;
-  const name = row.dataset.name;
-  if (name) {
-    window.open(
-      `/static/member.html?name=${encodeURIComponent(name)}`,
-      '_blank',
-      'width=1000,height=800,noopener'
-    );
-  }
-});
 
 const _fineTbodyEl = document.getElementById('fineTbody');
 if (_fineTbodyEl) _fineTbodyEl.addEventListener('click', e => {
