@@ -2333,7 +2333,7 @@ function renderDeltaList(rows, kind) {
         <div class="lb-name">${escapeAttr(r.name)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
-      <div class="lb-value ${cls}">${sign}${fmt(r.delta)}</div>
+      <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}</span></div>
     </div>
     `;
   }).join('') + `</div>`;

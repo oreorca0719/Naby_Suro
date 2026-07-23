@@ -1089,13 +1089,22 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
         curr = int(m.get("score", 0))
 
         # 상승/하락 분석: 이번 주 참여 (이상치 회원도 포함 — 사용자 결정)
+        #
+        # 순위 기준은 wow_delta(전주 대비). 이전에는 avg_delta(본인 평균 대비)로
+        # 정렬했는데, 꾸준히 성장해 평균이 낮게 깔린 회원이 이번 주에 거의 안 올라도
+        # 계속 상위에 남는 문제가 있었다. (예: 이번 주 +4,407 인데 평균 대비로는
+        # +49,560 이라 1위) avg_delta 는 참고용으로 함께 내려준다.
         if curr > 0:
+            prev_score = score_by_name_week.get(name, {}).get(prev_week, 0) if prev_week else 0
             delta_list.append({
                 "name":         name,
                 "job":          m.get("job", ""),
                 "personal_avg": int(clean_mean),
                 "curr_score":   curr,
-                "delta":        int(curr - clean_mean),
+                "prev_score":   int(prev_score),
+                # 전주에 미참(0점)이면 상승폭을 계산할 수 없다 → 순위에서 제외
+                "delta":        int(curr - prev_score) if prev_score > 0 else None,
+                "avg_delta":    int(curr - clean_mean),
             })
 
         # 불성실 의심 명단: "이번 주(latest)" 이상치 회원만
@@ -1127,8 +1136,10 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
                 "spec_down_candidate_from_week": spec_down_candidate,
             })
 
-    rise_top5 = sorted(delta_list, key=lambda x: (-x["delta"], x["name"]))[:10]
-    drop_top5 = sorted(delta_list, key=lambda x: (x["delta"], x["name"]))[:10]
+    # delta 가 None(전주 미참)인 회원은 상승/하락 순위에서 제외
+    ranked_delta = [d for d in delta_list if d["delta"] is not None]
+    rise_top5 = sorted(ranked_delta, key=lambda x: (-x["delta"], x["name"]))[:10]
+    drop_top5 = sorted(ranked_delta, key=lambda x: (x["delta"], x["name"]))[:10]
     suspect_list.sort(
         key=lambda x: (-x["outlier_count"], -int(x["latest_outlier_week"] or "0"), x["name"])
     )
