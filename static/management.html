@@ -1169,6 +1169,8 @@
       position: relative;
       overflow: hidden;
     }
+    /* 압축 마크 — 좁은 리더보드용 (색·발광은 동일, 텍스트만 짧게) */
+    .wmark-sm { margin-left: 5px; padding: 1px 6px; font-size: 0.6rem; border-radius: 4px; }
     /* 제네시스 — 검은 바탕, 빨간 글씨, 번쩍이는 발광 */
     .wmark-genesis {
       background: #0a0a0f;
@@ -1242,21 +1244,24 @@
   <nav class="page-tabs">
     <a href="/admin" class="page-tab">개요</a>
     <a href="/manage" class="page-tab active">관리</a>
-    <button type="button" class="rename-tool-btn" onclick="showRenameModal()" title="닉네임을 바꾼 길드원의 기존 히스토리를 신규 닉네임으로 이관">
-      닉네임 변경
-    </button>
-    <button type="button" class="rename-tool-btn" id="weaponRefreshBtn" onclick="refreshWeaponMarks()" title="넥슨 API로 제네시스·데스티니 무기 착용자를 조회해 마크를 갱신">
-      무기 마크 갱신
-    </button>
-    <a href="/event" class="event-link-btn" title="신규/기존 연합원 조회 (달빛·연꽃·꽃잎·꿀벌)">
-      <span class="event-link-badge">EVENT</span>
-      <span class="event-link-text">신규/기존 연합원 조회</span>
-    </a>
+    <div class="nav-tools">
+      <button type="button" class="rename-tool-btn" onclick="showRenameModal()" title="닉네임을 바꾼 길드원의 기존 히스토리를 신규 닉네임으로 이관">
+        닉네임 변경
+      </button>
+      <button type="button" class="rename-tool-btn" id="weaponRefreshBtn" onclick="refreshWeaponMarks()" title="넥슨 API로 제네시스·데스티니 무기 착용자를 조회해 마크를 갱신">
+        무기 마크 갱신
+      </button>
+    </div>
   </nav>
   <style>
-    .rename-tool-btn {
-      align-self: center;
+    /* 오른쪽 도구 버튼 묶음 — 함께 우측 정렬, 동일 간격 */
+    .nav-tools {
       margin-left: auto;
+      align-self: center;
+      display: flex;
+      gap: 8px;
+    }
+    .rename-tool-btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -1277,41 +1282,8 @@
       background: rgba(49,130,246,0.22);
     }
     @media (max-width: 600px) {
+      .nav-tools { gap: 6px; }
       .rename-tool-btn { padding: 6px 10px; font-size: 0.74rem; }
-    }
-    .event-link-btn {
-      margin-left: 6px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      align-self: center;
-      background: var(--fill);
-      border: 1px solid rgba(49,130,246,0.4);
-      border-radius: 8px;
-      color: var(--text);
-      text-decoration: none;
-      font-size: 0.82rem;
-      font-weight: 700;
-      white-space: nowrap;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .event-link-btn:hover {
-      border-color: var(--accent);
-      background: var(--border);
-    }
-    .event-link-badge {
-      background: var(--accent);
-      color: #fff;
-      font-weight: 800;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.66rem;
-      letter-spacing: 0.04em;
-    }
-    @media (max-width: 600px) {
-      .event-link-btn { padding: 6px 10px; font-size: 0.72rem; }
-      .event-link-text { display: none; }
     }
   </style>
 
@@ -1546,9 +1518,10 @@ function fmt(n) {
   return Number(n).toLocaleString('ko-KR');
 }
 
-function weaponMark(tier) {
-  if (tier === 'genesis') return ' <span class="wmark wmark-genesis">대적자: 제네시스 해방</span>';
-  if (tier === 'destiny') return ' <span class="wmark wmark-destiny">대적자: 데스티니 초월</span>';
+function weaponMark(tier, compact) {
+  const c = compact ? ' wmark-sm' : '';
+  if (tier === 'genesis') return ` <span class="wmark wmark-genesis${c}">${compact ? '제네시스' : '대적자: 제네시스 해방'}</span>`;
+  if (tier === 'destiny') return ` <span class="wmark wmark-destiny${c}">${compact ? '데스티니' : '대적자: 데스티니 초월'}</span>`;
   return '';
 }
 
@@ -2408,7 +2381,7 @@ function renderAvgRankList(rows) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value">평균 ${r.avg_rank}위<span class="lb-value-sub">${r.weeks}주차</span></div>
@@ -2422,7 +2395,7 @@ function renderFineList(rows) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value fine">${r.fine_count}회</div>
@@ -2440,7 +2413,7 @@ function renderDeltaList(rows, kind) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}</span></div>

@@ -705,6 +705,8 @@
       position: relative;
       overflow: hidden;
     }
+    /* 압축 마크 — 좁은 리더보드용 (색·발광은 동일, 텍스트만 짧게) */
+    .wmark-sm { margin-left: 5px; padding: 1px 6px; font-size: 0.6rem; border-radius: 4px; }
     /* 제네시스 — 검은 바탕, 빨간 글씨, 번쩍이는 발광 */
     .wmark-genesis {
       background: #0a0a0f;
@@ -966,9 +968,10 @@ function fmt(n) {
   return Number(n).toLocaleString('ko-KR');
 }
 
-function weaponMark(tier) {
-  if (tier === 'genesis') return ' <span class="wmark wmark-genesis">대적자: 제네시스 해방</span>';
-  if (tier === 'destiny') return ' <span class="wmark wmark-destiny">대적자: 데스티니 초월</span>';
+function weaponMark(tier, compact) {
+  const c = compact ? ' wmark-sm' : '';
+  if (tier === 'genesis') return ` <span class="wmark wmark-genesis${c}">${compact ? '제네시스' : '대적자: 제네시스 해방'}</span>`;
+  if (tier === 'destiny') return ` <span class="wmark wmark-destiny${c}">${compact ? '데스티니' : '대적자: 데스티니 초월'}</span>`;
   return '';
 }
 
@@ -1704,7 +1707,7 @@ function renderAvgRankList(rows) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value">평균 ${r.avg_rank}위<span class="lb-value-sub">${r.weeks}주차</span></div>
@@ -1718,7 +1721,7 @@ function renderFineList(rows) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value fine">${r.fine_count}회</div>
@@ -1736,7 +1739,7 @@ function renderDeltaList(rows, kind) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}</span></div>

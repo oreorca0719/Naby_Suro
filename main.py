@@ -1335,10 +1335,6 @@ def admin_page():
 def manage_page():
     return FileResponse("static/management.html")     # 관리자 관리
 
-@app.get("/event")
-def event_page():
-    return FileResponse("static/event.html")          # 달빛 연합원 확인 (관리자 전용, 가드는 JS)
-
 @app.get("/member")
 def member_page():
     return FileResponse("static/member.html")         # 회원 히스토리 (공개)
