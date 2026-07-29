@@ -689,6 +689,56 @@
       .top5-champion-score { font-size: 1.3rem; }
       .chart-wrap { height: 220px; }
     }
+  
+    /* ── 무기 마크 (제네시스/데스티니 착용자) ── */
+    .wmark {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      line-height: 1.45;
+      position: relative;
+      overflow: hidden;
+    }
+    /* 제네시스 — 검은 바탕, 빨간 글씨, 번쩍이는 발광 */
+    .wmark-genesis {
+      background: #0a0a0f;
+      color: #ff3b3b;
+      border: 1px solid #5c0d0d;
+      text-shadow: 0 0 5px rgba(255,59,59,0.9);
+      animation: wmarkGenesis 1.3s ease-in-out infinite;
+    }
+    @keyframes wmarkGenesis {
+      0%, 100% { box-shadow: 0 0 3px rgba(255,59,59,0.35); color: #ff3b3b;
+                 text-shadow: 0 0 4px rgba(255,59,59,0.7); }
+      50%      { box-shadow: 0 0 11px 2px rgba(255,59,59,0.85); color: #ff7a7a;
+                 text-shadow: 0 0 9px rgba(255,90,90,1); }
+    }
+    /* 데스티니 — 하늘색 바탕, 노란 글씨, 반짝이는 광택 스윕 */
+    .wmark-destiny {
+      background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+      color: #fff59d;
+      border: 1px solid #b3e5fc;
+      text-shadow: 0 0 5px rgba(255,235,59,0.9), 0 1px 1px rgba(0,0,0,0.35);
+    }
+    .wmark-destiny::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 32%, rgba(255,255,255,0.8) 50%, transparent 68%);
+      transform: translateX(-120%);
+      animation: wmarkShimmer 2.4s ease-in-out infinite;
+    }
+    @keyframes wmarkShimmer { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .wmark-genesis { animation: none; box-shadow: 0 0 6px rgba(255,59,59,0.6); }
+      .wmark-destiny::after { animation: none; opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -898,6 +948,12 @@ function fmt(n) {
   return Number(n).toLocaleString('ko-KR');
 }
 
+function weaponMark(tier) {
+  if (tier === 'genesis') return ' <span class="wmark wmark-genesis">대적자: 제네시스 해방</span>';
+  if (tier === 'destiny') return ' <span class="wmark wmark-destiny">대적자: 데스티니 초월</span>';
+  return '';
+}
+
 /* 큰 수치를 현재 표시값 → 목표값으로 굴려서 채운다.
    첫 진입은 0 부터, 갱신 시에는 이전 값부터 이어져 깜빡이지 않는다. */
 function countUp(el, to, suffix = '') {
@@ -1055,7 +1111,7 @@ function renderTop5(members) {
       <div class="top5-crown">1</div>
       <div class="top5-champion-meta">
         <div class="top5-champion-label">1위</div>
-        <div class="top5-champion-name">${escapeAttr(first.name)}</div>
+        <div class="top5-champion-name">${escapeAttr(first.name)}${weaponMark(first.weapon_tier)}</div>
         <div class="top5-champion-job">${escapeAttr(normalizeJob(first.job))}</div>
       </div>
       <div class="top5-champion-score">${fmt(first.score)}<span class="top5-champion-score-unit">점</span></div>
@@ -1067,7 +1123,7 @@ function renderTop5(members) {
       <div class="top5-row rank-${rank}">
         <div class="top5-medal">${REST_MEDALS[i]}</div>
         <div class="top5-meta">
-          <div class="top5-name">${escapeAttr(r.name)}</div>
+          <div class="top5-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
           <div class="top5-job">${escapeAttr(normalizeJob(r.job))}</div>
         </div>
         <div class="top5-score">${fmt(r.score)}<span class="top5-score-unit">점</span></div>
@@ -1125,7 +1181,7 @@ function renderFullTable(members) {
   const tbody = document.getElementById('fullTbody');
   tbody.innerHTML = members.map(m => `<tr>
     <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
-    <td>${m.name}</td>
+    <td>${m.name}${weaponMark(m.weapon_tier)}</td>
     <td><span class="rank-job">${m.job}</span></td>
     <td class="${m.score === 0 ? 'zero-score' : ''}"  style="font-weight:800">
       ${m.score === 0 ? '—' : fmt(m.score)}
@@ -1630,7 +1686,7 @@ function renderAvgRankList(rows) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value">평균 ${r.avg_rank}위<span class="lb-value-sub">${r.weeks}주차</span></div>
@@ -1644,7 +1700,7 @@ function renderFineList(rows) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value fine">${r.fine_count}회</div>
@@ -1662,7 +1718,7 @@ function renderDeltaList(rows, kind) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
       <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}</span></div>

@@ -156,7 +156,8 @@ def get_members(week: str) -> list[dict]:
     items = [i for i in resp.get("Items", []) if not i.get("is_ghost")]
     # rank 기준 정렬, Decimal → int 변환
     return sorted(
-        [{"rank": int(i["rank"]), "name": i["name"], "job": i["job"], "score": int(i["score"]), "fine_count": int(i.get("fine_count", 0))} for i in items],
+        [{"rank": int(i["rank"]), "name": i["name"], "job": i["job"], "score": int(i["score"]),
+          "fine_count": int(i.get("fine_count", 0)), "weapon_tier": i.get("weapon_tier")} for i in items],
         key=lambda x: x["rank"]
     )
 
@@ -381,6 +382,31 @@ async def _get_ocid(client: httpx.AsyncClient, name: str) -> str:
     return ocid
 
 
+def _weapon_tier_from_name(weapon_name: str) -> str | None:
+    """무기 이름으로 등급 판별. 제네시스/데스티니 무기는 이름이 각각
+    '제네시스'/'데스티니'로 시작한다. (해방 무기는 이 접두어가 고유하다)"""
+    w = (weapon_name or "").strip()
+    if w.startswith("데스티니"):
+        return "destiny"
+    if w.startswith("제네시스"):
+        return "genesis"
+    return None
+
+
+async def _fetch_weapon_tier(client: httpx.AsyncClient, name: str) -> tuple[str | None, str]:
+    """캐릭터의 착용 무기 등급과 원본 무기명을 반환. (tier, weapon_name)
+    tier 는 'genesis' | 'destiny' | None."""
+    ocid = await _get_ocid(client, name)
+    data = await _nexon_get(client, "/character/item-equipment", {"ocid": ocid})
+    weapon_name = ""
+    for it in data.get("item_equipment", []) or []:
+        # 주무기 슬롯만 확인 (보조무기/엠블렘 제외)
+        if it.get("item_equipment_part") == "무기" or it.get("item_equipment_slot") == "무기":
+            weapon_name = it.get("item_name") or ""
+            break
+    return _weapon_tier_from_name(weapon_name), weapon_name
+
+
 @app.get("/api/member/{name}/profile")
 async def get_member_profile(name: str):
     if not NEXON_API_KEY:
@@ -439,6 +465,74 @@ async def get_member_profile(name: str):
 
     _profile_cache[name] = (time.time(), profile)
     return profile
+
+
+@app.post("/api/refresh-weapon-marks")
+async def refresh_weapon_marks(_admin: str = Depends(require_admin)):
+    """최신 주차 회원 전원의 착용 무기를 넥슨 API로 조회해 weapon_tier 를 갱신한다.
+    무기는 자주 바뀌지 않으므로 이 갱신은 관리자가 필요할 때만 수동 실행한다.
+
+    - 성공 + 제네시스/데스티니 → weapon_tier SET
+    - 성공 + 해당 없음 → weapon_tier REMOVE
+    - 조회 실패(캐릭터 없음/개명/API 오류) → 기존 값 유지 (덮어쓰지 않음)
+    """
+    if not NEXON_API_KEY:
+        raise HTTPException(status_code=503, detail="NEXON_API_KEY 미설정")
+
+    from boto3.dynamodb.conditions import Key
+
+    latest = get_latest_week()
+    resp = table.query(KeyConditionExpression=Key("week").eq(latest) & Key("rank").gt(0))
+    members = [i for i in resp.get("Items", []) if not i.get("is_ghost")]
+
+    sem = asyncio.Semaphore(8)   # 넥슨 rate limit 보호
+    counts = {"genesis": 0, "destiny": 0, "none": 0, "failed": 0}
+    samples: list[str] = []
+    updates: list[tuple[int, str | None]] = []   # (rank, tier|None) — 성공 건만
+
+    async with httpx.AsyncClient() as client:
+        async def one(item):
+            name = item.get("name")
+            rank = int(item["rank"])
+            async with sem:
+                try:
+                    tier, wname = await _fetch_weapon_tier(client, name)
+                except Exception:
+                    counts["failed"] += 1
+                    return
+                updates.append((rank, tier))
+                if tier:
+                    counts[tier] += 1
+                    if len(samples) < 12:
+                        samples.append(f"{name}: {wname}")
+                else:
+                    counts["none"] += 1
+        await asyncio.gather(*[one(m) for m in members])
+
+    # DynamoDB 반영 — 성공 건만 (실패 건은 기존 값 유지)
+    for rank, tier in updates:
+        if tier:
+            table.update_item(
+                Key={"week": latest, "rank": rank},
+                UpdateExpression="SET weapon_tier = :t",
+                ExpressionAttributeValues={":t": tier},
+            )
+        else:
+            table.update_item(
+                Key={"week": latest, "rank": rank},
+                UpdateExpression="REMOVE weapon_tier",
+            )
+
+    _cache_clear()
+    return {
+        "week": latest,
+        "total": len(members),
+        "genesis": counts["genesis"],
+        "destiny": counts["destiny"],
+        "none": counts["none"],
+        "failed": counts["failed"],
+        "samples": samples,   # 판별 검증용 — 실제 감지된 무기명 일부
+    }
 
 
 @app.get("/api/zero-score/{week}")
@@ -1140,6 +1234,11 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
     ranked_delta = [d for d in delta_list if d["delta"] is not None]
     rise_top5 = sorted(ranked_delta, key=lambda x: (-x["delta"], x["name"]))[:10]
     drop_top5 = sorted(ranked_delta, key=lambda x: (x["delta"], x["name"]))[:10]
+
+    # 무기 마크(weapon_tier) 일괄 주입 — 리더보드 각 행에 회원의 착용 무기 등급 부여
+    _wtier = {name: m.get("weapon_tier") for name, m in latest_members.items()}
+    for _row in (*top_avg, *top_fine, *rise_top5, *drop_top5):
+        _row["weapon_tier"] = _wtier.get(_row["name"])
     suspect_list.sort(
         key=lambda x: (-x["outlier_count"], -int(x["latest_outlier_week"] or "0"), x["name"])
     )

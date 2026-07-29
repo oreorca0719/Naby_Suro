@@ -57,8 +57,9 @@ def get_previous_fines(table) -> dict[str, dict]:
         left_guild = bool(i.get("left_guild"))
         spec_down_from_week = i.get("spec_down_from_week")
         fine_exempt_weeks = list(i.get("fine_exempt_weeks") or [])
+        weapon_tier = i.get("weapon_tier")   # 무기 마크 — 자주 안 바뀌므로 주차 간 이월
         if (fine_count > 0 or last_fine_week or pending_weeks or left_guild
-                or spec_down_from_week or fine_exempt_weeks):
+                or spec_down_from_week or fine_exempt_weeks or weapon_tier):
             mapping[key] = {
                 "name":                str(name),  # DB에 저장된 원본 표기 보존
                 "job":                 str(i.get("job") or "?"),
@@ -68,6 +69,7 @@ def get_previous_fines(table) -> dict[str, dict]:
                 "left_guild":          left_guild,
                 "spec_down_from_week": spec_down_from_week,
                 "fine_exempt_weeks":   fine_exempt_weeks,
+                "weapon_tier":         weapon_tier,
             }
     return mapping
 
@@ -118,6 +120,8 @@ def upload(file_path: str, week: str = None):
                 item["spec_down_from_week"] = prev["spec_down_from_week"]
             if prev.get("fine_exempt_weeks"):
                 item["fine_exempt_weeks"] = prev["fine_exempt_weeks"]
+            if prev.get("weapon_tier"):
+                item["weapon_tier"] = prev["weapon_tier"]
 
             # pending_weeks 이월
             new_pending = list(prev["pending_weeks"])
