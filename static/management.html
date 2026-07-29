@@ -1183,6 +1183,15 @@
       50%      { box-shadow: 0 0 11px 2px rgba(255,59,59,0.85); color: #ff7a7a;
                  text-shadow: 0 0 9px rgba(255,90,90,1); }
     }
+    /* 붉은 광택 스윕 — 데스티니와 동일한 이펙트 구조 */
+    .wmark-genesis::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 32%, rgba(255,120,120,0.7) 50%, transparent 68%);
+      transform: translateX(-120%);
+      animation: wmarkShimmer 2.4s ease-in-out infinite;
+    }
     /* 데스티니 — 하늘색 바탕, 노란 글씨, 반짝이는 광택 스윕 */
     /* 데스티니 — 실제 무기 색감(아이보리골드 바디 · 시안 보석 · 바이올렛 오라) */
     .wmark-destiny {
@@ -1208,6 +1217,7 @@
     @keyframes wmarkShimmer { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
     @media (prefers-reduced-motion: reduce) {
       .wmark-genesis { animation: none; box-shadow: 0 0 6px rgba(255,59,59,0.6); }
+      .wmark-genesis::after { animation: none; opacity: 0; }
       .wmark-destiny { animation: none; box-shadow: 0 0 7px rgba(140,215,255,0.6); }
       .wmark-destiny::after { animation: none; opacity: 0; }
     }
