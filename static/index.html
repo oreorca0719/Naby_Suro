@@ -720,23 +720,31 @@
                  text-shadow: 0 0 9px rgba(255,90,90,1); }
     }
     /* 데스티니 — 하늘색 바탕, 노란 글씨, 반짝이는 광택 스윕 */
+    /* 데스티니 — 실제 무기 색감(아이보리골드 바디 · 시안 보석 · 바이올렛 오라) */
     .wmark-destiny {
-      background: linear-gradient(135deg, #4fc3f7, #29b6f6);
-      color: #fff59d;
-      border: 1px solid #b3e5fc;
-      text-shadow: 0 0 5px rgba(255,235,59,0.9), 0 1px 1px rgba(0,0,0,0.35);
+      background: linear-gradient(135deg, #1f5f9e 0%, #37a6cf 45%, #8f7be0 100%);
+      color: #ffe6a3;
+      border: 1px solid rgba(160,224,255,0.75);
+      text-shadow: 0 0 6px rgba(255,205,110,0.95), 0 1px 1px rgba(0,0,0,0.45);
+      animation: wmarkDestinyGlow 2.4s ease-in-out infinite;
     }
+    @keyframes wmarkDestinyGlow {
+      0%, 100% { box-shadow: 0 0 6px rgba(120,205,255,0.40), inset 0 0 6px rgba(175,150,255,0.30); }
+      50%      { box-shadow: 0 0 12px 2px rgba(150,225,255,0.75), inset 0 0 8px rgba(200,175,255,0.50); }
+    }
+    /* 골드빛 광택 스윕 — 금속에 빛이 스치듯 */
     .wmark-destiny::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(110deg, transparent 32%, rgba(255,255,255,0.8) 50%, transparent 68%);
+      background: linear-gradient(110deg, transparent 32%, rgba(255,248,220,0.85) 50%, transparent 68%);
       transform: translateX(-120%);
       animation: wmarkShimmer 2.4s ease-in-out infinite;
     }
     @keyframes wmarkShimmer { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
     @media (prefers-reduced-motion: reduce) {
       .wmark-genesis { animation: none; box-shadow: 0 0 6px rgba(255,59,59,0.6); }
+      .wmark-destiny { animation: none; box-shadow: 0 0 7px rgba(140,215,255,0.6); }
       .wmark-destiny::after { animation: none; opacity: 0; }
     }
   </style>
