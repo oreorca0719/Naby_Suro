@@ -115,39 +115,6 @@
     /* 사용 안 함 (마크업에서 제거됨) */
     .live-badge, .live-dot { display: none; }
 
-    /* ── 통계 3종 ───────────────────────── */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    .stat-card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 22px 24px;
-    }
-    .stat-label {
-      font-size: 0.85rem;
-      color: var(--ink-2);
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-    .stat-value {
-      font-size: 1.7rem;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.15;
-    }
-    .stat-value span {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--muted);
-      margin-left: 3px;
-      letter-spacing: -0.02em;
-    }
-
     /* ── 카드 / 섹션 ────────────────────── */
     .card {
       background: var(--surface);
@@ -578,7 +545,6 @@
       to   { opacity: 1; transform: none; }
     }
     .brief-banner,
-    .stat-grid > .stat-card,
     .brief-grid-3 > .brief-card,
     .brief-grid-4 > .brief-card,
     .wrapper > .card,
@@ -587,11 +553,9 @@
       animation: riseIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
     }
     /* 순차 등장 — 같은 줄의 카드들이 왼쪽부터 차례로 */
-    .stat-grid > .stat-card:nth-child(2),
     .brief-grid-3 > .brief-card:nth-child(2),
     .brief-grid-4 > .brief-card:nth-child(2),
     .leaderboard-row-public > .card:nth-child(2) { animation-delay: 0.06s; }
-    .stat-grid > .stat-card:nth-child(3),
     .brief-grid-3 > .brief-card:nth-child(3),
     .brief-grid-4 > .brief-card:nth-child(3) { animation-delay: 0.12s; }
     .brief-grid-4 > .brief-card:nth-child(4) { animation-delay: 0.18s; }
@@ -607,7 +571,7 @@
     @media (prefers-reduced-motion: reduce) {
       .spinner { animation-duration: 2.4s; }
       * { transition: none !important; }
-      .brief-banner, .stat-card, .brief-card, .card, .full-table-section { animation: none !important; }
+      .brief-banner, .brief-card, .card, .full-table-section { animation: none !important; }
     }
 
     /* ── 모달 ───────────────────────────── */
@@ -681,8 +645,8 @@
       .wrapper { padding: 0 14px 56px; }
       header { padding: 28px 0 20px; align-items: flex-start; flex-direction: column; }
       .header-left h1 { font-size: 1.45rem; }
-      .stat-grid, .brief-grid-3 { grid-template-columns: 1fr; }
-      .card, .stat-card, .brief-card { padding: 18px; }
+      .brief-grid-3 { grid-template-columns: 1fr; }
+      .card, .brief-card { padding: 18px; }
       .top5-list { padding: 4px 18px; }
       .top5-champion { padding: 18px; gap: 12px; }
       .top5-champion-name { font-size: 1.2rem; }
@@ -777,22 +741,6 @@
       <div class="updated-at" id="updatedAt">불러오는 중...</div>
     </div>
   </header>
-
-  <!-- STAT CARDS -->
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-label" id="labelTotal">총 길드원</div>
-      <div class="stat-value" id="statTotal">—<span>명</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label" id="labelActive">수로 참여자</div>
-      <div class="stat-value" id="statActive">—<span>명</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label" id="labelScore">수로 총 점수</div>
-      <div class="stat-value" id="statTotalScore">—</div>
-    </div>
-  </div>
 
   <!-- 브리핑 보드 -->
   <div id="briefingBoard" style="margin-bottom:32px;"></div>
@@ -1016,10 +964,8 @@ function normalizeMembers(members) {
 }
 
 function renderStats(stats) {
-  countUp(document.getElementById('statTotal'),      stats.total,       '<span>명</span>');
-  countUp(document.getElementById('statActive'),     stats.active,      '<span>명</span>');
-  countUp(document.getElementById('statTotalScore'), stats.total_score);
-  document.getElementById('updatedAt').textContent = `${stats.week_display} 기준`;
+  const updatedEl = document.getElementById('updatedAt');
+  if (updatedEl && stats.week_display) updatedEl.textContent = `${stats.week_display} 기준`;
 }
 
 function calcAnalysis(members) {
@@ -1227,10 +1173,7 @@ function weekLabel(w) {
 }
 
 function setStatLabels(week) {
-  const prefix = week ? `(${weekRangeLabel(week)}) ` : '';
-  document.getElementById('labelTotal').textContent  = `${prefix}총 길드원`;
-  document.getElementById('labelActive').textContent = `${prefix}수로 참여자`;
-  document.getElementById('labelScore').textContent  = `${prefix}수로 총 점수`;
+  // 상단 스탯 카드(총 길드원/수로 참여자/수로 총 점수) 제거됨 — 주요 지표와 중복이라 걷어냄
 }
 
 function setWeekBadge(week) {

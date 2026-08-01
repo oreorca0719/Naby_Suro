@@ -411,7 +411,6 @@
       to   { opacity: 1; transform: none; }
     }
     .brief-banner,
-    .stat-grid > .stat-card,
     .brief-grid-3 > .brief-card,
     .brief-grid-4 > .brief-card,
     .wrapper > .card,
@@ -420,11 +419,9 @@
       animation: riseIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
     }
     /* 순차 등장 — 같은 줄의 카드들이 왼쪽부터 차례로 */
-    .stat-grid > .stat-card:nth-child(2),
     .brief-grid-3 > .brief-card:nth-child(2),
     .brief-grid-4 > .brief-card:nth-child(2),
     .leaderboard-row-public > .card:nth-child(2) { animation-delay: 0.06s; }
-    .stat-grid > .stat-card:nth-child(3),
     .brief-grid-3 > .brief-card:nth-child(3),
     .brief-grid-4 > .brief-card:nth-child(3) { animation-delay: 0.12s; }
     .brief-grid-4 > .brief-card:nth-child(4) { animation-delay: 0.18s; }
@@ -440,7 +437,7 @@
     @media (prefers-reduced-motion: reduce) {
       .spinner { animation-duration: 2.4s; }
       * { transition: none !important; }
-      .brief-banner, .stat-card, .brief-card, .card, .full-table-section { animation: none !important; }
+      .brief-banner, .brief-card, .card, .full-table-section { animation: none !important; }
     }
   </style>
 </head>

@@ -214,45 +214,6 @@
     .cutoff-value-green  { color: var(--green); }
     .cutoff-value-yellow { color: var(--yellow); }
 
-    /* ── STAT CARDS ── */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-
-    .stat-card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 22px 24px;
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      display: none;
-    }
-
-    .stat-card:hover { border-color: var(--accent); }
-
-    .stat-label {
-      font-size: 0.85rem;
-      color: var(--ink-2);
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-    .stat-value {
-      font-size: 1.7rem;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.15;
-    }
-    .stat-value span { font-size: 0.85rem; color: var(--muted); margin-left: 4px; font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif; }
-
     /* ── SECTION TITLE ── */
     .section-title {
       font-size: 1.05rem;
@@ -944,7 +905,6 @@
     }
 
     @media (max-width: 1024px) {
-      .stat-grid { grid-template-columns: repeat(2, 1fr); }
       .main-grid { grid-template-columns: 1fr; }
       .brief-grid-3, .brief-grid-4 { grid-template-columns: repeat(2, 1fr); }
     }
@@ -960,10 +920,6 @@
         align-items: flex-start;
         width: 100%;
       }
-      .stat-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
-      .stat-card { padding: 16px 20px; }
-      .stat-label { font-size: 0.65rem; }
-      .stat-value { font-size: 1.5rem; }
       .cutoff-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
       .cutoff-card { padding: 18px 20px; }
       .cutoff-value { font-size: 1.8rem; }
@@ -1010,10 +966,6 @@
       header { margin-bottom: 20px; padding: 20px 0 16px; }
       .header-left h1 { font-size: 1.5rem; }
       .header-left .subtitle { font-size: 0.7rem; }
-      .stat-card { padding: 14px 16px; }
-      .stat-label { font-size: 0.6rem; }
-      .stat-value { font-size: 1.3rem; }
-      .stat-value span { font-size: 0.75rem; }
       .card { padding: 16px; border-radius: 8px; }
       .section-title { font-size: 0.8rem; margin-bottom: 12px; }
       .chart-wrap { height: 240px; }
@@ -1122,7 +1074,6 @@
       to   { opacity: 1; transform: none; }
     }
     .brief-banner,
-    .stat-grid > .stat-card,
     .brief-grid-3 > .brief-card,
     .brief-grid-4 > .brief-card,
     .wrapper > .card,
@@ -1131,11 +1082,9 @@
       animation: riseIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
     }
     /* 순차 등장 — 같은 줄의 카드들이 왼쪽부터 차례로 */
-    .stat-grid > .stat-card:nth-child(2),
     .brief-grid-3 > .brief-card:nth-child(2),
     .brief-grid-4 > .brief-card:nth-child(2),
     .leaderboard-row-public > .card:nth-child(2) { animation-delay: 0.06s; }
-    .stat-grid > .stat-card:nth-child(3),
     .brief-grid-3 > .brief-card:nth-child(3),
     .brief-grid-4 > .brief-card:nth-child(3) { animation-delay: 0.12s; }
     .brief-grid-4 > .brief-card:nth-child(4) { animation-delay: 0.18s; }
@@ -1151,7 +1100,7 @@
     @media (prefers-reduced-motion: reduce) {
       .spinner { animation-duration: 2.4s; }
       * { transition: none !important; }
-      .brief-banner, .stat-card, .brief-card, .card, .full-table-section { animation: none !important; }
+      .brief-banner, .brief-card, .card, .full-table-section { animation: none !important; }
     }
   
     /* ── 무기 마크 (제네시스/데스티니 착용자) ── */
@@ -1566,10 +1515,8 @@ function normalizeMembers(members) {
 }
 
 function renderStats(stats) {
-  countUp(document.getElementById('statTotal'), stats.total, '<span>명</span>');
-  countUp(document.getElementById('statActive'), stats.active, '<span>명</span>');
-  countUp(document.getElementById('statTotalScore'), stats.total_score);
-  document.getElementById('updatedAt').textContent = `업데이트: ${stats.updated_at}`;
+  const updatedEl = document.getElementById('updatedAt');
+  if (updatedEl && stats.updated_at) updatedEl.textContent = `업데이트: ${stats.updated_at}`;
 }
 
 // 신규 가입 커트라인 — 참여자(점수>0) 정렬 후 하위 20% 위치 회원 한 명의 점수
@@ -1748,10 +1695,7 @@ function weekLabel(w) {
 }
 
 function setStatLabels(week) {
-  const prefix = week ? `(${weekRangeLabel(week)}) ` : '';
-  document.getElementById('labelTotal').textContent  = `${prefix}총 길드원`;
-  document.getElementById('labelActive').textContent = `${prefix}수로 참여자`;
-  document.getElementById('labelScore').textContent  = `${prefix}수로 총 점수`;
+  // 상단 스탯 카드(총 길드원/수로 참여자/수로 총 점수) 제거됨 — 주요 지표와 중복이라 걷어냄
 }
 
 function setWeekBadge(week) {
