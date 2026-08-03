@@ -106,6 +106,12 @@
       white-space: nowrap;
     }
     .page-tab:hover { color: var(--text); }
+    .beta-badge {
+      display: inline-block; margin-left: 6px; padding: 2px 7px;
+      border-radius: 999px; background: var(--accent2, #FFB020); color: #fff;
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em;
+      vertical-align: middle;
+    }
     .page-tab.active {
       color: var(--accent);
       border-bottom-color: var(--accent);
@@ -1193,6 +1199,7 @@
   <nav class="page-tabs">
     <a href="/admin" class="page-tab">개요</a>
     <a href="/manage" class="page-tab active">관리</a>
+    <a href="/detection" class="page-tab">불성실 참여 탐지 시스템<span class="beta-badge">BETA</span></a>
     <div class="nav-tools">
       <button type="button" class="rename-tool-btn" onclick="showRenameModal()" title="닉네임을 바꾼 길드원의 기존 히스토리를 신규 닉네임으로 이관">
         닉네임 변경

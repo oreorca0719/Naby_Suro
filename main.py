@@ -1282,6 +1282,177 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
     return result
 
 
+# ── 불성실 참여 탐지 (베타) ────────────────────────────────────────
+# 임계값 버전 이력. 최신 항목이 현재 적용값이다.
+# 새 패치를 낼 때는 이 목록 맨 앞에 항목을 추가한다.
+DETECTION_VERSIONS = [
+    {
+        "version": "v1.0",
+        "date": "2026-08-03",
+        "threshold": 0.15,
+        "trail_weeks": 3,
+        "min_history": 3,
+        "title": "환경 보정 방식 도입 및 임계값 -15% 산출",
+    },
+]
+DETECTION_CURRENT = DETECTION_VERSIONS[0]
+
+
+@app.get("/api/detection")
+def get_detection(_admin: str = Depends(require_admin)):
+    """불성실 참여 탐지 (베타).
+
+    길드 전체 변동(환경 요인)을 상쇄하고, 개인만 이탈한 정도를 본다.
+
+        환경 변동률 = median(전 회원의 이번주 / 직전 추세)
+        개인 기대치 = 본인 추세 x 환경 변동률
+        이탈률      = (실제 - 기대치) / 기대치
+
+    이탈률이 임계값 아래면 탐지한다. 상습성은 필터가 아니라 표시 정보로,
+    1회여도 탐지하되 누적 횟수를 함께 보여준다.
+    """
+    from boto3.dynamodb.conditions import Attr
+
+    cache_key = "detection"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    cfg = DETECTION_CURRENT
+    THRESHOLD = cfg["threshold"]
+    TRAIL = cfg["trail_weeks"]
+    MIN_HIST = cfg["min_history"]
+
+    resp = table.scan(FilterExpression=Attr("rank").gt(0))
+    items = resp.get("Items", [])
+    while "LastEvaluatedKey" in resp:
+        resp = table.scan(
+            FilterExpression=Attr("rank").gt(0),
+            ExclusiveStartKey=resp["LastEvaluatedKey"],
+        )
+        items.extend(resp.get("Items", []))
+
+    score_by_name: dict[str, dict[str, int]] = defaultdict(dict)
+    latest_members: dict[str, dict] = {}
+    weeks_set: set[str] = set()
+    latest = get_latest_week()
+    for i in items:
+        wk = i.get("week")
+        if wk == "METADATA" or i.get("is_ghost"):
+            continue
+        name = i.get("name")
+        if not name:
+            continue
+        weeks_set.add(wk)
+        score_by_name[name][wk] = int(i.get("score", 0))
+        if wk == latest:
+            latest_members[name] = i
+
+    weeks = sorted(weeks_set)
+
+    meta_resp = table.get_item(Key={"week": "METADATA", "rank": 0}).get("Item") or {}
+    guild_baseline = meta_resp.get("guild_baseline_from_week") or ""
+
+    def effective_from(member: dict) -> str:
+        return max(member.get("spec_down_from_week") or "", guild_baseline)
+
+    def trend_at(name: str, wi: int, floor: str) -> float | None:
+        """직전 TRAIL주 중 참여(>0)한 주차의 평균. 2주 미만이면 None."""
+        vals = [
+            score_by_name[name][weeks[j]]
+            for j in range(max(0, wi - TRAIL), wi)
+            if weeks[j] in score_by_name[name]
+            and score_by_name[name][weeks[j]] > 0
+            and weeks[j] >= floor
+        ]
+        return statistics.mean(vals) if len(vals) >= 2 else None
+
+    def history_count(name: str, wi: int, floor: str) -> int:
+        return sum(
+            1
+            for j in range(0, wi)
+            if weeks[j] in score_by_name[name]
+            and score_by_name[name][weeks[j]] > 0
+            and weeks[j] >= floor
+        )
+
+    def detect_week(wi: int) -> tuple[float, list[dict]]:
+        """해당 주차의 (환경 변동률, 탐지 목록)."""
+        wk = weeks[wi]
+        ratios: list[float] = []
+        cands: list[tuple[str, int, float]] = []
+        for name, weekly in score_by_name.items():
+            score = weekly.get(wk, 0)
+            if score <= 0:                      # 미참은 벌금 체계가 별도로 다룸
+                continue
+            member = latest_members.get(name) or {}
+            floor = effective_from(member)
+            if wk < floor:
+                continue
+            if history_count(name, wi, floor) < MIN_HIST:
+                continue                        # 비교 기준이 없는 신규 등은 판정 보류
+            tr = trend_at(name, wi, floor)
+            if not tr:
+                continue
+            ratios.append(score / tr)
+            cands.append((name, score, tr))
+
+        if len(ratios) < 10:                    # 표본이 적으면 환경 추정 불가
+            return 1.0, []
+
+        env = statistics.median(ratios)
+        hits: list[dict] = []
+        for name, score, tr in cands:
+            expected = tr * env
+            if expected <= 0:
+                continue
+            dev = (score - expected) / expected
+            if dev < -THRESHOLD:
+                hits.append({
+                    "name": name,
+                    "score": score,
+                    "trend": int(tr),
+                    "expected": int(expected),
+                    "deviation_pct": round(dev * 100, 1),
+                })
+        return env, hits
+
+    latest_idx = weeks.index(latest)
+    env_ratio, current_hits = detect_week(latest_idx)
+
+    # 누적 탐지 횟수 — 과거 전 주차에 동일 규칙 적용
+    total_counts: dict[str, int] = defaultdict(int)
+    for wi in range(1, len(weeks)):
+        _, hits = detect_week(wi)
+        for h in hits:
+            total_counts[h["name"]] += 1
+
+    for h in current_hits:
+        m = latest_members.get(h["name"]) or {}
+        h["job"] = m.get("job", "")
+        h["detected_count"] = total_counts.get(h["name"], 0)
+    current_hits.sort(key=lambda x: x["deviation_pct"])
+
+    result = {
+        "week": latest,
+        "week_display": get_week_display(latest),
+        "version": cfg["version"],
+        "version_date": cfg["date"],
+        "threshold_pct": round(THRESHOLD * 100, 1),
+        "trail_weeks": TRAIL,
+        "min_history": MIN_HIST,
+        "env_ratio": round(env_ratio, 4),
+        "env_shift_pct": round((env_ratio - 1) * 100, 1),
+        "detected": current_hits,
+        "detected_count": len(current_hits),
+        "evaluated_count": sum(
+            1 for n, w in score_by_name.items() if w.get(latest, 0) > 0
+        ),
+    }
+    _cache_set(cache_key, result)
+    return result
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
@@ -1334,6 +1505,10 @@ def admin_page():
 @app.get("/manage")
 def manage_page():
     return FileResponse("static/management.html")     # 관리자 관리
+
+@app.get("/detection")
+def detection_page():
+    return FileResponse("static/detection.html")      # 불성실 참여 탐지 (베타)
 
 @app.get("/member")
 def member_page():

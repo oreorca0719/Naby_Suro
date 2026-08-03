@@ -1126,7 +1126,16 @@
   <nav class="page-tabs">
     <a href="/admin" class="page-tab active">개요</a>
     <a href="/manage" class="page-tab">관리</a>
+    <a href="/detection" class="page-tab">불성실 참여 탐지 시스템<span class="beta-badge">BETA</span></a>
   </nav>
+  <style>
+    .beta-badge {
+      display: inline-block; margin-left: 6px; padding: 2px 7px;
+      border-radius: 999px; background: var(--accent2, #FFB020); color: #fff;
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em;
+      vertical-align: middle;
+    }
+  </style>
 
   <!-- 보약 효과 알림 배너 (조건부) -->
   <div id="guildAlertBanner" class="guild-alert-banner" style="display:none;">
