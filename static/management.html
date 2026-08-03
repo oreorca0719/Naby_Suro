@@ -1240,11 +1240,11 @@
   <div class="cutoff-row">
     <div class="cutoff-card cutoff-card-green">
       <div class="cutoff-label">현재 커트라인</div>
-      <div class="cutoff-value cutoff-value-green">33,000<span>점</span></div>
+      <div class="cutoff-value cutoff-value-green" id="cutoffCurrent">—</div>
     </div>
     <div class="cutoff-card cutoff-card-yellow">
-      <div class="cutoff-label">신규 가입 커트라인</div>
-      <div class="cutoff-value cutoff-value-yellow" id="cutoffJoin">—</div>
+      <div class="cutoff-label">반영 예정 커트라인 (08/26)</div>
+      <div class="cutoff-value cutoff-value-yellow">50,000<span>점</span></div>
     </div>
   </div>
 
@@ -1519,9 +1519,9 @@ function renderStats(stats) {
   if (updatedEl && stats.updated_at) updatedEl.textContent = `업데이트: ${stats.updated_at}`;
 }
 
-// 신규 가입 커트라인 — 참여자(점수>0) 정렬 후 하위 20% 위치 회원 한 명의 점수
+// 현재 커트라인 — 참여자(점수>0) 정렬 후 하위 20% 위치 회원 한 명의 점수
 function renderCutoffs(members) {
-  const el = document.getElementById('cutoffJoin');
+  const el = document.getElementById('cutoffCurrent');
   if (!el) return;
   const scores = members.map(m => m.score).filter(s => s > 0).sort((a, b) => a - b);
   const n = scores.length;
