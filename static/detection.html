@@ -1201,6 +1201,8 @@
       font-size: 0.88rem; line-height: 1.75;
     }
     .intro-card strong { color: var(--text); }
+    .intro-card p { margin: 0 0 10px; }
+    .intro-card p:last-child { margin-bottom: 0; }
     .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
     .stat-chip {
       padding: 8px 14px; border-radius: var(--radius-sm);
@@ -1296,12 +1298,11 @@
 
   <!-- 의도 설명 -->
   <div class="intro-card">
-    본인의 최근 실력에 비해 <strong>현저히 낮은 점수</strong>로 수로에 참여한 길드원을 찾는 페이지입니다.
-    보약 효과 종료처럼 <strong>길드 전체가 함께 떨어지는 상황은 자동으로 상쇄</strong>하여,
-    환경 탓이 아니라 개인만 이탈한 경우만 탐지합니다.
-    성실히 참여하는 길드원이 상대적 박탈감을 느끼지 않도록,
-    구두 안내나 자리 조정 같은 운영 판단의 <strong>참고 자료</strong>로 사용합니다.
-    탐지는 횟수와 무관하게 발생한 건을 모두 표시하며, 최종 판단은 관리자가 합니다.
+    <p>본인 스펙에 맞지 않게 수로에 불성실하게 참여하였다고 의심되는 길드원을 탐지하는 시스템입니다.
+    보약 효과 종료처럼 길드 전체가 함께 떨어지는 상황은 자동으로 구분하며 탐지합니다.</p>
+    <p>성실히 참여하는 길드원이 상대적 박탈감을 느끼지 않도록, 구두 안내나 자리 조정 같은
+    운영 판단의 참고 자료로 사용합니다.</p>
+    <p>탐지는 횟수와 무관하게 발생한 건을 모두 표시하며, 최종 판단은 관리자가 합니다.</p>
   </div>
 
   <!-- 탐지 결과 -->
