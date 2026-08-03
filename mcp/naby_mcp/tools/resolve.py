@@ -12,6 +12,7 @@
 """
 from __future__ import annotations
 
+import difflib
 import json
 import re
 import unicodedata
@@ -23,9 +24,33 @@ _BRACKET = re.compile(r"^(?P<outer>[^()]+)\((?P<inner>[^()]*)\)$")
 # 게임이 괄호 안을 잘라낸 형태: A(..), A(…), A( )
 _TRUNCATED = re.compile(r"^[.…\s]*$")
 
+# 오독 자동 교정 임계값. 길드 명단과 이 정도로 유사하면 같은 닉으로 본다.
+# 한글은 자모로 분해해 비교한다. 글자 단위로 재면 '츄주'와 '츄쭈'가 0.5 로
+# 나와 실제 유사성이 반영되지 않기 때문이다(자모 기준 0.75).
+AUTO_FIX_RATIO = 0.72
+# 후보로 제시할 최소 유사도 (자동 교정은 안 하되 사람에게 보여줄 수준)
+SUGGEST_RATIO = 0.55
+
 
 def _nfc(s: str) -> str:
     return unicodedata.normalize("NFC", (s or "").strip())
+
+
+def _jamo(s: str) -> str:
+    """한글을 자모로 분해. 초·중·종성 단위 비교를 위해."""
+    return unicodedata.normalize("NFD", s)
+
+
+def _ratio(a: str, b: str) -> float:
+    return difflib.SequenceMatcher(None, _jamo(a), _jamo(b)).ratio()
+
+
+def _similar(name: str, roster: list[str], n: int = 3) -> list[tuple[str, float]]:
+    """길드 명단에서 유사한 닉네임 후보를 유사도 순으로 반환."""
+    scored = [(cand, _ratio(name, cand)) for cand in roster]
+    scored = [s for s in scored if s[1] >= SUGGEST_RATIO]
+    scored.sort(key=lambda x: -x[1])
+    return scored[:n]
 
 
 def _load_normalize() -> dict:
@@ -149,15 +174,23 @@ def resolve(
             note = f"부캐 접속({outer}) → 본캐 환산"
 
         # 2) 길드 명단 대조 (인게임 닉 기준)
+        #    명단에 없으면 오독 가능성이 크다. 명단이 정답지이므로 유사도로 후보를
+        #    찾아, 충분히 가까우면 자동 교정하고 애매하면 후보와 함께 확인 요청한다.
         if ingame not in roster_set:
-            ambiguous.append({
-                "reason": "명단에 없는 닉네임",
-                "raw": row,
-                "candidates": [],
-                "detail": (f"'{ingame}' 은(는) 이번 주 길드 명단에 없습니다. "
-                           f"OCR 오독이거나 개명 직후일 수 있어 확인이 필요합니다."),
-            })
-            continue
+            cands = _similar(ingame, roster)
+            if cands and cands[0][1] >= AUTO_FIX_RATIO:
+                fixed, ratio = cands[0]
+                note = (note + " · " if note else "") + f"오독 교정({ingame}→{fixed})"
+                ingame = fixed
+            else:
+                ambiguous.append({
+                    "reason": "명단에 없는 닉네임",
+                    "raw": row,
+                    "candidates": [c for c, _ in cands],
+                    "detail": (f"'{ingame}' 은(는) 이번 주 길드 명단에 없습니다. "
+                               f"OCR 오독이거나 개명 직후일 수 있어 확인이 필요합니다."),
+                })
+                continue
 
         # 3) 기록용 닉 (개명 회원은 옛 닉으로 — 히스토리 연속성)
         main = to_record_name(ingame)
