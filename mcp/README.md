@@ -15,20 +15,27 @@
 규칙으로 확정할 수 없는 항목은 추측하지 않고 `ambiguous`로 올린다.
 Claude가 풀지 못하면 관리자에게 확인받는다. 이 흐름이 잘못된 데이터의 유입을 막는다.
 
-## 설치
+## 다른 PC에서 사용하기
 
 ```bash
-cd mcp
+git clone https://github.com/oreorca0719/Naby_Suro.git
+cd Naby_Suro/mcp
 pip install -r requirements.txt
 cp .env.example .env      # 값 입력
 ```
 
-`.env`에 최소한 `NEXON_API_KEY`가 필요하다. AWS 자격증명은 `.env` 또는
-`aws configure`로 설정한다.
+`.env`는 저장소에 포함되지 않으므로 clone 후 직접 만든다.
+최소한 `NEXON_API_KEY`가 필요하다. AWS 자격증명은 `.env`에 넣거나
+그 PC에 `aws configure`로 설정한다.
 
-## Claude Desktop 연결
+### 커넥터 등록
 
-설정 파일(`claude_desktop_config.json`)에 추가한다.
+**Claude Desktop** — `claude_desktop_config.json`에 추가한다.
+
+| OS | 설정 파일 위치 |
+|---|---|
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 
 ```json
 {
@@ -41,11 +48,31 @@ cp .env.example .env      # 값 입력
 }
 ```
 
-Claude Code는 다음 명령으로 등록한다.
+**Claude Code**
 
 ```bash
 claude mcp add naby-suro -- python /path/to/Naby_Suro/mcp/server.py
 ```
+
+등록 후 Claude를 완전히 종료했다가 다시 실행한다.
+
+주의할 점:
+
+- 경로는 그 PC 기준 절대경로로 바꾼다.
+- `python`으로 실행되지 않으면 `python3` 또는 파이썬 실행 파일 전체 경로를 쓴다.
+- PowerShell로 JSON을 편집하면 BOM이 붙어 파싱이 깨질 수 있다.
+  에디터로 편집하거나 BOM 없는 UTF-8인지 확인한다.
+
+### 판독 스킬 (선택)
+
+`skill/` 에 이미지 판독 지침이 함께 들어 있다. 설치하면 매번 설명 없이
+동일한 절차로 판독한다. 자세한 내용은 `skill/README.md` 참고.
+
+```bash
+cp -r skill ~/.claude/skills/guild-suro-tracker
+```
+
+설치하지 않아도 파이프라인은 동작한다.
 
 ## 제공 툴
 
@@ -58,6 +85,27 @@ claude mcp add naby-suro -- python /path/to/Naby_Suro/mcp/server.py
 | `check_week_key(week)` | 주차 키 점검(수요일 여부·기존 데이터) |
 | `generate_xlsx(rows, out_path)` | 업로드용 XLSX 생성 |
 | `upload_week(xlsx_path, week, approved, overwrite)` | DynamoDB 적재 |
+
+## 구성
+
+```
+mcp/
+├── server.py              # MCP 진입점 (툴 7종)
+├── naby_mcp/
+│   ├── config.py          # 환경변수 설정
+│   ├── data/
+│   │   └── normalize.json # 정규화·개명 표 (코드 밖 데이터)
+│   └── tools/
+│       ├── roster.py      # NEXON 길드 명단
+│       ├── db.py          # DynamoDB 조회
+│       ├── resolve.py     # 규칙 엔진
+│       ├── validate.py    # 교차검증
+│       ├── xlsx.py        # XLSX 생성
+│       └── upload.py      # 적재 (승인 게이트)
+├── skill/                 # 이미지 판독 지침 (선택 설치)
+├── .env.example
+└── requirements.txt
+```
 
 ## 처리 흐름
 
