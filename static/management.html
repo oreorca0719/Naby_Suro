@@ -1669,8 +1669,8 @@ function escapeAttr(s) {
 
 // 전체 길드원 표 전용 — 해방/초월 열 셀 (마크 없으면 옅은 대시)
 function weaponCell(tier) {
-  if (tier === 'genesis') return `<span class="wmark wmark-genesis wmark-sm">제네시스</span>`;
-  if (tier === 'destiny') return `<span class="wmark wmark-destiny wmark-sm">데스티니</span>`;
+  if (tier === 'genesis') return `<span class="wmark wmark-genesis">대적자: 제네시스 해방</span>`;
+  if (tier === 'destiny') return `<span class="wmark wmark-destiny">대적자: 데스티니 초월</span>`;
   return `<span style="color:var(--muted);opacity:0.4">—</span>`;
 }
 
