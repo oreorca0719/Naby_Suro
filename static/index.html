@@ -819,6 +819,7 @@
             <tr>
               <th>순위</th>
               <th>닉네임</th>
+              <th>해방/초월</th>
               <th>직업</th>
               <th >지하수로 점수</th>
               <th >히스토리</th>
@@ -1144,11 +1145,19 @@ function escapeAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
+// 전체 길드원 표 전용 — 해방/초월 열 셀 (마크 없으면 옅은 대시)
+function weaponCell(tier) {
+  if (tier === 'genesis') return `<span class="wmark wmark-genesis">대적자: 제네시스 해방</span>`;
+  if (tier === 'destiny') return `<span class="wmark wmark-destiny">대적자: 데스티니 초월</span>`;
+  return `<span style="color:var(--muted);opacity:0.4">—</span>`;
+}
+
 function renderFullTable(members) {
   const tbody = document.getElementById('fullTbody');
   tbody.innerHTML = members.map(m => `<tr>
     <td  style="color:var(--muted);font-size:0.8rem">${m.rank}</td>
-    <td>${m.name}${weaponMark(m.weapon_tier)}</td>
+    <td>${m.name}</td>
+    <td>${weaponCell(m.weapon_tier)}</td>
     <td><span class="rank-job">${m.job}</span></td>
     <td class="${m.score === 0 ? 'zero-score' : ''}"  style="font-weight:800">
       ${m.score === 0 ? '—' : fmt(m.score)}
