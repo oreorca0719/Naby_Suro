@@ -1197,8 +1197,8 @@
       <button type="button" class="rename-tool-btn" onclick="showRenameModal()" title="닉네임을 바꾼 길드원의 기존 히스토리를 신규 닉네임으로 이관">
         닉네임 변경
       </button>
-      <button type="button" class="rename-tool-btn" id="weaponRefreshBtn" onclick="refreshWeaponMarks()" title="넥슨 API로 제네시스·데스티니 무기 착용자를 조회해 마크를 갱신">
-        무기 마크 갱신
+      <button type="button" class="rename-tool-btn" id="weaponRefreshBtn" onclick="refreshWeaponMarks()" title="넥슨 API로 제네시스(해방)·데스티니(초월) 무기 착용자를 조회해 마크를 갱신">
+        해방/초월 갱신
       </button>
     </div>
   </nav>
@@ -2226,7 +2226,7 @@ async function dismissGuildAlert() {
   }
 }
 
-// ── 무기 마크 갱신 ──
+// ── 해방/초월 갱신 (무기 마크) ──
 async function refreshWeaponMarks() {
   const btn = document.getElementById('weaponRefreshBtn');
   if (!confirm('넥슨 API로 현재 길드원 전원의 착용 무기를 조회합니다.\n인원이 많으면 20~40초 걸릴 수 있어요. 진행할까요?')) return;
@@ -2242,7 +2242,7 @@ async function refreshWeaponMarks() {
     }
     const r = await res.json();
     alert(
-      `무기 마크 갱신 완료\n\n` +
+      `해방/초월 갱신 완료\n\n` +
       `제네시스: ${r.genesis}명\n데스티니: ${r.destiny}명\n` +
       `해당 없음: ${r.none}명\n조회 실패: ${r.failed}명 (기존 값 유지)\n` +
       `(총 ${r.total}명)`
