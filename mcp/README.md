@@ -85,12 +85,20 @@ cp -r skill ~/.claude/skills/guild-suro-tracker
 | `check_week_key(week)` | 주차 키 점검(수요일 여부·기존 데이터) |
 | `generate_xlsx(rows, out_path)` | 업로드용 XLSX 생성 |
 | `upload_week(xlsx_path, week, approved, overwrite)` | DynamoDB 적재 |
+| `collect_spec(week, save)` | 장비 스펙 스냅샷 수집 (적재 후 1회) |
+
+`collect_spec`은 200명 기준 약 2분 걸려 MCP 호출이 타임아웃될 수 있다.
+그럴 때는 같은 함수를 직접 실행한다.
+
+```bash
+python -c "from naby_mcp.tools import spec_collect as sc; print(sc.collect_week('20260729', save=True))"
+```
 
 ## 구성
 
 ```
 mcp/
-├── server.py              # MCP 진입점 (툴 7종)
+├── server.py              # MCP 진입점 (툴 8종)
 ├── naby_mcp/
 │   ├── config.py          # 환경변수 설정
 │   ├── data/
@@ -101,7 +109,9 @@ mcp/
 │       ├── resolve.py     # 규칙 엔진
 │       ├── validate.py    # 교차검증
 │       ├── xlsx.py        # XLSX 생성
-│       └── upload.py      # 적재 (승인 게이트)
+│       ├── upload.py      # 적재 (승인 게이트)
+│       ├── spec.py        # 장비 옵션 → 주스탯 환산
+│       └── spec_collect.py# 주간 스펙 스냅샷 수집
 ├── skill/                 # 이미지 판독 지침 (선택 설치)
 ├── .env.example
 └── requirements.txt
@@ -120,6 +130,7 @@ MCP      cross_validate      → 신규·이탈·점수 이상
 Claude   "확정 N명 / 확인 M명" 보고
 관리자:  승인
 MCP      generate_xlsx → upload_week(approved=True)
+MCP      collect_spec(week)  → 같은 주차로 스펙 스냅샷 수집
 ```
 
 ## 규칙
@@ -139,6 +150,10 @@ MCP      generate_xlsx → upload_week(approved=True)
 
 **점수** — 외부 정답지가 없어 자동 검증이 불가능하다. 자릿수 이상과 직전 대비
 급변만 플래그해 확인 대상을 좁히고, 최종 판단은 관리자가 한다.
+
+**스펙 환산** — 전투력 API는 조회 시점 착용 장비에 좌우되므로 쓰지 않는다.
+프리셋 3개를 모두 읽어 가장 강한 조합을 보스 세팅으로 보고, 옵션을 주스탯으로
+환산해 합산한다. 환산 계수와 태그 규칙은 [상위 README](../README.md#스펙-다운-감지) 참고.
 
 ## 닉네임 오독 교정
 
