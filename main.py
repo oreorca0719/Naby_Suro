@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Cookie, Response, Body, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 # ── 시간대 ──────────────────────────────────────────────────────
@@ -254,7 +254,6 @@ def get_data():
     members = get_members(week)
 
     scores  = [m["score"] for m in members if m["score"] > 0]
-    job_cnt = Counter(m["job"] for m in members)
 
     stats = {
         "week":           week,
@@ -270,7 +269,6 @@ def get_data():
         "stats":            stats,
         "top30":            members[:30],
         "all_members":      members,
-        "job_distribution": [{"job": k, "count": v} for k, v in job_cnt.most_common()],
     }
     _cache_set("data", result)
     return result
@@ -1165,8 +1163,6 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
     dismissed_alert_week = meta_resp.get("dismissed_baseline_alert_week") or ""
 
     delta_list: list[dict] = []
-    suspect_list: list[dict] = []
-    suspect_count_list: list[dict] = []  # 전체 현 길드원 누적 이상치 횟수 (이번 주 여부 무관)
 
     for name, m in latest_members.items():
         weekly = score_by_name_week.get(name, {})
@@ -1182,24 +1178,14 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
         if len(participating) < MIN_PARTICIPATION:
             continue
 
-        total = sum(s for _, s in participating)
-        n = len(participating)
-
-        # 이상치 식별 — 공통 헬퍼
-        outlier_weeks_set, outlier_base = detect_outliers_trailing(participating)
-
-        # 이상치 제외 평균 (화면 표시 + 본인 평균)
+        # 이상치를 제외한 본인 평균 — 상승/하락 리더보드의 '평균 대비' 표시에 쓴다
+        outlier_weeks_set, _ = detect_outliers_trailing(participating)
         clean_pairs = [(w, s) for w, s in participating if w not in outlier_weeks_set]
-        clean_mean = (sum(s for _, s in clean_pairs) / len(clean_pairs)) if clean_pairs else (total / n)
-
-        # 누적 의심 횟수: 이번 주 여부와 무관하게 baseline 이후 이상치 발생 주차 수
-        if outlier_weeks_set:
-            suspect_count_list.append({
-                "name":          name,
-                "job":           m.get("job", ""),
-                "suspect_count": len(outlier_weeks_set),
-                "personal_avg":  int(clean_mean),
-            })
+        clean_mean = (
+            sum(s for _, s in clean_pairs) / len(clean_pairs)
+            if clean_pairs
+            else sum(s for _, s in participating) / len(participating)
+        )
 
         curr = int(m.get("score", 0))
 
@@ -1214,41 +1200,11 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
             delta_list.append({
                 "name":         name,
                 "job":          m.get("job", ""),
-                "personal_avg": int(clean_mean),
                 "curr_score":   curr,
                 "prev_score":   int(prev_score),
                 # 전주에 미참(0점)이면 상승폭을 계산할 수 없다 → 순위에서 제외
                 "delta":        int(curr - prev_score) if prev_score > 0 else None,
                 "avg_delta":    int(curr - clean_mean),
-            })
-
-        # 불성실 의심 명단: "이번 주(latest)" 이상치 회원만
-        if latest in outlier_weeks_set:
-            outlier_pairs = [(w, s) for w, s in participating if w in outlier_weeks_set]
-            latest_outlier_w, latest_outlier_s = max(outlier_pairs, key=lambda x: x[0])
-            # 드롭률: 해당 주차 판정 기준(직전 추세 평균) 대비
-            base = outlier_base.get(latest_outlier_w, clean_mean)
-            drop_pct = ((latest_outlier_s - base) / base * 100.0) if base > 0 else 0
-
-            # 스펙 다운 추정: 회원의 outlier_weeks 중 연속 ≥ 2 그룹 존재
-            consecutive_group = find_latest_consecutive_outlier_group(
-                sorted(outlier_weeks_set),
-                sorted({w for w, _ in participating}),
-            )
-            spec_down_suspected = consecutive_group is not None and (latest in consecutive_group)
-            spec_down_candidate = consecutive_group[0] if consecutive_group else None
-
-            suspect_list.append({
-                "name":                         name,
-                "job":                          m.get("job", ""),
-                "personal_avg":                 int(clean_mean),
-                "outlier_count":                len(outlier_weeks_set),
-                "outlier_weeks":                sorted(outlier_weeks_set),
-                "latest_outlier_week":          latest_outlier_w,
-                "latest_outlier_score":         latest_outlier_s,
-                "latest_outlier_drop_pct":      round(drop_pct, 1),
-                "spec_down_suspected":          spec_down_suspected,
-                "spec_down_candidate_from_week": spec_down_candidate,
             })
 
     # delta 가 None(전주 미참)인 회원은 상승/하락 순위에서 제외
@@ -1260,13 +1216,6 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
     _wtier = {name: m.get("weapon_tier") for name, m in latest_members.items()}
     for _row in (*top_avg, *top_fine, *rise_top5, *drop_top5):
         _row["weapon_tier"] = _wtier.get(_row["name"])
-    suspect_list.sort(
-        key=lambda x: (-x["outlier_count"], -int(x["latest_outlier_week"] or "0"), x["name"])
-    )
-    suspect_count_top = sorted(
-        suspect_count_list, key=lambda x: (-x["suspect_count"], x["name"])
-    )[:10]
-
     # 보약 효과 자동 감지 — 전주 대비 감소 회원 수 ≥ 100
     guild_alert = None
     if prev_week and dismissed_alert_week != latest:
@@ -1287,17 +1236,12 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
     result = {
         "avg_rank_top3": top_avg,
         "rise_top5":     rise_top5,
-        "prev_week":     prev_week,
-        "latest_week":   latest,
     }
     # 관리자 전용: 미참 횟수 / 하락폭 / 의심 명단 / 보약 알림
     if admin:
         result["fine_top3"]    = top_fine
         result["drop_top5"]    = drop_top5
-        result["suspect_list"] = suspect_list
-        result["suspect_count_top"] = suspect_count_top
         result["guild_alert"]  = guild_alert
-        result["guild_baseline_from_week"] = guild_baseline_from or None
 
     _cache_set(cache_key, result)
     return result
@@ -1532,9 +1476,21 @@ def get_detection(_admin: str = Depends(require_admin)):
             h["spec_change_pct"] = None
     current_hits.sort(key=lambda x: x["deviation_pct"])
 
-    tag_counts: dict[str, int] = defaultdict(int)
-    for h in current_hits:
-        tag_counts[h["tag"]] += 1
+    # 누적 탐지 횟수 TOP 10 — 이번 주 탐지 여부와 무관하게 현 길드원 전체를 본다.
+    # 상습성은 탐지 필터가 아니라 참고 정보이므로 순위로만 제시한다.
+    suspect_rank = sorted(
+        (
+            {
+                "name": n,
+                "job": m.get("job", ""),
+                "count": cumulative(n),
+                "detected_now": any(h["name"] == n for h in current_hits),
+            }
+            for n, m in latest_members.items()
+            if cumulative(n) > 0
+        ),
+        key=lambda x: (-x["count"], x["name"]),
+    )[:10]
 
     # 이번 주차에 스펙 다운으로 인정 처리된 회원 — 취소(되돌리기) 대상.
     # 인정과 동시에 탐지 목록에서 빠지므로 여기서 따로 노출해야 손댈 수 있다.
@@ -1557,22 +1513,21 @@ def get_detection(_admin: str = Depends(require_admin)):
         "week_display": get_week_display(latest),
         "version": cfg["version"],
         "version_date": cfg["date"],
-        "version_title": cfg["title"],
         "threshold_pct": round(THRESHOLD * 100, 1),
         "threshold_since": cfg["threshold_since"],
         "trail_weeks": TRAIL,
         "min_history": MIN_HIST,
-        "env_ratio": round(env_ratio, 4),
         "env_shift_pct": round((env_ratio - 1) * 100, 1),
         "detected": current_hits,
         "detected_count": len(current_hits),
         "spec_down_confirmed": confirmed,
+        "suspect_rank": suspect_rank,
         "evaluated_count": sum(
             1 for n, w in score_by_name.items() if w.get(latest, 0) > 0
         ),
-        "tag_counts": dict(tag_counts),
+        # 스펙 수집이 안 된 주차는 태그가 전부 '불성실 참여 의심'으로 떨어진다.
+        # 조용히 성능이 낮아지는 상태이므로 화면에 노출해 확인 가능하게 한다.
         "spec_collected": sum(1 for n in spec_by_name if latest in spec_by_name[n]),
-        "spec_drop_threshold_pct": round(SPEC_DROP_THRESHOLD * 100, 1),
     }
     _cache_set(cache_key, result)
     return result

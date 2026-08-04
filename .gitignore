@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .claude/
 .env
+
+# 주간 업로드 원본 — 로컬 작업 파일이므로 저장소에 넣지 않는다
+guild_members_*.xlsx
+
+# 서버 로그
+*.log

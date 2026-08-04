@@ -1445,7 +1445,6 @@ const JOB_COLORS = [
 
 let allMembers = [];
 let filteredMembers = [];
-let jobChart = null;
 let distChart = null;
 let historyChart = null;
 let statTrendChart = null;
@@ -1575,47 +1574,6 @@ function renderAnalysis(members) {
     </div>`;
 }
 
-function renderJobChart(dist) {
-  const labels = dist.map(d => d.job);
-  const data   = dist.map(d => d.count);
-  const colors = dist.map((_, i) => JOB_COLORS[i % JOB_COLORS.length]);
-
-  if (jobChart) jobChart.destroy();
-  jobChart = new Chart(document.getElementById('jobChart'), {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
-    options: {
-      cutout: '68%',
-      plugins: { legend: { display: false }, tooltip: {
-        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}명` }
-      }},
-      animation: { animateRotate: true, duration: 800 }
-    }
-  });
-
-  const PAGE_SIZE = 10;
-  let legendPage = 0;
-  const totalPages = Math.ceil(dist.length / PAGE_SIZE);
-
-  function renderLegendPage() {
-    const start = legendPage * PAGE_SIZE;
-    const items = dist.slice(start, start + PAGE_SIZE);
-    document.getElementById('jobLegend').innerHTML = items.map((d, i) => `
-      <div class="legend-item">
-        <span class="legend-dot" style="background:${colors[start + i]}"></span>
-        <span class="legend-name">${d.job}</span>
-        <span class="legend-count">${d.count}명</span>
-      </div>`).join('');
-    document.getElementById('legendPage').textContent = `${legendPage + 1} / ${totalPages}`;
-    document.getElementById('legendPrev').disabled = legendPage === 0;
-    document.getElementById('legendNext').disabled = legendPage === totalPages - 1;
-  }
-
-  document.getElementById('legendPrev').onclick = () => { if (legendPage > 0) { legendPage--; renderLegendPage(); } };
-  document.getElementById('legendNext').onclick = () => { if (legendPage < totalPages - 1) { legendPage++; renderLegendPage(); } };
-
-  renderLegendPage();
-}
 
 function renderDistChart(members) {
   const active = members.filter(m => m.score > 0).map(m => m.score);

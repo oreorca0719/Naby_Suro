@@ -1,6 +1,6 @@
 """
 매주 실행: xlsx -> DynamoDB 업로드
-사용법: python upload_to_dynamodb.py guild_members_20260430_0507.xlsx
+사용법: python upload_to_dynamodb.py guild_members_YYYYMMDD_MMDD.xlsx
 
 업로드 정책:
   - 신규 주차 레코드 생성 시, 직전 주차의 회원별 fine_count / last_fine_week 을 name 기준으로 이월

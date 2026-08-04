@@ -1211,6 +1211,8 @@
       background: var(--fill); font-size: 0.8rem; color: var(--ink-2);
     }
     .stat-chip b { color: var(--text); font-weight: 800; }
+    .stat-chip.warn { background: rgba(240,68,82,0.12); color: var(--danger); }
+    .stat-chip.warn b { color: var(--danger); }
     .dev-cell { font-weight: 800; color: var(--danger); }
     .name-link {
       background: none; border: none; padding: 0; cursor: pointer;
@@ -1381,6 +1383,31 @@
     </div>
   </div>
 
+  <!-- 누적 탐지 횟수 순위 -->
+  <div class="full-table-section" id="rankSection" style="display:none;margin-bottom:32px;">
+    <div class="section-title">불성실 참여 의심 누적 TOP 10</div>
+    <div class="card">
+      <div class="confirmed-note">
+        현 길드원의 전 주차 누적 탐지 횟수입니다. 이번 주 탐지 여부와 무관하게 집계하며,
+        스펙 다운을 인정한 회원은 인정 시점의 횟수가 보존됩니다.
+      </div>
+      <div class="full-table-wrap">
+        <table class="full-table">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>닉네임</th>
+              <th>직업</th>
+              <th>누적 탐지</th>
+              <th>이번 주</th>
+            </tr>
+          </thead>
+          <tbody id="rankTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- 이번 주 스펙 다운 인정 처리 (해당 건이 있을 때만 표시) -->
   <div class="full-table-section" id="confirmedSection" style="display:none;margin-bottom:32px;">
     <div class="section-title">이번 주 스펙 다운 인정 처리</div>
@@ -1465,10 +1492,15 @@ function renderDetection(d) {
   document.getElementById('weekBadge').textContent = '— ' + d.week_display;
 
   const shift = d.env_shift_pct;
+  // 스펙 수집이 0명이면 태그 판정이 전부 '불성실 참여 의심'으로 떨어진다.
+  // 조용히 성능이 낮아지는 상태이므로 눈에 띄게 표시한다.
+  const specWarn = d.spec_collected === 0;
   document.getElementById('statRow').innerHTML =
     '<div class="stat-chip">평가 대상 <b>' + d.evaluated_count + '명</b></div>' +
     '<div class="stat-chip">탐지 <b>' + d.detected_count + '명</b></div>' +
-    '<div class="stat-chip">이번 주 길드 전체 변동 <b>' + (shift >= 0 ? '+' : '') + shift + '%</b> (자동 보정됨)</div>';
+    '<div class="stat-chip">이번 주 길드 전체 변동 <b>' + (shift >= 0 ? '+' : '') + shift + '%</b> (자동 보정됨)</div>' +
+    '<div class="stat-chip' + (specWarn ? ' warn' : '') + '">스펙 수집 <b>' +
+      d.spec_collected + '명</b>' + (specWarn ? ' — 미수집 시 스펙 다운 구분 불가' : '') + '</div>';
 
   const tbody = document.getElementById('detTbody');
   const empty = document.getElementById('emptyState');
@@ -1493,6 +1525,36 @@ function renderDetection(d) {
       '</tr>';
   }).join('');
 }
+
+function renderSuspectRank(list) {
+  const sec = document.getElementById('rankSection');
+  if (!list || !list.length) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  document.getElementById('rankTbody').innerHTML = list.map(function (r, i) {
+    const rep = r.count >= 2 ? ' rep' : '';
+    const now = r.detected_now
+      ? '<span class="tag suspect">탐지</span>'
+      : '<span style="color:var(--muted)">—</span>';
+    return '<tr>' +
+      '<td style="color:var(--muted);font-size:0.8rem">' + (i + 1) + '</td>' +
+      '<td><button type="button" class="name-link" data-name="' + escapeAttr(r.name) + '">' +
+        escapeAttr(r.name) + '</button></td>' +
+      '<td><span class="rank-job">' + escapeAttr(r.job) + '</span></td>' +
+      '<td><span class="cnt-badge' + rep + '">' + r.count + '회</span></td>' +
+      '<td>' + now + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+document.getElementById('rankTbody').addEventListener('click', function (e) {
+  const btn = e.target.closest('.name-link');
+  if (!btn) return;
+  window.open(
+    '/static/member.html?name=' + encodeURIComponent(btn.dataset.name),
+    '_blank',
+    'width=1000,height=800,noopener'
+  );
+});
 
 function renderConfirmed(list) {
   const sec = document.getElementById('confirmedSection');
@@ -1831,6 +1893,7 @@ async function init() {
   const d = await res.json();
   LAST_DETECTION = d;
   renderDetection(d);
+  renderSuspectRank(d.suspect_rank);
   renderConfirmed(d.spec_down_confirmed);
   document.getElementById('updatedAt').textContent = d.week_display + ' 기준';
 }
