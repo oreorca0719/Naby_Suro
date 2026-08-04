@@ -1252,8 +1252,11 @@
       display: block; margin-top: 4px; font-size: 0.72rem;
       color: var(--muted); line-height: 1.45; max-width: 260px;
     }
+    /* 표 위 설명문 — 좌우는 표 컬럼과 맞추고, 아래로 간격을 둬
+       헤더 행(th 는 padding-top 0)이 설명문에 달라붙지 않게 한다 */
     .confirmed-note {
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      padding: 0 0 16px; margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
       font-size: 0.82rem; color: var(--ink-2); line-height: 1.65;
     }
     .undo-btn {
