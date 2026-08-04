@@ -1306,13 +1306,25 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
 
 
 # ── 불성실 참여 탐지 (베타) ────────────────────────────────────────
-# 임계값 버전 이력. 최신 항목이 현재 적용값이다.
+# 버전 이력. 최신 항목이 현재 적용값이다.
 # 새 패치를 낼 때는 이 목록 맨 앞에 항목을 추가한다.
+# threshold_since 는 임계값이 마지막으로 산출된 시점. 임계값을 건드리지 않은
+# 패치에서는 그대로 승계해, 배너가 재산출된 것처럼 보이지 않게 한다.
 DETECTION_VERSIONS = [
+    {
+        "version": "v1.1",
+        "date": "2026-08-04",
+        "threshold": 0.15,
+        "threshold_since": "2026-08-03",
+        "trail_weeks": 3,
+        "min_history": 3,
+        "title": "장비 기반 스펙 다운 감지 도입 및 개인 기준선 인정",
+    },
     {
         "version": "v1.0",
         "date": "2026-08-03",
         "threshold": 0.15,
+        "threshold_since": "2026-08-03",
         "trail_weeks": 3,
         "min_history": 3,
         "title": "환경 보정 방식 도입 및 임계값 -15% 산출",
@@ -1547,7 +1559,9 @@ def get_detection(_admin: str = Depends(require_admin)):
         "week_display": get_week_display(latest),
         "version": cfg["version"],
         "version_date": cfg["date"],
+        "version_title": cfg["title"],
         "threshold_pct": round(THRESHOLD * 100, 1),
+        "threshold_since": cfg["threshold_since"],
         "trail_weeks": TRAIL,
         "min_history": MIN_HIST,
         "env_ratio": round(env_ratio, 4),

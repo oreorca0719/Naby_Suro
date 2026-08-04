@@ -1336,7 +1336,7 @@
 
   <!-- 버전 배너 -->
   <div class="ver-banner">
-    <span class="ver-pill" id="verPill">— 패치 적용 임계치 버전</span>
+    <span class="ver-pill" id="verPill">— 패치 적용 버전</span>
     <span class="ver-threshold" id="verThreshold">—</span>
     <span class="ver-meta" id="verMeta"></span>
   </div>
@@ -1457,10 +1457,11 @@ async function authGuard() {
 }
 
 function renderDetection(d) {
-  document.getElementById('verPill').textContent = d.version_date + ' 패치 적용 임계치 버전';
+  document.getElementById('verPill').textContent = d.version_date + ' 패치 적용 버전';
   document.getElementById('verThreshold').textContent = '-' + d.threshold_pct + '%';
   document.getElementById('verMeta').textContent =
-    d.version + ' · 직전 ' + d.trail_weeks + '주 추세 기준 · 최소 참여 ' + d.min_history + '주';
+    d.version + ' · 임계값 ' + d.threshold_since + ' 산출 · 직전 ' +
+    d.trail_weeks + '주 추세 기준 · 최소 참여 ' + d.min_history + '주';
   document.getElementById('weekBadge').textContent = '— ' + d.week_display;
 
   const shift = d.env_shift_pct;
@@ -1625,6 +1626,103 @@ document.getElementById('confirmedTbody').addEventListener('click', async functi
 
 // 패치 노트 — 새 패치가 나오면 이 배열 맨 앞에 항목을 추가한다.
 const PATCH_NOTES = [
+  {
+    version: 'v1.1',
+    date: '2026-08-04',
+    title: '장비 기반 스펙 다운 감지 도입 및 개인 기준선 인정',
+    body: `
+      <h4>배경</h4>
+      <p>v1.0은 탐지만 수행했습니다. 그런데 점수가 떨어지는 이유에는
+      <b>불성실한 참여</b> 외에 <b>스펙 자체가 낮아진 경우</b>도 있습니다.
+      후자는 본인 수준에 맞게 친 것이므로 불성실로 볼 수 없습니다.</p>
+      <p>더 큰 문제는 <b>한 번 스펙을 낮추면 계속 탐지된다</b>는 점이었습니다.
+      14만점을 유지하던 회원이 스펙을 낮춰 10만점대가 되면, 예전 고점이 기대치를
+      계속 끌어올려 매주 탐지됩니다. 이 상태가 이어지면 시스템을 신뢰할 수 없습니다.</p>
+
+      <h4>왜 전투력 수치를 쓰지 않는가</h4>
+      <p>가장 단순한 방법은 전투력 API 값을 주마다 비교하는 것입니다.
+      그러나 이 값은 <b>조회 시점에 착용 중인 장비</b>를 반영합니다.
+      수로를 친 뒤 사냥 세팅으로 바꿔 접속을 종료하면, 스펙업을 했는지
+      낮췄는지 구분할 수 없습니다.</p>
+      <p>실제로 동일 캐릭터를 서로 다른 날짜에 조회한 결과입니다.</p>
+      <table class="note-table">
+        <thead><tr><th>조회 시점 상태</th><th>전투력</th><th>아이템 드롭률</th></tr></thead>
+        <tbody>
+          <tr><td>사냥 세팅 착용 중</td><td>3.2억</td><td>284%</td></tr>
+          <tr><td>보스 세팅 착용 중</td><td>8.5억</td><td>40%</td></tr>
+        </tbody>
+      </table>
+      <p>같은 사람의 같은 스펙인데 <b>2.6배</b> 차이가 납니다.
+      이 값으로 주간 비교를 하면 접속 종료 상태에 따라 없던 스펙 다운이 만들어집니다.</p>
+
+      <h4>변경: 장비 프리셋 환산</h4>
+      <p>전투력 대신 <b>장비 프리셋 3개를 모두 읽어</b> 가장 강한 조합을
+      그 사람의 보스 세팅으로 봅니다. 프리셋은 접속 종료 상태와 무관하게 조회되므로
+      매주 같은 기준으로 비교할 수 있습니다.</p>
+      <p>실제 200명 수집 결과, 보스 세팅이 들어 있는 프리셋 번호는 사람마다 달랐습니다
+      (<code>1번 117명 · 2번 62명 · 3번 21명</code>).
+      특정 번호를 고정으로 읽으면 상당수의 사냥 세팅을 스펙으로 잡게 됩니다.</p>
+      <p>장비 옵션은 주스탯으로 환산해 합산합니다.</p>
+      <table class="note-table">
+        <thead><tr><th>옵션</th><th>주스탯 환산</th></tr></thead>
+        <tbody>
+          <tr><td>공격력 / 마력 1</td><td>3</td></tr>
+          <tr><td>주스탯 1%</td><td>10</td></tr>
+          <tr><td>공격력 / 마력 1%</td><td>30</td></tr>
+          <tr><td>보스 몬스터 데미지 + 데미지 1%</td><td>11</td></tr>
+          <tr><td>크리티컬 데미지 1%</td><td>3.5</td></tr>
+        </tbody>
+      </table>
+      <p>레벨 비례 옵션은 해당 캐릭터의 레벨로 실효값을 계산합니다.
+      소울 옵션과 예비 특수 반지는 실제 착용분이 아니므로 제외합니다.</p>
+
+      <h4>탐지 결과에 붙는 태그</h4>
+      <p>탐지된 회원의 직전 스냅샷과 비교해 하락 사유를 구분합니다.</p>
+      <table class="note-table">
+        <thead><tr><th>태그</th><th>조건</th><th>해석</th></tr></thead>
+        <tbody>
+          <tr><td>장비 미착용</td><td>장비 수 감소</td><td>강화를 위한 일시 탈착일 수 있어 판정 보류</td></tr>
+          <tr><td class="hl">스펙 다운 감지</td><td class="hl">환산 점수 1% 이상 하락</td><td class="hl">점수 하락이 스펙 변화로 설명됨</td></tr>
+          <tr><td>불성실 참여 의심</td><td>그 외</td><td>운영 판단 대상</td></tr>
+        </tbody>
+      </table>
+      <p>임계값 <code>1%</code>는 스펙을 바꾸지 않은 회원의 주간 변동이
+      <code>±0.7%</code> 이내라는 실측에 근거합니다.
+      장비 수가 줄어든 경우를 따로 나눈 이유는, 강화 중 일시 탈착과
+      실제 스펙 다운을 환산 점수만으로는 구분할 수 없기 때문입니다.</p>
+
+      <h4>개인 기준선 인정</h4>
+      <p><b>스펙 다운 감지</b> 태그는 버튼입니다. 관리자가 확인 후 인정하면
+      <b>그 주차가 해당 회원의 새 기준선</b>이 됩니다.
+      이전 주차는 기대치 산출에서 빠지므로, 낮아진 스펙에 맞는 점수대가
+      그 회원의 기준이 됩니다. 서두에 적은 '계속 탐지되는 문제'가 여기서 해소됩니다.</p>
+      <p>주의할 점 두 가지를 함께 처리했습니다.</p>
+      <ul>
+        <li><b>누적 탐지 횟수는 보존됩니다.</b> 기준선 이전 주차가 판정에서 빠져도
+            과거 이력까지 사라지면 안 되므로, 인정 시점의 횟수를 동결해 두고
+            이후 발생분만 더합니다.</li>
+        <li><b>처리한 주차 안에서는 취소할 수 있습니다.</b> 인정과 동시에 탐지 목록에서
+            빠지므로, 되돌릴 자리를 위해 '이번 주 스펙 다운 인정 처리' 섹션을 따로 두었습니다.
+            다음 주차 데이터가 올라오면 기준선이 이미 판정에 반영된 상태이므로 취소할 수 없습니다.</li>
+      </ul>
+      <p>인정 여부는 관리자의 판단입니다. 시스템은 장비가 실제로 약해졌다는
+      근거를 제시할 뿐 자동으로 처리하지 않습니다.</p>
+
+      <h4>한계</h4>
+      <ul>
+        <li>스냅샷은 <b>주 1회</b> 수집합니다. 수로 정산 직후 촬영하므로,
+            그 사이에 장비를 바꿨다가 되돌린 경우는 포착되지 않습니다.
+            주간 단위로 정산되는 체계와 맞추기 위한 선택입니다.</li>
+        <li>환산 계수는 통상적인 체감 기준이며 인게임 실제 데미지 공식이 아닙니다.
+            절대값이 아니라 <b>같은 사람의 주간 변화</b>를 보는 용도이므로,
+            계수가 일관되면 비교에는 문제가 없습니다.</li>
+        <li>스펙업은 별도로 다루지 않습니다. 스펙이 올랐는데 점수가 그대로여도
+            기대치는 본인의 최근 추세로 잡히므로, 곧바로 탐지되지는 않습니다.</li>
+        <li>NEXON API가 간헐적으로 실패합니다. 수집 결과의 실패 명단을 확인해
+            재수집하는 절차를 운영에 포함했습니다.</li>
+      </ul>
+    `
+  },
   {
     version: 'v1.0',
     date: '2026-08-03',
