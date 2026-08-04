@@ -1396,19 +1396,6 @@
 </div>
 
 
-<div class="modal" id="guildBaselineModal">
-  <div class="modal-content">
-    <div class="modal-header">보약 효과 종료 확인</div>
-    <div class="modal-body">
-      <div id="guildBaselineText"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn secondary" onclick="closeGuildBaselineModal()">취소</button>
-      <button class="modal-btn primary" onclick="confirmGuildBaseline()">네, 보약 효과 종료</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal" id="renameModal">
   <div class="modal-content">
     <div class="modal-header">닉네임 변경 (히스토리 이관)</div>
@@ -2166,7 +2153,6 @@ async function fetchAndRenderLeaderboards() {
     if (elFine) elFine.innerHTML = renderFineList(data.fine_top3 || []);
     if (elRise) elRise.innerHTML = renderDeltaList(data.rise_top5 || [], 'rise');
     if (elDrop) elDrop.innerHTML = renderDeltaList(data.drop_top5 || [], 'drop');
-    renderGuildAlert(data.guild_alert || null);
   } catch (e) {
     if (elAvg)  elAvg.innerHTML  = '<div class="lb-empty">불러오기 실패</div>';
     if (elFine) elFine.innerHTML = '<div class="lb-empty">불러오기 실패</div>';
@@ -2184,61 +2170,6 @@ function dropPctColor(p) {
 }
 
 
-function renderGuildAlert(alert) {
-  const banner = document.getElementById('guildAlertBanner');
-  if (!banner) return;  // 페이지에 알림 배너 없으면 무시
-  if (!alert) {
-    banner.style.display = 'none';
-    return;
-  }
-  document.getElementById('guildAlertCount').textContent = alert.drop_count;
-  banner.dataset.currentWeek = alert.current_week;
-  banner.style.display = 'flex';
-}
-
-// 보약 효과 종료 확인 모달
-function showGuildBaselineModal() {
-  const banner = document.getElementById('guildAlertBanner');
-  const wk = banner.dataset.currentWeek;
-  const count = document.getElementById('guildAlertCount').textContent;
-  document.getElementById('guildBaselineText').innerHTML = `
-    이번 주차(<strong>${weekLabel(wk)}</strong>)에 ${count}명이 전주 대비 점수 감소했습니다.<br><br>
-    보약 효과 종료로 인정하시겠습니까?<br><br>
-    <span style="color:var(--muted);font-size:0.85rem;">
-      이번 주차 이후 데이터를 길드 전체의 새 기준선으로 적용합니다.<br>
-      모든 회원의 점수 평균이 이 주차 이후 데이터로 재산출됩니다.
-    </span>
-  `;
-  document.getElementById('guildBaselineModal').classList.add('show');
-}
-function closeGuildBaselineModal() {
-  document.getElementById('guildBaselineModal').classList.remove('show');
-}
-async function confirmGuildBaseline() {
-  try {
-    const res = await fetch('/api/guild-baseline', { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      alert(`오류: ${err.detail || '요청이 실패했습니다.'}`);
-      return;
-    }
-    closeGuildBaselineModal();
-    alert('보약 효과 종료 처리되었습니다. 평균이 재산출됩니다.');
-    await init();
-  } catch (e) {
-    alert('통신 오류가 발생했습니다.');
-  }
-}
-
-// 알림 무시
-async function dismissGuildAlert() {
-  try {
-    await fetch('/api/dismiss-baseline-alert', { method: 'POST' });
-    document.getElementById('guildAlertBanner').style.display = 'none';
-  } catch (e) {
-    alert('통신 오류가 발생했습니다.');
-  }
-}
 
 // ── 해방/초월 갱신 (무기 마크) ──
 async function refreshWeaponMarks() {

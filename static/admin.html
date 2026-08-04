@@ -1141,11 +1141,12 @@
   <div id="guildAlertBanner" class="guild-alert-banner" style="display:none;">
     <div class="guild-alert-text">
       <div class="guild-alert-title">이번 주 길드원 <strong id="guildAlertCount">0</strong>명이 전주 대비 점수 감소</div>
-      <div class="guild-alert-desc">혹시 보약 효과가 종료되었나요? 확인 시 이번 주 이후 데이터를 새 기준선으로 적용합니다.</div>
+      <div class="guild-alert-desc">보약 효과 종료처럼 길드 전체가 함께 떨어진 경우일 수 있습니다.
+        길드 전체 변동은 불성실 참여 탐지에 자동 보정되므로 별도 조치는 필요하지 않습니다.
+        보정 수치는 <a href="/detection">탐지 페이지</a>에서 확인할 수 있습니다.</div>
     </div>
     <div class="guild-alert-actions">
-      <button class="alert-btn alert-btn-secondary" onclick="dismissGuildAlert()">무시</button>
-      <button class="alert-btn alert-btn-primary" onclick="showGuildBaselineModal()">네, 확인</button>
+      <button class="alert-btn alert-btn-primary" onclick="dismissGuildAlert()">확인</button>
     </div>
   </div>
 
@@ -1222,20 +1223,6 @@
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeLeaveGuildModal()">취소</button>
       <button class="modal-btn primary" onclick="confirmLeaveGuild()">탈퇴 처리</button>
-    </div>
-  </div>
-</div>
-
-
-<div class="modal" id="guildBaselineModal">
-  <div class="modal-content">
-    <div class="modal-header">보약 효과 종료 확인</div>
-    <div class="modal-body">
-      <div id="guildBaselineText"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn secondary" onclick="closeGuildBaselineModal()">취소</button>
-      <button class="modal-btn primary" onclick="confirmGuildBaseline()">네, 보약 효과 종료</button>
     </div>
   </div>
 </div>
@@ -1921,43 +1908,8 @@ function renderGuildAlert(alert) {
   banner.style.display = 'flex';
 }
 
-// 스펙 다운 확인 모달
-
-// 보약 효과 종료 확인 모달
-function showGuildBaselineModal() {
-  const banner = document.getElementById('guildAlertBanner');
-  const wk = banner.dataset.currentWeek;
-  const count = document.getElementById('guildAlertCount').textContent;
-  document.getElementById('guildBaselineText').innerHTML = `
-    이번 주차(<strong>${weekLabel(wk)}</strong>)에 ${count}명이 전주 대비 점수 감소했습니다.<br><br>
-    보약 효과 종료로 인정하시겠습니까?<br><br>
-    <span style="color:var(--muted);font-size:0.85rem;">
-      이번 주차 이후 데이터를 길드 전체의 새 기준선으로 적용합니다.<br>
-      모든 회원의 점수 평균이 이 주차 이후 데이터로 재산출됩니다.
-    </span>
-  `;
-  document.getElementById('guildBaselineModal').classList.add('show');
-}
-function closeGuildBaselineModal() {
-  document.getElementById('guildBaselineModal').classList.remove('show');
-}
-async function confirmGuildBaseline() {
-  try {
-    const res = await fetch('/api/guild-baseline', { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      alert(`오류: ${err.detail || '요청이 실패했습니다.'}`);
-      return;
-    }
-    closeGuildBaselineModal();
-    alert('보약 효과 종료 처리되었습니다. 평균이 재산출됩니다.');
-    await init();
-  } catch (e) {
-    alert('통신 오류가 발생했습니다.');
-  }
-}
-
-// 알림 무시
+// 알림 확인 — 배너만 내린다. 산출 기준은 바꾸지 않는다.
+// (길드 단위 baseline 설정은 제거했다. 단체 하락은 탐지의 환경 보정이 자동 처리한다)
 async function dismissGuildAlert() {
   try {
     await fetch('/api/dismiss-baseline-alert', { method: 'POST' });

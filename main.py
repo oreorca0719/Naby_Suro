@@ -886,27 +886,25 @@ def cancel_spec_down(name: str, _admin: str = Depends(require_admin)):
     return {"name": name, "cancelled": True, "week": latest}
 
 
-@app.post("/api/guild-baseline")
-def set_guild_baseline(_admin: str = Depends(require_admin)):
-    """보약 효과 종료 인정 — METADATA에 guild_baseline_from_week = 최신 주차 SET.
-
-    baseline 을 설정하면 해당 주차의 보약 알림은 목적을 달성한 것이므로
-    dismissed_baseline_alert_week 도 함께 SET 하여 배너를 즉시 내린다.
-    (이 값이 없으면 배너 표시 조건이 계속 참이라 '확인'을 눌러도 배너가 남는다)
-    """
-    latest = get_latest_week()
-    table.update_item(
-        Key={"week": "METADATA", "rank": 0},
-        UpdateExpression="SET guild_baseline_from_week = :wk, dismissed_baseline_alert_week = :wk",
-        ExpressionAttributeValues={":wk": latest}
-    )
-    _cache_clear()
-    return {"guild_baseline_from_week": latest, "dismissed_baseline_alert_week": latest}
+# 길드 단위 baseline 설정 기능은 제거했다.
+#
+# 단체 하락(보약 효과 종료 등)은 탐지 판정의 환경 보정이 매주 자동으로 상쇄한다.
+#   env = median(전 회원 이번주 ÷ 직전 추세),  기대치 = 본인 추세 x env
+# 실측상 전체 -7.7% 주차에서 보정 전 16명이던 탐지가 보정 후 4명으로,
+# 평상시와 같은 수준을 유지했다.
+#
+# 반면 baseline 을 설정하면 그 이전 주차가 판정 구간에서 통째로 빠져
+# 누적 탐지 이력이 소실된다(실측 31명 42건 -> 6명 6건). 얻는 것은 개인 평균의
+# 변화뿐인데 그 값은 어느 화면에도 노출되지 않는다. 되돌리는 수단도 없었다.
+#
+# guild_baseline_from_week 읽기 경로는 남겨 둔다. 현재 미설정이라 무동작이며,
+# 과거에 값이 설정된 환경에서도 거동이 달라지지 않도록 하기 위함이다.
+# 개인 단위 예외는 spec_down_from_week 가 담당한다(이력 동결 + 주차 내 취소).
 
 
 @app.post("/api/dismiss-baseline-alert")
 def dismiss_baseline_alert(_admin: str = Depends(require_admin)):
-    """보약 효과 알림 무시 — 같은 주차에 재표시 안 함"""
+    """단체 하락 알림 확인 — 같은 주차에 재표시 안 함 (산출 기준은 변하지 않음)"""
     latest = get_latest_week()
     table.update_item(
         Key={"week": "METADATA", "rank": 0},
