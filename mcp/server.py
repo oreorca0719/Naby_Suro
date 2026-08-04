@@ -23,6 +23,7 @@ from naby_mcp.tools import resolve as resolve_tool
 from naby_mcp.tools import validate as validate_tool
 from naby_mcp.tools import xlsx as xlsx_tool
 from naby_mcp.tools import upload as upload_tool
+from naby_mcp.tools import spec_collect as spec_tool
 
 mcp = FastMCP("naby-suro")
 
@@ -126,6 +127,23 @@ def upload_week(
         overwrite: 기존 주차 덮어쓰기 허용 여부
     """
     return upload_tool.upload_week(xlsx_path, week, approved, overwrite)
+
+
+@mcp.tool()
+def collect_spec(week: str, save: bool = True) -> dict:
+    """해당 주차 회원들의 장비 스펙 스냅샷을 수집해 저장한다.
+
+    각자의 가장 강한 프리셋(보스 세팅)을 찾아 환산 점수를 계산한다.
+    전투력 API 값은 조회 시점 착용 장비에 좌우되므로 쓰지 않는다.
+    수로 점수 적재 후 같은 주차로 1회 실행하면 된다. 200명 기준 몇 분 걸린다.
+
+    Args:
+        week: 주차 키 YYYYMMDD (정산 종료일=수요일)
+        save: False 면 계산만 하고 저장하지 않는다(리허설용)
+    """
+    r = spec_tool.collect_week(week, save=save)
+    r.pop("rows", None)          # 응답이 길어지지 않도록 요약만 반환
+    return r
 
 
 if __name__ == "__main__":

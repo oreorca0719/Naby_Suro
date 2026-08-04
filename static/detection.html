@@ -28,6 +28,7 @@
       --green:     #00A661;
       --up:        #00A661;
       --yellow:    #FFB020;
+      --warn:      #B45309;   /* 스펙 다운 인정 버튼 — 라이트 */
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -50,6 +51,7 @@
         --green:   #2FCB86;
         --up:      #2FCB86;
         --yellow:  #FFC14D;
+        --warn:    #FFC14D;   /* 스펙 다운 인정 버튼 — 다크 (대비 확보) */
       }
     }
 
@@ -1226,6 +1228,41 @@
     .cnt-badge.rep { background: rgba(240,68,82,0.12); color: var(--danger); }
     .empty-state { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 0.9rem; }
 
+    /* 판정 태그 — 스펙 다운은 인정 처리가 가능하므로 버튼으로 낸다 */
+    .tag {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 0.74rem; font-weight: 700; white-space: nowrap;
+      background: var(--fill); color: var(--ink-2);
+    }
+    .tag.suspect { background: rgba(240,68,82,0.12); color: var(--danger); }
+    .tag.unequipped { background: rgba(148,163,184,0.18); color: var(--ink-2); }
+    .tag-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 11px; border-radius: 999px; cursor: pointer;
+      font-family: inherit; font-size: 0.74rem; font-weight: 700;
+      white-space: nowrap; background: rgba(245,158,11,0.14);
+      color: var(--warn); border: 1px solid rgba(245,158,11,0.35);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .tag-btn:hover { background: rgba(245,158,11,0.24); border-color: rgba(245,158,11,0.6); }
+    .tag-btn::after { content: '확인'; font-weight: 600; opacity: 0.7; }
+    .tag-note {
+      display: block; margin-top: 4px; font-size: 0.72rem;
+      color: var(--muted); line-height: 1.45; max-width: 260px;
+    }
+    .confirmed-note {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      font-size: 0.82rem; color: var(--ink-2); line-height: 1.65;
+    }
+    .undo-btn {
+      padding: 4px 12px; border-radius: 999px; cursor: pointer;
+      font-family: inherit; font-size: 0.74rem; font-weight: 700;
+      white-space: nowrap; background: var(--fill);
+      color: var(--ink-2); border: 1px solid var(--border);
+      transition: background 0.15s, color 0.15s;
+    }
+    .undo-btn:hover { background: var(--fill-2); color: var(--danger); }
+
     /* 패치 노트 아코디언 */
     .note-item {
       border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -1332,6 +1369,7 @@
               <th>기대 점수</th>
               <th>이탈률</th>
               <th>누적 탐지</th>
+              <th>구분</th>
             </tr>
           </thead>
           <tbody id="detTbody"></tbody>
@@ -1339,6 +1377,33 @@
       </div>
       <div class="empty-state" id="emptyState" style="display:none;">
         이번 주 탐지된 길드원이 없습니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- 이번 주 스펙 다운 인정 처리 (해당 건이 있을 때만 표시) -->
+  <div class="full-table-section" id="confirmedSection" style="display:none;margin-bottom:32px;">
+    <div class="section-title">이번 주 스펙 다운 인정 처리</div>
+    <div class="card">
+      <div class="confirmed-note">
+        아래 길드원은 이번 주차부터 새 기준이 적용되어 탐지 대상에서 제외됩니다.
+        누적 탐지 횟수는 인정 시점 값으로 보존됩니다.
+        잘못 처리한 경우 <strong>이번 주차 안에서만</strong> 취소할 수 있습니다.
+      </div>
+      <div class="full-table-wrap">
+        <table class="full-table">
+          <thead>
+            <tr>
+              <th>닉네임</th>
+              <th>직업</th>
+              <th>이번 주 점수</th>
+              <th>누적 탐지</th>
+              <th>장비 환산 변화</th>
+              <th>처리</th>
+            </tr>
+          </thead>
+          <tbody id="confirmedTbody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1351,6 +1416,21 @@
 
 </div>
 
+<div class="modal" id="specDownModal">
+  <div class="modal-content">
+    <div class="modal-header">스펙 다운 확인</div>
+    <div class="modal-body">
+      <div id="specDownText"></div>
+      <div class="modal-info" id="specDownInfo"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeSpecDownModal()">취소</button>
+      <button class="modal-btn primary" id="specDownConfirmBtn"
+              onclick="confirmSpecDown()">네, 스펙 다운 인정</button>
+    </div>
+  </div>
+</div>
+
 <script>
 async function doLogout() {
   try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
@@ -1358,6 +1438,9 @@ async function doLogout() {
 }
 
 function fmt(n) { return Number(n).toLocaleString('ko-KR'); }
+
+// 마지막으로 받은 탐지 결과 — 모달이 상세값을 다시 조회하지 않도록 보관
+let LAST_DETECTION = { detected: [] };
 
 function escapeAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -1405,19 +1488,139 @@ function renderDetection(d) {
       '<td style="color:var(--muted)">' + fmt(h.expected) + '</td>' +
       '<td class="dev-cell">' + h.deviation_pct + '%</td>' +
       '<td><span class="cnt-badge' + rep + '">' + h.detected_count + '회</span></td>' +
+      '<td>' + tagCell(h) + '</td>' +
       '</tr>';
   }).join('');
 }
 
-// 닉네임 클릭 -> 회원 히스토리 (다른 페이지와 동일한 방식)
+function renderConfirmed(list) {
+  const sec = document.getElementById('confirmedSection');
+  if (!list || !list.length) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  document.getElementById('confirmedTbody').innerHTML = list.map(function (c) {
+    const rep = c.detected_count >= 2 ? ' rep' : '';
+    const chg = c.spec_change_pct === null || c.spec_change_pct === undefined
+      ? '<span style="color:var(--muted)">—</span>'
+      : c.spec_change_pct + '%';
+    return '<tr>' +
+      '<td><button type="button" class="name-link" data-name="' + escapeAttr(c.name) + '">' +
+        escapeAttr(c.name) + '</button></td>' +
+      '<td><span class="rank-job">' + escapeAttr(c.job) + '</span></td>' +
+      '<td style="font-weight:800">' + fmt(c.score) + '</td>' +
+      '<td><span class="cnt-badge' + rep + '">' + c.detected_count + '회</span></td>' +
+      '<td>' + chg + '</td>' +
+      '<td><button type="button" class="undo-btn" data-undo-name="' +
+        escapeAttr(c.name) + '">인정 취소</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// 태그 셀 — '스펙 다운 감지'만 인정 버튼, 나머지는 표시 전용
+function tagCell(h) {
+  const note = h.tag_detail
+    ? '<span class="tag-note">' + escapeAttr(h.tag_detail) + '</span>' : '';
+  if (h.tag === '스펙 다운 감지') {
+    return '<button type="button" class="tag-btn" data-spec-name="' +
+      escapeAttr(h.name) + '">스펙 다운 감지</button>' + note;
+  }
+  const cls = h.tag === '장비 미착용' ? 'unequipped' : 'suspect';
+  return '<span class="tag ' + cls + '">' + escapeAttr(h.tag) + '</span>' + note;
+}
+
 document.getElementById('detTbody').addEventListener('click', function (e) {
-  const btn = e.target.closest('.name-link');
-  if (!btn) return;
-  window.open(
-    '/static/member.html?name=' + encodeURIComponent(btn.dataset.name),
-    '_blank',
-    'width=1000,height=800,noopener'
-  );
+  // 닉네임 클릭 -> 회원 히스토리 (다른 페이지와 동일한 방식)
+  const nameBtn = e.target.closest('.name-link');
+  if (nameBtn) {
+    window.open(
+      '/static/member.html?name=' + encodeURIComponent(nameBtn.dataset.name),
+      '_blank',
+      'width=1000,height=800,noopener'
+    );
+    return;
+  }
+  const specBtn = e.target.closest('.tag-btn');
+  if (specBtn) showSpecDownModal(specBtn.dataset.specName);
+});
+
+// ── 스펙 다운 인정 ────────────────────────────────────────────────
+let specDownTarget = null;
+
+function showSpecDownModal(name) {
+  const h = (LAST_DETECTION.detected || []).find(function (x) { return x.name === name; });
+  if (!h) return;
+  specDownTarget = name;
+  document.getElementById('specDownText').innerHTML =
+    '<strong>' + escapeAttr(name) + '</strong> 님의 스펙 다운을 확인하셨습니까?<br><br>' +
+    '인정하면 이번 주차(<strong>' + escapeAttr(LAST_DETECTION.week_display) + '</strong>)부터를 ' +
+    '이 회원의 새 기준으로 삼습니다.';
+  document.getElementById('specDownInfo').innerHTML =
+    '장비 환산 점수 <strong>' + h.spec_change_pct + '%</strong> · ' +
+    '이번 주 수로 점수 <strong>' + fmt(h.score) + '</strong> (기대 ' + fmt(h.expected) + ')<br>' +
+    '이전 주차 기록은 기대치 산출에서만 제외되며, 누적 탐지 <strong>' +
+    h.detected_count + '회</strong>는 그대로 보존됩니다.<br>' +
+    '처리 후에는 아래 \'이번 주 스펙 다운 인정 처리\'에서 이번 주차 안에 취소할 수 있습니다.';
+  document.getElementById('specDownModal').classList.add('show');
+}
+
+function closeSpecDownModal() {
+  document.getElementById('specDownModal').classList.remove('show');
+  specDownTarget = null;
+}
+
+async function confirmSpecDown() {
+  if (!specDownTarget) return;
+  const btn = document.getElementById('specDownConfirmBtn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/spec-down/' + encodeURIComponent(specDownTarget), {
+      method: 'POST'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(function () { return {}; });
+      alert('오류: ' + (err.detail || '요청이 실패했습니다.'));
+      return;
+    }
+    closeSpecDownModal();
+    await init();
+  } catch (e) {
+    alert('네트워크 오류로 처리하지 못했습니다.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── 인정 취소 ─────────────────────────────────────────────────────
+document.getElementById('confirmedTbody').addEventListener('click', async function (e) {
+  const nameBtn = e.target.closest('.name-link');
+  if (nameBtn) {
+    window.open(
+      '/static/member.html?name=' + encodeURIComponent(nameBtn.dataset.name),
+      '_blank',
+      'width=1000,height=800,noopener'
+    );
+    return;
+  }
+  const undoBtn = e.target.closest('.undo-btn');
+  if (!undoBtn) return;
+  const name = undoBtn.dataset.undoName;
+  if (!confirm(name + ' 님의 스펙 다운 인정을 취소할까요?\n\n' +
+               '기준선이 해제되어 다시 탐지 대상이 됩니다.')) return;
+  undoBtn.disabled = true;
+  try {
+    const res = await fetch('/api/spec-down/' + encodeURIComponent(name), {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(function () { return {}; });
+      alert('오류: ' + (err.detail || '요청이 실패했습니다.'));
+      undoBtn.disabled = false;
+      return;
+    }
+    await init();
+  } catch (e) {
+    alert('네트워크 오류로 처리하지 못했습니다.');
+    undoBtn.disabled = false;
+  }
 });
 
 // 패치 노트 — 새 패치가 나오면 이 배열 맨 앞에 항목을 추가한다.
@@ -1528,7 +1731,9 @@ async function init() {
   const res = await fetch('/api/detection');
   if (!res.ok) throw new Error(res.status);
   const d = await res.json();
+  LAST_DETECTION = d;
   renderDetection(d);
+  renderConfirmed(d.spec_down_confirmed);
   document.getElementById('updatedAt').textContent = d.week_display + ' 기준';
 }
 

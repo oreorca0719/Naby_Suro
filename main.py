@@ -162,8 +162,19 @@ def get_members(week: str) -> list[dict]:
     )
 
 
+def _find_member_at_week(week: str, name: str) -> dict | None:
+    """해당 주차에서 닉네임으로 회원 레코드 1건 조회 (자리표시 제외)."""
+    from boto3.dynamodb.conditions import Key, Attr
+    resp = table.query(
+        KeyConditionExpression=Key("week").eq(week) & Key("rank").gt(0),
+        FilterExpression=Attr("name").eq(name),
+    )
+    items = [i for i in resp.get("Items", []) if not i.get("is_ghost")]
+    return items[0] if items else None
+
+
 # ── 이상치 탐지 (공통) ─────────────────────────────────────────────
-# 리더보드와 스펙 다운 인정 양쪽이 동일한 정의를 쓰도록 분리.
+# 리더보드의 이상치 표시 정의. 불성실 참여 탐지는 별도 규칙을 쓴다.
 OUTLIER_RATIO = 0.9      # 직전 추세 평균 대비 10% 이상 하락 = 이상치
 TRAIL_WEEKS = 3          # 비교 기준: 직전 최대 N주 참여 점수
 MIN_TRAIL = 2            # 판정에 필요한 최소 직전 이력 주차 (미만이면 판정 불가)
@@ -803,64 +814,76 @@ def leave_guild(name: str, _admin: str = Depends(require_admin)):
 
 @app.post("/api/spec-down/{name}")
 def confirm_spec_down(name: str, _admin: str = Depends(require_admin)):
-    """스펙 다운 인정 — 회원의 가장 최근 연속 이상치 그룹 첫 주차를 baseline으로 SET"""
-    from boto3.dynamodb.conditions import Key, Attr
+    """스펙 다운 인정 — 감지된 주차를 그 회원의 새 기준선으로 SET.
 
-    latest = get_latest_week()
+    장비 환산 점수가 실제로 하락한 것이 확인된 회원만 대상이다(탐지 시스템의
+    '스펙 다운 감지' 태그). 인정하면 그 주차 이전 기록은 판정에서 제외되어,
+    낮아진 스펙에 맞는 새 점수대가 그 회원의 기준이 된다. 이 처리가 없으면
+    예전 고점 기록이 계속 기대치를 끌어올려 매주 탐지되는 문제가 생긴다.
 
-    # 회원의 모든 주차 점수 수집
-    resp = table.scan(FilterExpression=Attr("name").eq(name) & Attr("rank").gt(0))
-    all_items = resp.get("Items", [])
-    while "LastEvaluatedKey" in resp:
-        resp = table.scan(
-            FilterExpression=Attr("name").eq(name) & Attr("rank").gt(0),
-            ExclusiveStartKey=resp["LastEvaluatedKey"],
+    누적 탐지 횟수는 기준선 이전 기록이 판정에서 빠져도 사라지면 안 되므로
+    (히스토리 관리 목적), 인정 시점의 횟수를 spec_down_prior_count 로 동결하고
+    이후 새 기준선에서 발생한 건만 여기에 더한다.
+    """
+    detection = get_detection(_admin=_admin)
+    hit = next((h for h in detection["detected"] if h["name"] == name), None)
+    if hit is None:
+        raise HTTPException(
+            status_code=400,
+            detail="이번 주 탐지 목록에 없는 회원입니다.",
         )
-        all_items.extend(resp.get("Items", []))
+    if hit.get("tag") != "스펙 다운 감지":
+        raise HTTPException(
+            status_code=400,
+            detail="장비 스펙 하락이 확인되지 않은 회원입니다. "
+                   "'스펙 다운 감지' 태그가 붙은 경우에만 인정할 수 있습니다.",
+        )
 
-    if not all_items:
-        raise HTTPException(status_code=404, detail="길드원을 찾을 수 없습니다.")
-
-    latest_member = next((i for i in all_items if i.get("week") == latest), None)
-    if not latest_member:
+    week = detection["week"]
+    member = _find_member_at_week(week, name)
+    if member is None:
         raise HTTPException(status_code=404, detail="최신 주차 데이터가 없습니다.")
 
-    # 기존 spec_down / guild baseline 반영하여 effective_from 계산
-    meta = table.get_item(Key={"week": "METADATA", "rank": 0}).get("Item") or {}
-    guild_baseline = meta.get("guild_baseline_from_week") or ""
-    existing_sd = latest_member.get("spec_down_from_week") or ""
-    effective_from = max(existing_sd, guild_baseline)
-
-    # 참여 주차 (effective_from 이상 + score > 0)
-    weekly = {i["week"]: int(i.get("score", 0)) for i in all_items if i.get("week") != "METADATA"}
-    participating = [(w, s) for w, s in weekly.items() if s > 0 and w >= effective_from]
-    if len(participating) < MIN_PARTICIPATION:
-        raise HTTPException(status_code=400, detail="분석 가능한 주차가 부족합니다.")
-
-    # 이상치 식별 + 가장 최근 연속 그룹 — 리더보드와 동일한 공통 헬퍼 호출
-    outlier_weeks_set, _ = detect_outliers_trailing(participating)
-    consecutive_group = find_latest_consecutive_outlier_group(
-        sorted(outlier_weeks_set),
-        sorted([w for w, _ in participating]),
-    )
-    if consecutive_group is None:
-        raise HTTPException(status_code=400, detail="연속 이상치 2주 이상 패턴이 감지되지 않았습니다.")
-
-    new_baseline = consecutive_group[0]  # 가장 최근 연속 그룹의 첫 주차
-
-    # 회원의 최신 주차 레코드에 spec_down_from_week SET
+    prior = int(hit.get("detected_count") or 0)
     table.update_item(
-        Key={"week": latest, "rank": int(latest_member["rank"])},
-        UpdateExpression="SET spec_down_from_week = :sd",
-        ExpressionAttributeValues={":sd": new_baseline}
+        Key={"week": week, "rank": int(member["rank"])},
+        UpdateExpression="SET spec_down_from_week = :sd, spec_down_prior_count = :pc",
+        ExpressionAttributeValues={":sd": week, ":pc": prior},
     )
 
     _cache_clear()
     return {
-        "name":               name,
-        "spec_down_from_week": new_baseline,
-        "latest_week":        latest,
+        "name":                name,
+        "spec_down_from_week": week,
+        "spec_down_prior_count": prior,
+        "spec_change_pct":     hit.get("spec_change_pct"),
     }
+
+
+@app.delete("/api/spec-down/{name}")
+def cancel_spec_down(name: str, _admin: str = Depends(require_admin)):
+    """스펙 다운 인정 취소 — 이번 주차에 처리한 건만 되돌린다.
+
+    오클릭 복구용이므로 처리한 그 주차 안에서만 허용한다. 다음 주차 데이터가
+    올라오면 기준선이 이월되어 이미 판정에 반영된 상태이므로 되돌리지 않는다.
+    """
+    latest = get_latest_week()
+    member = _find_member_at_week(latest, name)
+    if member is None:
+        raise HTTPException(status_code=404, detail="길드원을 찾을 수 없습니다.")
+    if (member.get("spec_down_from_week") or "") != latest:
+        raise HTTPException(
+            status_code=400,
+            detail="이번 주차에 인정 처리된 회원만 취소할 수 있습니다.",
+        )
+
+    table.update_item(
+        Key={"week": latest, "rank": int(member["rank"])},
+        UpdateExpression="REMOVE spec_down_from_week, spec_down_prior_count",
+    )
+
+    _cache_clear()
+    return {"name": name, "cancelled": True, "week": latest}
 
 
 @app.post("/api/guild-baseline")
@@ -1297,6 +1320,10 @@ DETECTION_VERSIONS = [
 ]
 DETECTION_CURRENT = DETECTION_VERSIONS[0]
 
+# 장비 환산 점수가 이 비율 이상 하락하면 스펙 다운으로 본다.
+# 스펙을 바꾸지 않으면 주간 변동이 ±0.7% 이내라(실측) 노이즈와 구분된다.
+SPEC_DROP_THRESHOLD = 0.01
+
 
 @app.get("/api/detection")
 def get_detection(_admin: str = Depends(require_admin)):
@@ -1333,6 +1360,7 @@ def get_detection(_admin: str = Depends(require_admin)):
         items.extend(resp.get("Items", []))
 
     score_by_name: dict[str, dict[str, int]] = defaultdict(dict)
+    spec_by_name: dict[str, dict[str, dict]] = defaultdict(dict)
     latest_members: dict[str, dict] = {}
     weeks_set: set[str] = set()
     latest = get_latest_week()
@@ -1345,6 +1373,11 @@ def get_detection(_admin: str = Depends(require_admin)):
             continue
         weeks_set.add(wk)
         score_by_name[name][wk] = int(i.get("score", 0))
+        if i.get("spec_score"):
+            spec_by_name[name][wk] = {
+                "score": int(i.get("spec_score") or 0),
+                "items": int(i.get("spec_items") or 0),
+            }
         if wk == latest:
             latest_members[name] = i
 
@@ -1417,21 +1450,97 @@ def get_detection(_admin: str = Depends(require_admin)):
                 })
         return env, hits
 
+    def spec_tag(name: str, wi: int) -> dict | None:
+        """장비 스펙 변화로 수로 점수 하락이 설명되는지 판정.
+
+        스펙이 낮아졌다면 수로 점수 하락은 당연한 결과이므로 불성실로 보지 않는다.
+        장비 수가 줄어든 경우는 강화를 위한 임시 탈착일 수 있어 판정을 보류한다.
+        """
+        wk = weeks[wi]
+        cur = spec_by_name.get(name, {}).get(wk)
+        if not cur:
+            return None
+        # 직전에 스펙이 기록된 주차와 비교
+        prev = None
+        for j in range(wi - 1, -1, -1):
+            p = spec_by_name.get(name, {}).get(weeks[j])
+            if p:
+                prev = p
+                break
+        if not prev or prev["score"] <= 0:
+            return None
+
+        if cur["items"] < prev["items"]:
+            return {
+                "tag": "장비 미착용",
+                "detail": f"장비 {prev['items']}개 → {cur['items']}개. "
+                          f"강화를 위한 일시 탈착일 수 있어 판정을 보류합니다.",
+                "spec_change_pct": round((cur["score"] / prev["score"] - 1) * 100, 1),
+            }
+
+        change = (cur["score"] - prev["score"]) / prev["score"]
+        if change <= -SPEC_DROP_THRESHOLD:
+            return {
+                "tag": "스펙 다운 감지",
+                "detail": f"장비 환산 점수 {prev['score']:,} → {cur['score']:,} "
+                          f"({change*100:+.1f}%). 점수 하락이 스펙 변화로 설명됩니다.",
+                "spec_change_pct": round(change * 100, 1),
+            }
+        return None
+
     latest_idx = weeks.index(latest)
     env_ratio, current_hits = detect_week(latest_idx)
 
-    # 누적 탐지 횟수 — 과거 전 주차에 동일 규칙 적용
+    # 누적 탐지 횟수 — 과거 전 주차에 동일 규칙 적용.
+    # 스펙 다운 인정으로 기준선이 올라간 회원은 그 이전 주차가 판정에서 빠지므로,
+    # 인정 시점에 동결해 둔 횟수(spec_down_prior_count)를 더해 이력을 보존한다.
+    prior_counts = {
+        n: int(m.get("spec_down_prior_count") or 0) for n, m in latest_members.items()
+    }
     total_counts: dict[str, int] = defaultdict(int)
     for wi in range(1, len(weeks)):
         _, hits = detect_week(wi)
         for h in hits:
             total_counts[h["name"]] += 1
 
+    def cumulative(name: str) -> int:
+        return total_counts.get(name, 0) + prior_counts.get(name, 0)
+
+    # 태그 판정 — 스펙 변화로 설명되면 불성실 의심에서 제외한다
     for h in current_hits:
         m = latest_members.get(h["name"]) or {}
         h["job"] = m.get("job", "")
-        h["detected_count"] = total_counts.get(h["name"], 0)
+        h["detected_count"] = cumulative(h["name"])
+        st = spec_tag(h["name"], latest_idx)
+        if st:
+            h["tag"] = st["tag"]
+            h["tag_detail"] = st["detail"]
+            h["spec_change_pct"] = st["spec_change_pct"]
+        else:
+            h["tag"] = "불성실 참여 의심"
+            h["tag_detail"] = ""
+            h["spec_change_pct"] = None
     current_hits.sort(key=lambda x: x["deviation_pct"])
+
+    tag_counts: dict[str, int] = defaultdict(int)
+    for h in current_hits:
+        tag_counts[h["tag"]] += 1
+
+    # 이번 주차에 스펙 다운으로 인정 처리된 회원 — 취소(되돌리기) 대상.
+    # 인정과 동시에 탐지 목록에서 빠지므로 여기서 따로 노출해야 손댈 수 있다.
+    confirmed: list[dict] = []
+    for name, m in latest_members.items():
+        if (m.get("spec_down_from_week") or "") != latest:
+            continue
+        st = spec_tag(name, latest_idx)
+        confirmed.append({
+            "name": name,
+            "job": m.get("job", ""),
+            "score": int(m.get("score", 0)),
+            "detected_count": cumulative(name),
+            "spec_change_pct": st["spec_change_pct"] if st else None,
+        })
+    confirmed.sort(key=lambda x: -x["score"])
 
     result = {
         "week": latest,
@@ -1445,9 +1554,13 @@ def get_detection(_admin: str = Depends(require_admin)):
         "env_shift_pct": round((env_ratio - 1) * 100, 1),
         "detected": current_hits,
         "detected_count": len(current_hits),
+        "spec_down_confirmed": confirmed,
         "evaluated_count": sum(
             1 for n, w in score_by_name.items() if w.get(latest, 0) > 0
         ),
+        "tag_counts": dict(tag_counts),
+        "spec_collected": sum(1 for n in spec_by_name if latest in spec_by_name[n]),
+        "spec_drop_threshold_pct": round(SPEC_DROP_THRESHOLD * 100, 1),
     }
     _cache_set(cache_key, result)
     return result

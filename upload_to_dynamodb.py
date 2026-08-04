@@ -56,6 +56,7 @@ def get_previous_fines(table) -> dict[str, dict]:
         pending_weeks = list(i.get("pending_weeks") or [])
         left_guild = bool(i.get("left_guild"))
         spec_down_from_week = i.get("spec_down_from_week")
+        spec_down_prior_count = i.get("spec_down_prior_count")
         fine_exempt_weeks = list(i.get("fine_exempt_weeks") or [])
         weapon_tier = i.get("weapon_tier")   # 무기 마크 — 자주 안 바뀌므로 주차 간 이월
         if (fine_count > 0 or last_fine_week or pending_weeks or left_guild
@@ -68,6 +69,7 @@ def get_previous_fines(table) -> dict[str, dict]:
                 "pending_weeks":       pending_weeks,
                 "left_guild":          left_guild,
                 "spec_down_from_week": spec_down_from_week,
+                "spec_down_prior_count": spec_down_prior_count,
                 "fine_exempt_weeks":   fine_exempt_weeks,
                 "weapon_tier":         weapon_tier,
             }
@@ -118,6 +120,8 @@ def upload(file_path: str, week: str = None):
                 item["last_fine_week"] = prev["last_fine_week"]
             if prev.get("spec_down_from_week"):
                 item["spec_down_from_week"] = prev["spec_down_from_week"]
+            if prev.get("spec_down_prior_count"):
+                item["spec_down_prior_count"] = prev["spec_down_prior_count"]
             if prev.get("fine_exempt_weeks"):
                 item["fine_exempt_weeks"] = prev["fine_exempt_weeks"]
             if prev.get("weapon_tier"):
@@ -176,6 +180,8 @@ def upload(file_path: str, week: str = None):
             ghost_item["last_fine_week"] = prev["last_fine_week"]
         if prev.get("spec_down_from_week"):
             ghost_item["spec_down_from_week"] = prev["spec_down_from_week"]
+        if prev.get("spec_down_prior_count"):
+            ghost_item["spec_down_prior_count"] = prev["spec_down_prior_count"]
         if prev.get("fine_exempt_weeks"):
             ghost_item["fine_exempt_weeks"] = prev["fine_exempt_weeks"]
         members.append(ghost_item)
