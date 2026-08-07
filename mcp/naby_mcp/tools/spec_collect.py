@@ -39,6 +39,7 @@ def fetch_one(name: str, date: str) -> dict | None:
         basic = _get("/character/basic", {"ocid": ocid, "date": date})
         stat = _get("/character/stat", {"ocid": ocid, "date": date})
         equip = _get("/character/item-equipment", {"ocid": ocid, "date": date})
+        # 세트효과는 최강 프리셋 아이템으로 직접 계산하므로 set-effect API 불필요
         return character_spec(basic, stat, equip)
     except Exception:
         return None
@@ -76,6 +77,7 @@ def collect_week(week: str, names: list[str] | None = None,
             "name": r["name"],
             "rank": r["rank"],
             "spec_score": spec["score"],
+            "spec_set_score": spec.get("set_score", 0),
             "spec_items": spec["item_count"],
             "spec_preset": spec["best_preset"],
             "spec_level": spec["level"],
@@ -85,11 +87,12 @@ def collect_week(week: str, names: list[str] | None = None,
             db.table().update_item(
                 Key={"week": week, "rank": int(r["rank"])},
                 UpdateExpression=(
-                    "SET spec_score = :s, spec_items = :i, "
+                    "SET spec_score = :s, spec_set_score = :ss, spec_items = :i, "
                     "spec_preset = :p, spec_level = :l, spec_main_stat = :m"
                 ),
                 ExpressionAttributeValues={
                     ":s": int(spec["score"]),
+                    ":ss": int(spec.get("set_score", 0)),
                     ":i": int(spec["item_count"]),
                     ":p": int(spec["best_preset"]),
                     ":l": int(spec["level"]),

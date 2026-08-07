@@ -1254,6 +1254,15 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
 # 패치에서는 그대로 승계해, 배너가 재산출된 것처럼 보이지 않게 한다.
 DETECTION_VERSIONS = [
     {
+        "version": "v1.2",
+        "date": "2026-08-07",
+        "threshold": 0.15,
+        "threshold_since": "2026-08-03",
+        "trail_weeks": 3,
+        "min_history": 3,
+        "title": "스펙 환산 전면 개편 — 곱연산 데미지 지수·최강 프리셋 세트효과",
+    },
+    {
         "version": "v1.1",
         "date": "2026-08-04",
         "threshold": 0.15,
@@ -1274,9 +1283,10 @@ DETECTION_VERSIONS = [
 ]
 DETECTION_CURRENT = DETECTION_VERSIONS[0]
 
-# 장비 환산 점수가 이 비율 이상 하락하면 스펙 다운으로 본다.
-# 스펙을 바꾸지 않으면 주간 변동이 ±0.7% 이내라(실측) 노이즈와 구분된다.
-SPEC_DROP_THRESHOLD = 0.01
+# 데미지 지수가 이 비율 이상 하락하면 스펙 다운으로 본다.
+# v1.2 곱연산 데미지 지수는 스펙 미변경 회원이 정확히 0%, 실제 하향은 -20~50%로
+# 크게 벌어져(실측), -5%면 정상 변동과 확실히 구분된다.
+SPEC_DROP_THRESHOLD = 0.05
 
 
 @app.get("/api/detection")
@@ -1436,7 +1446,7 @@ def get_detection(_admin: str = Depends(require_admin)):
         if change <= -SPEC_DROP_THRESHOLD:
             return {
                 "tag": "스펙 다운 감지",
-                "detail": f"장비 환산 점수 {prev['score']:,} → {cur['score']:,} "
+                "detail": f"데미지 지수 {prev['score']:,} → {cur['score']:,} "
                           f"({change*100:+.1f}%). 점수 하락이 스펙 변화로 설명됩니다.",
                 "spec_change_pct": round(change * 100, 1),
             }
