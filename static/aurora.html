@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오로라 수로 길드 랭킹 | NabySuro</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ═══════════════════════════════════════════
+       나비 길드 — 디자인 시스템
+       원칙: 장식 대신 타이포와 여백. 색은 파랑 하나 + 경고 빨강 하나.
+       ═══════════════════════════════════════════ */
+    :root {
+      --bg:        #F7F8FA;
+      --surface:   #FFFFFF;
+      --fill:      #F2F4F6;
+      --fill-2:    #F9FAFB;
+      --line:      #E9ECEF;
+      --text:      #191F28;
+      --ink-2:     #4E5968;
+      --muted:     #8B95A1;
+      --accent:    #3182F6;
+      --accent-weak: #E8F1FD;
+      --danger:    #F04452;
+      --danger-weak: #FDECEE;
+      --up:        #00A661;
+      --up-weak:   #E4F7EF;
+      --radius:    18px;
+      --radius-sm: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #15171A;
+        --surface:   #1B1E22;
+        --fill:      #24282E;
+        --fill-2:    #212429;
+        --line:      #2E333A;
+        --text:      #EDEFF2;
+        --ink-2:     #B0B8C1;
+        --muted:     #7B848F;
+        --accent:    #4D93F8;
+        --accent-weak: #1B2C44;
+        --danger:    #FF6B75;
+        --danger-weak: #3A2226;
+        --up:        #2FCB86;
+        --up-weak:   #16342A;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      letter-spacing: -0.02em;
+    }
+
+    .wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+      width: 100%;
+    }
+
+    /* ── 헤더 ───────────────────────────── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 40px 0 28px;
+    }
+    .header-left h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.3;
+    }
+    .header-left .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .header-left .header-owner {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 16px;   /* 한 칸 띄우기 */
+      font-weight: 600;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .updated-at {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .admin-link-btn {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: var(--fill);
+      border: 0;
+      color: var(--ink-2);
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .admin-link-btn:hover { background: var(--line); }
+
+    /* 사용 안 함 (마크업에서 제거됨) */
+    .live-badge, .live-dot { display: none; }
+
+    /* ── 카드 / 섹션 ────────────────────── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 18px;
+      color: var(--text);
+    }
+    .chart-wrap { position: relative; height: 260px; }
+    .stat-trend-wrap { position: relative; height: 220px; }
+
+    /* ── 브리핑 ─────────────────────────── */
+    .brief-banner {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      background: var(--accent-weak);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+    .brief-banner .brief-icon {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .brief-icon { font-style: normal; }
+    /* .brief-streak 의 margin-top 은 카드 안에서만 필요 — 배너에서는 밑선이 어긋난다 */
+    .brief-banner .brief-streak { margin-top: 0; }
+    .brief-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+    .brief-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+    .brief-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+    }
+    .brief-card-label {
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 9px;
+    }
+    .brief-card-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+    }
+    .brief-group-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin: 20px 0 10px;
+    }
+    /* 현재 길드원 수 — 성장 배너와 주요 지표 사이의 얇은 스트립 */
+    .brief-guildcount {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding: 9px 14px;
+      background: var(--fill-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm, 8px);
+    }
+    .brief-gc-main { font-size: 0.86rem; font-weight: 600; color: var(--text); }
+    .brief-gc-main strong {
+      font-size: 1.02rem;
+      font-weight: 800;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      margin-left: 2px;
+    }
+    .brief-gc-note { font-size: 0.68rem; color: var(--muted); font-weight: 500; }
+    .brief-change { font-size: 0.85rem; font-weight: 700; margin-top: 6px; }
+    .brief-change.up, .brief-pct.up { color: var(--up); }
+    .brief-change.down, .brief-pct.down { color: var(--danger); }
+    .brief-pct { font-size: 0.85rem; font-weight: 700; }
+    .brief-bar-wrap {
+      height: 6px;
+      background: var(--fill);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .brief-bar { height: 100%; background: var(--accent); border-radius: 999px; }
+    .brief-record, .brief-streak {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 7px;
+      font-weight: 500;
+    }
+
+    /* ── TOP 5 ──────────────────────────── */
+    .top5-wrap { margin-top: 2px; }
+    .top5-champion {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 22px 24px;
+      margin-bottom: 8px;
+      background: var(--accent-weak);
+      border-radius: var(--radius);
+    }
+    .top5-crown {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent);
+      width: 24px;
+      text-align: center;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .top5-champion-meta { flex: 1; min-width: 0; }
+    .top5-champion-label {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 5px;
+      letter-spacing: 0;
+    }
+    .top5-champion-name {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.25;
+    }
+    .top5-champion-job {
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      margin-top: 3px;
+      font-weight: 500;
+    }
+    .top5-champion-score {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    /* 단위('점')는 숫자와 같은 크기·굵기로 맞춘다 (색만 한 단계 죽여 위계 유지) */
+    .top5-champion-score-unit {
+      font-size: 1em;
+      font-weight: 800;
+      color: var(--ink-2);
+      margin-left: 4px;
+      letter-spacing: -0.03em;
+    }
+    .top5-list { background: var(--surface); border-radius: var(--radius); padding: 4px 24px; }
+    .top5-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 15px 0;
+    }
+    .top5-row + .top5-row { border-top: 1px solid var(--line); }
+    .top5-medal {
+      width: 24px;
+      text-align: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .top5-row.rank-2 .top5-medal, .top5-row.rank-3 .top5-medal { color: var(--accent); }
+    .top5-meta { flex: 1; min-width: 0; }
+    .top5-name { font-size: 1rem; font-weight: 700; letter-spacing: -0.03em; }
+    .top5-job { font-size: 0.8rem; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .top5-score {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .top5-score-unit {
+      font-size: 1em;
+      font-weight: 800;
+      color: var(--muted);
+      margin-left: 4px;
+      letter-spacing: -0.03em;
+    }
+
+    /* ── 통계 분석 ──────────────────────── */
+    .analysis-block { margin-bottom: 18px; }
+    .analysis-label {
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 7px;
+    }
+    .analysis-value {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+    }
+    .analysis-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.6;
+      font-weight: 500;
+    }
+    .analysis-divider {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 22px 0;
+    }
+    /* 항목은 Q1/Q2/Q3 3개 — 칸 수를 맞춰 행을 꽉 채운다 */
+    .quartile-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .quartile-item {
+      background: var(--fill-2);
+      border-radius: var(--radius-sm);
+      padding: 15px 16px;
+    }
+    .quartile-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .quartile-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── 리더보드 ───────────────────────── */
+    .leaderboard-row-public {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .lb-list { margin-top: -4px; }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 0;
+    }
+    .lb-row + .lb-row { border-top: 1px solid var(--line); }
+    .lb-medal {
+      width: 22px;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .lb-row.rank-1 .lb-medal,
+    .lb-row.rank-2 .lb-medal,
+    .lb-row.rank-3 .lb-medal { color: var(--accent); }
+    .lb-meta { flex: 1; min-width: 0; }
+    .lb-name {
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lb-job { font-size: 0.76rem; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .lb-value {
+      font-size: 0.94rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .lb-value-sub {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .lb-value.fine { color: var(--danger); }
+    .lb-value.rise { color: var(--up); }
+    .lb-value.drop { color: var(--danger); }
+    /* 리더보드 행 — 클릭하면 히스토리로 이동 */
+    .lb-row[data-name] { cursor: pointer; }
+    .lb-row[data-name]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .lb-empty {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 26px 0;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* ── 분포 범례 ──────────────────────── */
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 12px 8px 0;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+    .legend-dot { width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
+    .legend-name { color: var(--ink-2); }
+    .legend-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    /* ── 전체 길드원 표 ─────────────────── */
+    .full-table-section { margin-top: 12px; }
+    .table-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+      padding: 11px 15px;
+      border-radius: var(--radius-sm);
+      border: 0;
+      background: var(--fill);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      letter-spacing: -0.02em;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+    .table-info { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; }
+
+    .full-table-wrap { overflow-x: auto; }
+    .full-table { width: 100%; border-collapse: collapse; min-width: 520px; }
+    .full-table th {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+    .full-table td {
+      text-align: center;
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.9rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    /* 표 정렬 관례: 모든 열 center, 닉네임 열만 left */
+    .full-table th:nth-child(2), .full-table td:nth-child(2) { text-align: left; }
+    .full-table tbody tr:last-child td { border-bottom: 0; }
+    .full-table tbody tr:hover td { background: var(--fill-2); }
+    .rank-job {
+      font-size: 0.78rem;
+      color: var(--ink-2);
+      background: var(--fill);
+      padding: 3px 9px;
+      border-radius: 7px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .zero-score { color: var(--muted) !important; }
+
+    .miss-badge, .carryover-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-left: 7px;
+      border: 0;
+      font-family: inherit;
+      vertical-align: middle;
+    }
+    .miss-badge { background: var(--danger-weak); color: var(--danger); }
+    .carryover-badge { background: var(--fill); color: var(--ink-2); }
+    .miss-badge:disabled, .carryover-badge:disabled { opacity: 1; cursor: default; }
+
+    .history-btn, .leave-btn {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 7px 13px;
+      border-radius: 9px;
+      border: 0;
+      cursor: pointer;
+      background: var(--fill);
+      color: var(--ink-2);
+      letter-spacing: -0.02em;
+      transition: background 0.15s;
+    }
+    .history-btn:hover { background: var(--line); }
+    .leave-btn { background: var(--danger-weak); color: var(--danger); }
+    .fine-action-group {
+      /* 버튼별로 고정 폭 영역을 확보 — 라벨이 '벌금 취소'/'벌금 납부 확인'으로
+         바뀌어도 세 버튼의 위치가 행마다 동일하게 유지된다.
+         (측정 자연폭: 벌금 납부 확인 88px, 나머지 65px) */
+      display: inline-grid;
+      grid-template-columns: 96px 74px 74px;
+      gap: 6px;
+      justify-content: end;
+      align-items: center;
+    }
+    .fine-action-group > button { width: 100%; }
+
+    /* ── 로딩 ───────────────────────────── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 40px 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── 모션 ───────────────────────────────
+       장식이 아니라 피드백. 진입할 때 한 번 떠오르고, 조작에는 즉시 반응한다.
+       거리는 짧게(10px), 시간은 짧게(0.4s 이내). */
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .brief-banner,
+    .brief-grid-3 > .brief-card,
+    .brief-grid-4 > .brief-card,
+    .wrapper > .card,
+    .wrapper > .full-table-section,
+    .leaderboard-row-public > .card {
+      animation: riseIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    /* 순차 등장 — 같은 줄의 카드들이 왼쪽부터 차례로 */
+    .brief-grid-3 > .brief-card:nth-child(2),
+    .brief-grid-4 > .brief-card:nth-child(2),
+    .leaderboard-row-public > .card:nth-child(2) { animation-delay: 0.06s; }
+    .brief-grid-3 > .brief-card:nth-child(3),
+    .brief-grid-4 > .brief-card:nth-child(3) { animation-delay: 0.12s; }
+    .brief-grid-4 > .brief-card:nth-child(4) { animation-delay: 0.18s; }
+
+    /* 행 hover — 어디를 보고 있는지 알려준다 */
+    .top5-row, .lb-row { transition: background 0.15s; }
+    .top5-row:hover, .lb-row:hover { background: var(--fill-2); }
+
+    /* 누름 반응 */
+    button, .admin-link-btn { transition: background 0.15s, border-color 0.15s, transform 0.08s; }
+    button:active, .admin-link-btn:active { transform: scale(0.97); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation-duration: 2.4s; }
+      * { transition: none !important; }
+      .brief-banner, .brief-card, .card, .full-table-section { animation: none !important; }
+    }
+
+    /* ── 모달 ───────────────────────────── */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: var(--surface);
+      border-radius: 22px;
+      padding: 28px 26px 22px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .modal-header {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      margin-bottom: 14px;
+    }
+    .modal-body {
+      font-size: 0.92rem;
+      color: var(--ink-2);
+      line-height: 1.65;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .modal-info {
+      background: var(--fill);
+      border-radius: var(--radius-sm);
+      padding: 13px 15px;
+      font-size: 0.85rem;
+      margin-top: 14px;
+      color: var(--text);
+    }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-btn {
+      flex: 1;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 0;
+      cursor: pointer;
+      letter-spacing: -0.025em;
+    }
+    .modal-btn.primary { background: var(--accent); color: #fff; }
+    .modal-btn.secondary { background: var(--fill); color: var(--ink-2); }
+    .modal-btn:hover { filter: brightness(0.96); }
+
+    button:focus-visible, a:focus-visible, input:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* ── 반응형 ─────────────────────────── */
+    @media (max-width: 760px) {
+      .brief-grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .quartile-row { grid-template-columns: repeat(2, 1fr); }
+      .leaderboard-row-public { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .wrapper { padding: 0 14px 56px; }
+      header { padding: 28px 0 20px; align-items: flex-start; flex-direction: column; }
+      .header-left h1 { font-size: 1.45rem; }
+      .brief-grid-3 { grid-template-columns: 1fr; }
+      .card, .brief-card { padding: 18px; }
+      .top5-list { padding: 4px 18px; }
+      .top5-champion { padding: 18px; gap: 12px; }
+      .top5-champion-name { font-size: 1.2rem; }
+      .top5-champion-score { font-size: 1.3rem; }
+      .chart-wrap { height: 220px; }
+    }
+  
+    /* ── 무기 마크 (제네시스/데스티니 착용자) ── */
+    .wmark {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      line-height: 1.45;
+      position: relative;
+      overflow: hidden;
+    }
+    /* 압축 마크 — 좁은 리더보드용 (색·발광은 동일, 텍스트만 짧게) */
+    .wmark-sm { margin-left: 5px; padding: 1px 6px; font-size: 0.6rem; border-radius: 4px; }
+    /* 제네시스 — 검은 바탕, 빨간 글씨, 번쩍이는 발광 */
+    .wmark-genesis {
+      background: #0a0a0f;
+      color: #ff3b3b;
+      border: 1px solid #5c0d0d;
+      text-shadow: 0 0 5px rgba(255,59,59,0.9);
+      animation: wmarkGenesis 1.3s ease-in-out infinite;
+    }
+    @keyframes wmarkGenesis {
+      0%, 100% { box-shadow: 0 0 3px rgba(255,59,59,0.35); color: #ff3b3b;
+                 text-shadow: 0 0 4px rgba(255,59,59,0.7); }
+      50%      { box-shadow: 0 0 11px 2px rgba(255,59,59,0.85); color: #ff7a7a;
+                 text-shadow: 0 0 9px rgba(255,90,90,1); }
+    }
+    /* 붉은 광택 스윕 — 데스티니와 동일한 이펙트 구조 */
+    .wmark-genesis::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 32%, rgba(255,120,120,0.7) 50%, transparent 68%);
+      transform: translateX(-120%);
+      animation: wmarkShimmer 2.4s ease-in-out infinite;
+    }
+    /* 데스티니 — 하늘색 바탕, 노란 글씨, 반짝이는 광택 스윕 */
+    /* 데스티니 — 실제 무기 색감(아이보리골드 바디 · 시안 보석 · 바이올렛 오라) */
+    .wmark-destiny {
+      background: linear-gradient(135deg, #1f5f9e 0%, #37a6cf 45%, #8f7be0 100%);
+      color: #ffe6a3;
+      border: 1px solid rgba(160,224,255,0.75);
+      text-shadow: 0 0 6px rgba(255,205,110,0.95), 0 1px 1px rgba(0,0,0,0.45);
+      animation: wmarkDestinyGlow 2.4s ease-in-out infinite;
+    }
+    @keyframes wmarkDestinyGlow {
+      0%, 100% { box-shadow: 0 0 6px rgba(120,205,255,0.40), inset 0 0 6px rgba(175,150,255,0.30); }
+      50%      { box-shadow: 0 0 12px 2px rgba(150,225,255,0.75), inset 0 0 8px rgba(200,175,255,0.50); }
+    }
+    /* 골드빛 광택 스윕 — 금속에 빛이 스치듯 */
+    .wmark-destiny::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 32%, rgba(255,248,220,0.85) 50%, transparent 68%);
+      transform: translateX(-120%);
+      animation: wmarkShimmer 2.4s ease-in-out infinite;
+    }
+    @keyframes wmarkShimmer { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .wmark-genesis { animation: none; box-shadow: 0 0 6px rgba(255,59,59,0.6); }
+      .wmark-genesis::after { animation: none; opacity: 0; }
+      .wmark-destiny { animation: none; box-shadow: 0 0 7px rgba(140,215,255,0.6); }
+      .wmark-destiny::after { animation: none; opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <h1>NabySuro</h1>
+        <a href="/login" class="admin-link-btn">관리자</a>
+      </div>
+      <div class="subtitle">지하수로 대시보드</div>
+      <div class="header-owner">운영자: NAVYSEAL</div>
+    </div>
+    <div class="header-right">
+      <div class="updated-at" id="updatedAt">불러오는 중...</div>
+    </div>
+  </header>
+
+  <!-- 오로라 서버 길드 수로 Top 10 (chuchu.gg) -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;">
+      <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        오로라 서버 길드 수로 Top 10
+        <span id="suroRankMeta" style="font-size:0.72rem;color:var(--muted);font-weight:400;"></span>
+      </span>
+      <button id="suroRankRefresh" class="admin-link-btn" style="cursor:pointer;">새로고침</button>
+    </div>
+    <div class="lb-list" id="suroRankWrap">
+      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+    </div>
+  </div>
+
+  <!-- 오로라 서버 길드 수로 점수 Top 10 타임라인 -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      오로라 서버 길드 수로 점수 Top 10 타임라인
+      <span style="font-size:0.72rem;color:var(--muted);font-weight:400;">오로라 · 주간 지하수로 점수 · 2026-04-15 ~ 08-05 (17주)</span>
+    </div>
+    <div id="tlLegend" style="display:flex;flex-wrap:wrap;gap:8px 14px;margin:2px 0 12px;font-size:0.78rem;color:var(--muted);"></div>
+    <div id="tlPeriod" style="font-size:0.95rem;font-weight:700;color:var(--text);margin:0 0 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span id="tlPeriodText">비교 구간: 4/15 → 8/5</span>
+      <span style="color:var(--accent);">· 그래프의 두 지점을 클릭해 시작/끝 주차를 지정하세요</span>
+      <button id="tlPeriodReset" class="admin-link-btn" style="cursor:pointer;padding:3px 10px;font-size:0.72rem;">구간 초기화</button>
+    </div>
+    <div class="chart-wrap" style="height:680px;">
+      <canvas id="tlChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 길드 순위 비교 -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title">점수를 비교하고 싶은 길드 순위를 입력하세요</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+      <input id="cmpInput" type="text" inputmode="numeric" placeholder="예: 1,5,10"
+        style="flex:1;min-width:180px;background:var(--bg,#0a0c10);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-family:inherit;font-size:0.9rem;" />
+      <button id="cmpApply" class="admin-link-btn" style="cursor:pointer;">확인</button>
+      <button id="cmpReset" class="admin-link-btn" style="cursor:pointer;">전체 보기</button>
+    </div>
+    <div id="cmpHint" style="font-size:0.9rem;color:var(--muted);">1~10 사이 순위를 쉼표(,)로 구분해 입력하세요. 성장률 구간은 위 그래프에서 두 지점을 클릭해 바꿀 수 있습니다.</div>
+    <div id="cmpDash" style="margin-top:16px;"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  function escapeAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  var fmt=function(n){return Number(n).toLocaleString('ko-KR');};
+
+  async function loadSuroRanking(refresh){
+    var wrap=document.getElementById('suroRankWrap');
+    var meta=document.getElementById('suroRankMeta');
+    var btn=document.getElementById('suroRankRefresh');
+    var upd=document.getElementById('updatedAt');
+    if(!wrap) return;
+    if(refresh&&btn){btn.disabled=true;btn.textContent='불러오는 중…';}
+    try{
+      var res=await fetch('/api/suro-ranking'+(refresh?'?refresh=true':''));
+      if(!res.ok) throw new Error('http');
+      var d=await res.json();
+      if(meta) meta.textContent=(d.date?d.date+' 기준':'')+(d.stale?' · 캐시':'');
+      if(upd) upd.textContent=(d.date?d.date+' 기준':'');
+      wrap.innerHTML=(d.ranking||[]).map(function(g){
+        var ours=g.name===d.our_guild;
+        var medal=g.rank<=3?['🥇','🥈','🥉'][g.rank-1]:g.rank;
+        var tag=ours?' <span style="color:var(--accent);font-size:0.7rem;font-weight:700;">우리 길드</span>':'';
+        var rowStyle=ours?' style="background:var(--fill-2);border-radius:8px;padding-left:10px;padding-right:10px;"':'';
+        return '<div class="lb-row rank-'+g.rank+'"'+rowStyle+'>'+
+          '<div class="lb-medal">'+medal+'</div>'+
+          '<div class="lb-meta"><div class="lb-name">'+escapeAttr(g.name)+tag+'</div>'+
+          '<div class="lb-job">길드마스터 '+escapeAttr(g.master)+' · '+g.members+'명</div></div>'+
+          '<div class="lb-value">'+g.point.toLocaleString()+'점</div></div>';
+      }).join('');
+    }catch(e){
+      wrap.innerHTML='<p style="color:var(--muted);padding:12px 0;">랭킹을 불러오지 못했습니다. 잠시 후 새로고침 해주세요.</p>';
+    }finally{
+      if(refresh&&btn){btn.disabled=false;btn.textContent='새로고침';}
+    }
+  }
+
+  // ---- 타임라인 데이터 (17주 시드 · 추후 chuchu.gg 적재 연동 예정) ----
+  var WK=["4/15","4/22","4/29","5/6","5/13","5/20","5/27","6/3","6/10","6/17","6/24","7/1","7/8","7/15","7/22","7/29","8/5"];
+  var S=[
+   {n:"뷰티",c:"#eb6834",d:[20965584,21023600,21940861,21490423,22068950,21663075,22679070,22650306,23285279,24355796,23509739,23989923,23576161,25459867,24373237,24871435,26138188]},
+   {n:"니니",c:"#1baf7a",d:[16684044,16496448,17808079,18495800,18737927,18472624,19281658,19875289,20468862,21779978,20972958,20243360,19579659,19265864,19842118,19884944,22236870]},
+   {n:"피너",c:"#eda100",d:[13910225,13433368,14750303,14385043,14463479,14580484,14589419,15246356,17395605,17214496,16126454,16545326,16127130,15361498,15033838,14802079,16468618]},
+   {n:"은인",c:"#e87ba4",d:[14159072,13714165,14342460,14367124,13637869,14141695,14386583,15580182,15376231,16492143,16570491,14930490,14917332,15026677,14757506,15619998,16383474]},
+   {n:"나비",c:"#4f8ef7",our:true,d:[11348287,11238499,12123803,11490537,10711854,12218054,12791737,12850070,13517143,14642855,14325418,13753223,12591938,13808385,12968582,14048418,14047352]},
+   {n:"이별",c:"#9085e9",d:[9509653,11066194,11813971,10864400,11361474,10199598,11594155,11129492,12593003,11986398,11479450,11167466,10742341,10770755,11036579,12163144,12263600]},
+   {n:"귀신",c:"#e34948",d:[8544912,8387032,9352256,8831464,8742090,8749572,8349986,9227121,9894156,9894932,9830676,9043266,9211061,9265957,9335426,9839790,9318608]},
+   {n:"투썸",c:"#00a37a",d:[7573739,7450010,8203969,7888974,7919788,8393084,8570235,9391404,8657240,8947313,8403340,8050845,8490904,8881603,8786378,8983368,9164915]},
+   {n:"천상",c:"#8a94a6",d:[7636483,7694048,7831811,7290029,7702352,7882997,8507844,8888600,8256471,8990697,9279363,8780263,8282490,8414260,8722117,9158147,8674311]},
+   {n:"Rose",c:"#d55181",d:[7949979,8274888,8545113,8746299,9240893,9067894,8828528,9056720,9690974,10192967,8581423,8399365,8748633,8683545,8901042,8352377,8361940]}
+  ];
+  var tlChartInst=null;
+  var currentVisible=null;       // null = 전체
+  var currentRanks=null;         // 마지막 '확인'으로 선택된 순위
+  var pStart=0, pEnd=WK.length-1; // 성장률 구간 (기본: 첫주~최신주)
+
+  function fadeHex(hex){var h=hex.replace('#','');return 'rgba('+parseInt(h.substr(0,2),16)+','+parseInt(h.substr(2,2),16)+','+parseInt(h.substr(4,2),16)+',0.15)';}
+  function subActive(){ return !(pStart===0 && pEnd===(WK.length-1)); }
+  function segIn(ctx){ var b=(pEnd==null?WK.length-1:pEnd); return ctx.p0DataIndex>=pStart && ctx.p1DataIndex<=b; }
+
+  function drawLegend(){
+    var leg=document.getElementById('tlLegend'); if(!leg) return;
+    leg.innerHTML=S.map(function(s,i){
+      var on=!currentVisible||currentVisible.indexOf(i+1)>=0;
+      return '<span style="display:inline-flex;align-items:center;gap:6px;opacity:'+(on?1:0.28)+';'+(s.our?'color:var(--text);font-weight:700;':'')+'">'
+        +'<span style="width:12px;height:'+(s.our?'4px':'3px')+';border-radius:2px;background:'+s.c+';display:inline-block;"></span>'
+        +(i+1)+'위 '+s.n+'</span>';
+    }).join('');
+  }
+
+  function updatePeriodUI(){
+    var t=document.getElementById('tlPeriodText'); if(!t) return;
+    var endTxt = (pEnd==null) ? '(끝 주차 클릭)' : WK[pEnd];
+    t.textContent='비교 구간: '+WK[pStart]+' → '+endTxt;
+  }
+
+  // 선택 구간 세로선 표시 플러그인
+  var periodPlugin={id:'periodMark',afterDraw:function(chart){
+    var xa=chart.scales.x, ya=chart.scales.y, ctx=chart.ctx;
+    var marks=[[pStart,'#4f8ef7'],[pEnd,'#f7c04f']];
+    marks.forEach(function(m){
+      if(m[0]==null) return;
+      var x=xa.getPixelForValue(m[0]);
+      ctx.save();ctx.strokeStyle=m[1];ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(x,ya.top);ctx.lineTo(x,ya.bottom);ctx.stroke();ctx.restore();
+    });
+  }};
+
+  function renderTimeline(){
+    drawLegend(); updatePeriodUI();
+    var el=document.getElementById('tlChart');
+    if(!el||!window.Chart) return;
+    function rankAt(i){return S.map(function(s){return s.d[i];}).slice().sort(function(a,b){return b-a;});}
+    tlChartInst=new Chart(el,{type:'line',
+      data:{labels:WK,datasets:S.map(function(s){return {label:s.n,data:s.d,borderColor:s.c,backgroundColor:s.c,borderWidth:s.our?3.2:1.6,pointRadius:s.our?3:0,pointHoverRadius:6,tension:0.32,order:s.our?0:1,
+        segment:{
+          borderColor:function(ctx){ return (!subActive())?s.c:(segIn(ctx)?s.c:fadeHex(s.c)); },
+          borderWidth:function(ctx){ var base=s.our?3.2:1.6; return (!subActive())?base:(segIn(ctx)?(s.our?4.2:2.8):(s.our?1.4:0.9)); }
+        }};})},
+      plugins:[periodPlugin],
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
+        onClick:function(e,els,chart){
+          var ev=e.native||e;
+          var rect=chart.canvas.getBoundingClientRect();
+          var px=(ev.clientX||0)-rect.left;
+          var idx=Math.round(chart.scales.x.getValueForPixel(px));
+          if(isNaN(idx)) return;
+          if(idx<0) idx=0; if(idx>WK.length-1) idx=WK.length-1;
+          if(pStart==null||pEnd!=null){ pStart=idx; pEnd=null; }
+          else { pEnd=idx; if(pEnd<pStart){var tmp=pStart;pStart=pEnd;pEnd=tmp;} }
+          chart.update(); updatePeriodUI();
+          if(pStart!=null&&pEnd!=null&&currentRanks) renderDash(currentRanks);
+        },
+        plugins:{legend:{display:false},tooltip:{callbacks:{
+          title:function(c){return WK[c[0].dataIndex]+' 주차';},
+          label:function(c){var i=c.dataIndex;var rk=rankAt(i).indexOf(c.parsed.y)+1;return ' '+c.dataset.label+' · '+rk+'위 · '+fmt(c.parsed.y)+'점';}
+        }}},
+        scales:{x:{grid:{color:'rgba(30,39,64,0.8)'},ticks:{color:'#5a6a8a',maxRotation:45,autoSkip:false}},
+          y:{grid:{color:'rgba(30,39,64,0.8)'},ticks:{color:'#5a6a8a',callback:function(v){return (v/1000000)+'M';}}}}}
+    });
+  }
+
+  function applyVisible(ranks){
+    currentVisible=ranks;
+    if(tlChartInst){
+      tlChartInst.data.datasets.forEach(function(ds,i){ ds.hidden = ranks ? (ranks.indexOf(i+1)<0) : false; });
+      tlChartInst.update();
+    }
+    drawLegend();
+  }
+
+  function renderDash(ranks){
+    var dash=document.getElementById('cmpDash'); if(!dash) return;
+    if(!ranks||!ranks.length){ dash.innerHTML=''; return; }
+    var a=pStart, b=(pEnd!=null?pEnd:WK.length-1);
+    var items=ranks.map(function(r){
+      var s=S[r-1]; var f=s.d[a], l=s.d[b]; var delta=l-f; var pct=f?delta/f*100:0;
+      var seg=s.d.slice(Math.min(a,b),Math.max(a,b)+1);
+      return {r:r,s:s,f:f,l:l,delta:delta,pct:pct,peak:Math.max.apply(null,seg),low:Math.min.apply(null,seg)};
+    });
+    var best=items.slice().sort(function(x,y){return y.pct-x.pct;})[0];
+    var cards=items.map(function(it){
+      var up=it.delta>=0; var col=up?'#4ade80':'#f87171'; var sign=up?'+':'';
+      var star=(it===best&&items.length>1)?' <span style="color:var(--accent);font-size:0.66rem;font-weight:700;">최고 성장</span>':'';
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="width:11px;height:11px;border-radius:2px;background:'+it.s.c+';display:inline-block;"></span>'
+        +'<span style="font-weight:700;">'+it.r+'위 · '+it.s.n+'</span>'+star+'</div>'
+        +'<div style="font-size:0.72rem;color:var(--muted);">'+WK[a]+' → '+WK[b]+'</div>'
+        +'<div style="font-size:0.9rem;margin:2px 0;">'+fmt(it.f)+' → <b>'+fmt(it.l)+'</b></div>'
+        +'<div style="font-size:1rem;font-weight:700;color:'+col+';">'+sign+fmt(it.delta)+' ('+sign+it.pct.toFixed(1)+'%)</div>'
+        +'<div style="font-size:0.72rem;color:var(--muted);margin-top:6px;">구간 최고 '+fmt(it.peak)+' · 최저 '+fmt(it.low)+'</div>'
+        +'</div>';
+    }).join('');
+    dash.innerHTML='<div style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;">'+items.length+'개 길드 비교 · 구간 '+WK[a]+' ~ '+WK[b]+' · 성장률 = 시작 대비 끝</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">'+cards+'</div>';
+  }
+
+  function parseRanks(str){
+    var arr=(str||'').split(',').map(function(x){return parseInt(String(x).trim(),10);}).filter(function(x){return !isNaN(x)&&x>=1&&x<=S.length;});
+    return arr.filter(function(v,i){return arr.indexOf(v)===i;}).sort(function(a,b){return a-b;});
+  }
+  function doApply(){
+    var hint=document.getElementById('cmpHint');
+    var ranks=parseRanks(document.getElementById('cmpInput').value);
+    if(!ranks.length){ if(hint) hint.textContent='1~10 사이 순위를 쉼표(,)로 구분해 입력해주세요. (예: 1,5,10)'; currentRanks=null; applyVisible(null); renderDash(null); return; }
+    currentRanks=ranks;
+    var b=(pEnd!=null?pEnd:WK.length-1);
+    if(hint) hint.textContent='선택한 순위: '+ranks.join(', ')+'위 · 구간 '+WK[pStart]+'~'+WK[b];
+    applyVisible(ranks); renderDash(ranks);
+  }
+  function doReset(){
+    var inp=document.getElementById('cmpInput'); if(inp) inp.value='';
+    var hint=document.getElementById('cmpHint'); if(hint) hint.textContent='1~10 사이 순위를 쉼표(,)로 구분해 입력하세요. 성장률 구간은 위 그래프에서 두 지점을 클릭해 바꿀 수 있습니다.';
+    currentRanks=null; applyVisible(null); renderDash(null);
+  }
+  function resetPeriod(){
+    pStart=0; pEnd=WK.length-1;
+    if(tlChartInst) tlChartInst.update();
+    updatePeriodUI();
+    if(currentRanks) renderDash(currentRanks);
+  }
+
+  // ---- init ----
+  var _b=document.getElementById('suroRankRefresh');
+  if(_b) _b.addEventListener('click',function(){loadSuroRanking(true);});
+  var _a=document.getElementById('cmpApply'); if(_a) _a.addEventListener('click',doApply);
+  var _r=document.getElementById('cmpReset'); if(_r) _r.addEventListener('click',doReset);
+  var _pr=document.getElementById('tlPeriodReset'); if(_pr) _pr.addEventListener('click',resetPeriod);
+  var _i=document.getElementById('cmpInput'); if(_i) _i.addEventListener('keydown',function(e){ if(e.key==='Enter') doApply(); });
+  loadSuroRanking();
+  renderTimeline();
+})();
+</script>
+</body>
+</html>
