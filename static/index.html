@@ -87,6 +87,12 @@
       margin-top: 6px;
       font-weight: 500;
     }
+    .header-left .header-owner {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 16px;   /* 한 칸 띄우기 */
+      font-weight: 600;
+    }
     .header-right {
       display: flex;
       align-items: center;
@@ -753,10 +759,11 @@
   <header>
     <div class="header-left">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-        <h1>나비 길드</h1>
+        <h1>NabySuro</h1>
         <a href="/login" class="admin-link-btn">관리자</a>
       </div>
-      <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
+      <div class="subtitle">지하수로 대시보드</div>
+      <div class="header-owner">운영자: NAVYSEAL</div>
     </div>
     <div class="header-right">
       <div class="updated-at" id="updatedAt">불러오는 중...</div>
