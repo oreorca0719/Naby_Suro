@@ -178,6 +178,27 @@
       color: var(--muted);
       margin: 20px 0 10px;
     }
+    /* 현재 길드원 수 — 성장 배너와 주요 지표 사이의 얇은 스트립 */
+    .brief-guildcount {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding: 9px 14px;
+      background: var(--fill-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm, 8px);
+    }
+    .brief-gc-main { font-size: 0.86rem; font-weight: 600; color: var(--text); }
+    .brief-gc-main strong {
+      font-size: 1.02rem;
+      font-weight: 800;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      margin-left: 2px;
+    }
+    .brief-gc-note { font-size: 0.68rem; color: var(--muted); font-weight: 500; }
     .brief-change { font-size: 0.85rem; font-weight: 700; margin-top: 6px; }
     .brief-change.up, .brief-pct.up { color: var(--up); }
     .brief-change.down, .brief-pct.down { color: var(--danger); }
@@ -1274,6 +1295,10 @@ function renderBriefing(history) {
       <span>이번 주 길드는 지난 주보다 ${isUp ? '성장했습니다' : '하향됐습니다'}</span>
       <span class="brief-streak">${streak}주 연속 ${isUp ? '성장' : '하락'} 중</span>
     </div>
+    <div class="brief-guildcount">
+      <span class="brief-gc-main">현재 길드원 <strong id="guildCountValue">···</strong></span>
+      <span class="brief-gc-note" id="guildCountNote">하루 단위 갱신 (전일 기준)</span>
+    </div>
     <div class="brief-group-label">주요 지표</div>
     <div class="brief-grid-3">
       ${card('길드 총 점수',   cur.total_score,   prev.total_score,   atHigh('total_score'))}
@@ -1599,6 +1624,22 @@ function renderDeltaList(rows, kind) {
   }).join('') + `</div>`;
 }
 
+async function loadGuildCount() {
+  const v = document.getElementById('guildCountValue');
+  const n = document.getElementById('guildCountNote');
+  if (!v) return;
+  try {
+    const res = await fetch('/api/guild-count');
+    if (!res.ok) throw new Error('http');
+    const d = await res.json();
+    v.textContent = (d.count || 0).toLocaleString() + '명';
+    if (n) n.textContent = '하루 단위 갱신 (전일 기준)' + (d.date ? ' · ' + d.date : '');
+  } catch (e) {
+    v.textContent = '조회 실패';
+    if (n) n.textContent = '하루 단위 갱신 (전일 기준)';
+  }
+}
+
 async function loadSuroRanking(refresh) {
   const wrap = document.getElementById('suroRankWrap');
   const meta = document.getElementById('suroRankMeta');
@@ -1642,6 +1683,7 @@ async function init() {
   renderStats(data.stats);
   setStatLabels(data.stats.week);
   renderBriefing(history);
+  loadGuildCount();            // 현재 길드원 수(외부 조회, 비동기 독립 로드)
   renderHistoryChart(history);
   renderStatTrendChart(history);
   renderAnalysis(data.all_members);

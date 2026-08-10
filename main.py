@@ -494,6 +494,41 @@ async def _fetch_weapon_tier(client: httpx.AsyncClient, name: str) -> tuple[str 
     return _weapon_tier_from_name(weapon_name), weapon_name
 
 
+# 나비 길드 현재 인원 (NEXON /guild/basic). 하루 단위 갱신이라 1시간 캐시.
+_GUILD_COUNT_CACHE = {"ts": 0.0, "data": None}
+
+
+@app.get("/api/guild-count")
+async def get_guild_count(refresh: bool = False):
+    """나비 길드 현재 등록 인원(캐릭터 수). NEXON 데이터는 하루 단위(전일 기준)."""
+    now = time.time()
+    floor = 60 if refresh else 3600
+    if _GUILD_COUNT_CACHE["data"] and now - _GUILD_COUNT_CACHE["ts"] < floor:
+        return _GUILD_COUNT_CACHE["data"]
+    if not NEXON_API_KEY:
+        if _GUILD_COUNT_CACHE["data"]:
+            return _GUILD_COUNT_CACHE["data"]
+        raise HTTPException(status_code=503, detail="NEXON_API_KEY 미설정")
+    try:
+        async with httpx.AsyncClient() as client:
+            gid = (await _nexon_get(
+                client, "/guild/id",
+                {"guild_name": "나비", "world_name": "오로라"},
+            )).get("oguild_id")
+            basic = await _nexon_get(client, "/guild/basic", {"oguild_id": gid})
+    except Exception:
+        if _GUILD_COUNT_CACHE["data"]:
+            return {**_GUILD_COUNT_CACHE["data"], "stale": True}
+        raise HTTPException(status_code=502, detail="길드 인원 조회 실패")
+    out = {
+        "count": int(basic.get("guild_member_count") or 0),
+        "guild": basic.get("guild_name") or "나비",
+        "date": (basic.get("date") or "")[:10] or None,
+    }
+    _GUILD_COUNT_CACHE.update(ts=now, data=out)
+    return out
+
+
 @app.get("/api/member/{name}/profile")
 async def get_member_profile(name: str):
     if not NEXON_API_KEY:
