@@ -750,6 +750,24 @@
       .wmark-destiny { animation: none; box-shadow: 0 0 7px rgba(140,215,255,0.6); }
       .wmark-destiny::after { animation: none; opacity: 0; }
     }
+    /* ── 페이지 탭 (나비 / 오로라 길드 랭킹) ── */
+    .page-tabs {
+      display: flex; gap: 4px; margin-bottom: 28px;
+      border-bottom: 1px solid var(--border); overflow-x: auto;
+    }
+    .page-tab {
+      padding: 12px 22px; color: var(--muted); text-decoration: none;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.92rem; font-weight: 700; letter-spacing: -0.01em;
+      border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .page-tab:hover { color: var(--text); }
+    .page-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    @media (max-width: 480px) {
+      .page-tab { padding: 10px 16px; font-size: 0.82rem; }
+      .page-tabs { margin-bottom: 20px; }
+    }
   </style>
 </head>
 <body>
@@ -760,7 +778,6 @@
     <div class="header-left">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <h1>NabySuro</h1>
-        <a href="/" class="admin-link-btn">메인</a>
         <a href="/login" class="admin-link-btn">관리자</a>
       </div>
       <div class="subtitle">지하수로 대시보드</div>
@@ -770,6 +787,11 @@
       <div class="updated-at" id="updatedAt">불러오는 중...</div>
     </div>
   </header>
+
+  <nav class="page-tabs">
+    <a href="/" class="page-tab">나비</a>
+    <a href="/aurora" class="page-tab active">오로라 길드 랭킹</a>
+  </nav>
 
   <!-- 오로라 서버 길드 수로 Top 10 (chuchu.gg) -->
   <div class="card" style="margin-bottom:32px;">
