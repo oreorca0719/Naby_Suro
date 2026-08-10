@@ -745,6 +745,20 @@
   <!-- 브리핑 보드 -->
   <div id="briefingBoard" style="margin-bottom:32px;"></div>
 
+  <!-- 오로라 서버 수로 길드 랭킹 (chuchu.gg) -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;">
+      <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        오로라 서버 수로 길드 랭킹 <span style="font-size:0.72rem;color:var(--muted);font-weight:400;">TOP 10</span>
+        <span id="suroRankMeta" style="font-size:0.72rem;color:var(--muted);font-weight:400;"></span>
+      </span>
+      <button id="suroRankRefresh" class="admin-link-btn" style="cursor:pointer;">새로고침</button>
+    </div>
+    <div class="lb-list" id="suroRankWrap">
+      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+    </div>
+  </div>
+
   <!-- 주간 총점수 추이 -->
   <div class="card" style="margin-bottom:32px;">
     <div class="section-title">주간 길드 총점수 추이</div>
@@ -1585,6 +1599,38 @@ function renderDeltaList(rows, kind) {
   }).join('') + `</div>`;
 }
 
+async function loadSuroRanking(refresh) {
+  const wrap = document.getElementById('suroRankWrap');
+  const meta = document.getElementById('suroRankMeta');
+  const btn = document.getElementById('suroRankRefresh');
+  if (!wrap) return;
+  if (refresh && btn) { btn.disabled = true; btn.textContent = '불러오는 중…'; }
+  try {
+    const res = await fetch('/api/suro-ranking' + (refresh ? '?refresh=true' : ''));
+    if (!res.ok) throw new Error('http');
+    const d = await res.json();
+    if (meta) meta.textContent = (d.date ? d.date + ' 기준' : '') + (d.stale ? ' · 캐시' : '');
+    wrap.innerHTML = (d.ranking || []).map(function (g) {
+      const ours = g.name === d.our_guild;
+      const medal = g.rank <= 3 ? ['🥇', '🥈', '🥉'][g.rank - 1] : g.rank;
+      const tag = ours ? ' <span style="color:var(--accent);font-size:0.7rem;font-weight:700;">우리 길드</span>' : '';
+      const rowStyle = ours ? ' style="background:var(--fill-2);border-radius:var(--radius-sm,8px);padding-left:10px;padding-right:10px;"' : '';
+      return '<div class="lb-row rank-' + g.rank + '"' + rowStyle + '>' +
+        '<div class="lb-medal">' + medal + '</div>' +
+        '<div class="lb-meta">' +
+          '<div class="lb-name">' + escapeAttr(g.name) + tag + '</div>' +
+          '<div class="lb-job">길드마스터 ' + escapeAttr(g.master) + ' · ' + g.members + '명</div>' +
+        '</div>' +
+        '<div class="lb-value">' + g.point.toLocaleString() + '점</div>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    wrap.innerHTML = '<p style="color:var(--muted);padding:12px 0;">랭킹을 불러오지 못했습니다. 잠시 후 새로고침 해주세요.</p>';
+  } finally {
+    if (refresh && btn) { btn.disabled = false; btn.textContent = '새로고침'; }
+  }
+}
+
 async function init() {
   // 공개 페이지: 통계 + 차트 + 통계 분석 + 평균등수/상승폭 TOP 5 + 전체 길드원
   const [data, history] = await Promise.all([fetchData(), fetch('/api/history').then(r => r.json())]);
@@ -1617,6 +1663,11 @@ async function init() {
   // 전체 길드원 현황
   renderFullTable(data.all_members);
   document.getElementById('searchInput').addEventListener('input', e => filterTable(e.target.value));
+
+  // 오로라 수로 길드 랭킹 (외부 조회라 비동기로 독립 로드)
+  const suroBtn = document.getElementById('suroRankRefresh');
+  if (suroBtn) suroBtn.addEventListener('click', () => loadSuroRanking(true));
+  loadSuroRanking();
 }
 
 // 핸들러: 페이지마다 DOM 요소 유무 다름. null-safe 처리.

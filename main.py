@@ -282,6 +282,84 @@ def get_week(week: str):
     return {"week": week, "week_display": get_week_display(week), "all_members": members}
 
 
+import json as _json
+
+# 오로라 주간 지하수로 길드 랭킹 (chuchu.gg 프록시). 주간 갱신이라 5분 캐시.
+_SURO_RANK_CACHE = {"ts": 0.0, "data": None}
+
+
+def _parse_suro_world(html: str, world: str):
+    """chuchu.gg /ranking/suro 서버렌더 HTML(RSC flight)에서 해당 월드
+    길드 수로 랭킹 배열을 추출한다. 데이터는 이스케이프된 JSON 문자열로 박혀 있다."""
+    key = '\\"worldName\\":\\"%s\\"' % world
+    i = html.find(key)
+    if i < 0:
+        return None
+    j = html.find('\\"ranking\\":[', i)
+    if j < 0:
+        return None
+    start = html.index('[', j)
+    depth = 0
+    end = None
+    for k in range(start, len(html)):
+        c = html[k]
+        if c == '[':
+            depth += 1
+        elif c == ']':
+            depth -= 1
+            if depth == 0:
+                end = k + 1
+                break
+    if end is None:
+        return None
+    frag = html[start:end].replace('\\"', '"').replace('\\\\', '\\')
+    return _json.loads(frag)
+
+
+@app.get("/api/suro-ranking")
+def get_suro_ranking(refresh: bool = False):
+    """오로라 서버 주간 지하수로 길드 랭킹 상위 10 (chuchu.gg 프록시)."""
+    now = time.time()
+    floor = 15 if refresh else 300
+    if _SURO_RANK_CACHE["data"] and now - _SURO_RANK_CACHE["ts"] < floor:
+        return _SURO_RANK_CACHE["data"]
+    try:
+        resp = httpx.get(
+            "https://chuchu.gg/ranking/suro",
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                                   "AppleWebKit/537.36 (KHTML, like Gecko)"},
+            timeout=15,
+            follow_redirects=True,
+        )
+        resp.raise_for_status()
+        rk = _parse_suro_world(resp.text, "오로라")
+        if not rk:
+            raise ValueError("parse failed")
+    except Exception:
+        if _SURO_RANK_CACHE["data"]:
+            return {**_SURO_RANK_CACHE["data"], "stale": True}
+        raise HTTPException(status_code=502, detail="수로 랭킹을 불러오지 못했습니다.")
+    top = rk[:10]
+    out = {
+        "date": top[0].get("date") if top else None,
+        "world": "오로라",
+        "our_guild": "나비",
+        "ranking": [
+            {
+                "rank": g.get("ranking"),
+                "name": g.get("guild_name", ""),
+                "point": int(g.get("guild_point") or 0),
+                "members": int((g.get("basic") or {}).get("guild_user_count") or 0),
+                "master": g.get("guild_master_name", ""),
+            }
+            for g in top
+        ],
+        "fetched_at": int(now),
+    }
+    _SURO_RANK_CACHE.update(ts=now, data=out)
+    return out
+
+
 @app.get("/api/history")
 def get_history():
     cached = _cache_get("history")
