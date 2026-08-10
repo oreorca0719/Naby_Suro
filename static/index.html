@@ -1632,8 +1632,8 @@ async function loadGuildCount() {
     const res = await fetch('/api/guild-count');
     if (!res.ok) throw new Error('http');
     const d = await res.json();
-    v.textContent = (d.count || 0).toLocaleString() + '명';
-    if (n) n.textContent = '하루 단위 갱신 (전일 기준)' + (d.date ? ' · ' + d.date : '');
+    v.textContent = (d.user_count || 0).toLocaleString() + '명';
+    if (n) n.textContent = '계정 기준 · 하루 단위 갱신(전일)' + (d.date ? ' · ' + d.date : '');
   } catch (e) {
     v.textContent = '조회 실패';
     if (n) n.textContent = '하루 단위 갱신 (전일 기준)';

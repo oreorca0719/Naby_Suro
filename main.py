@@ -521,7 +521,8 @@ async def get_guild_count(refresh: bool = False):
             return {**_GUILD_COUNT_CACHE["data"], "stale": True}
         raise HTTPException(status_code=502, detail="길드 인원 조회 실패")
     out = {
-        "count": int(basic.get("guild_member_count") or 0),
+        "user_count": int(basic.get("guild_user_count") or 0),     # 계정 수
+        "char_count": int(basic.get("guild_member_count") or 0),   # 캐릭터 수(부캐 포함)
         "guild": basic.get("guild_name") or "나비",
         "date": (basic.get("date") or "")[:10] or None,
     }
