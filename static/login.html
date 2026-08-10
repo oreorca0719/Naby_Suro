@@ -173,7 +173,7 @@
           body: JSON.stringify({ username, password }),
         });
         if (res.ok) {
-          location.href = '/admin';
+          location.href = '/manage';
         } else {
           const err = await res.json();
           errEl.textContent = err.detail || '로그인에 실패했습니다.';

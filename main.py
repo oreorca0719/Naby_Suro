@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Cookie, Response, Body, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
@@ -978,17 +978,6 @@ def cancel_spec_down(name: str, _admin: str = Depends(require_admin)):
 # 개인 단위 예외는 spec_down_from_week 가 담당한다(이력 동결 + 주차 내 취소).
 
 
-@app.post("/api/dismiss-baseline-alert")
-def dismiss_baseline_alert(_admin: str = Depends(require_admin)):
-    """단체 하락 알림 확인 — 같은 주차에 재표시 안 함 (산출 기준은 변하지 않음)"""
-    latest = get_latest_week()
-    table.update_item(
-        Key={"week": "METADATA", "rank": 0},
-        UpdateExpression="SET dismissed_baseline_alert_week = :wk",
-        ExpressionAttributeValues={":wk": latest}
-    )
-    _cache_clear()
-    return {"dismissed_baseline_alert_week": latest}
 
 
 @app.post("/api/rename-member")
@@ -1235,10 +1224,9 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
     # 상승폭 / 하락폭 / 불성실 의심 — 공통 헬퍼 사용(detect_outliers_trailing,
     # find_latest_consecutive_outlier_group). 상수도 모듈 레벨에 통일.
 
-    # METADATA 조회 — 길드 baseline 및 알림 무시 주차
+    # METADATA 조회 — 길드 baseline (읽기 경로만 유지, 현재 미설정)
     meta_resp = table.get_item(Key={"week": "METADATA", "rank": 0}).get("Item") or {}
     guild_baseline_from = meta_resp.get("guild_baseline_from_week") or ""
-    dismissed_alert_week = meta_resp.get("dismissed_baseline_alert_week") or ""
 
     delta_list: list[dict] = []
 
@@ -1294,32 +1282,15 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
     _wtier = {name: m.get("weapon_tier") for name, m in latest_members.items()}
     for _row in (*top_avg, *top_fine, *rise_top5, *drop_top5):
         _row["weapon_tier"] = _wtier.get(_row["name"])
-    # 보약 효과 자동 감지 — 전주 대비 감소 회원 수 ≥ 100
-    guild_alert = None
-    if prev_week and dismissed_alert_week != latest:
-        drop_count = 0
-        for name, m in latest_members.items():
-            curr = int(m.get("score", 0))
-            prev = score_by_name_week.get(name, {}).get(prev_week, 0)
-            if prev > 0 and curr > 0 and curr < prev:
-                drop_count += 1
-        if drop_count >= 100:
-            guild_alert = {
-                "type":          "buff_expiration_suspected",
-                "drop_count":    drop_count,
-                "current_week":  latest,
-            }
-
     # 공개 응답: 평균 등수 + 상승폭만
     result = {
         "avg_rank_top3": top_avg,
         "rise_top5":     rise_top5,
     }
-    # 관리자 전용: 미참 횟수 / 하락폭 / 의심 명단 / 보약 알림
+    # 관리자 전용: 미참 횟수 / 하락폭 / 의심 명단
     if admin:
         result["fine_top3"]    = top_fine
         result["drop_top5"]    = drop_top5
-        result["guild_alert"]  = guild_alert
 
     _cache_set(cache_key, result)
     return result
@@ -1668,7 +1639,8 @@ def login_page():
 
 @app.get("/admin")
 def admin_page():
-    return FileResponse("static/admin.html")          # 관리자 개요
+    # 개요 페이지는 제거됨(공개 메인의 축소판이라 중복). 관리 페이지로 이동.
+    return RedirectResponse("/manage")
 
 @app.get("/manage")
 def manage_page():
