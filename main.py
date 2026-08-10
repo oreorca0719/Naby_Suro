@@ -1690,5 +1690,9 @@ def detection_page():
 def member_page():
     return FileResponse("static/member.html")         # 회원 히스토리 (공개)
 
+@app.get("/aurora")
+def aurora_page():
+    return FileResponse("static/aurora.html")         # 오로라 서버 길드 수로 Top10 랭킹/타임라인
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
