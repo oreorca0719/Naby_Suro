@@ -360,6 +360,123 @@ def get_suro_ranking(refresh: bool = False):
     return out
 
 
+# 오로라 상위 길드 주간 타임라인. 외부(meaegi) 주차별 조회라 6시간 캐시.
+_AURORA_TL_CACHE = {"ts": 0.0, "data": None}
+_MEAEGI_URL = "https://meaegi.com/api/maplestory/ranking/guild"
+_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+       "AppleWebKit/537.36 (KHTML, like Gecko)")
+# 길드별 고정 색상. 순위가 바뀌어도 선 색이 튀지 않게 이름 기준으로 고정한다.
+_GUILD_COLORS = {
+    "뷰티": "#eb6834", "니니": "#1baf7a", "피너": "#eda100", "은인": "#e87ba4",
+    "나비": "#4f8ef7", "이별": "#9085e9", "귀신": "#e34948", "투썸": "#00a37a",
+    "Rose": "#d55181", "천상": "#8a94a6",
+}
+_COLOR_POOL = ["#7c8cf8", "#3fb0c9", "#c98f3f", "#b45fd1", "#5fa85f",
+               "#d16b6b", "#6bd1c0", "#c0c06b"]
+
+
+def _all_weeks() -> list[str]:
+    """DB에 적재된 주차 키 목록(오름차순). METADATA 제외."""
+    from boto3.dynamodb.conditions import Attr
+    weeks: set[str] = set()
+    resp = table.scan(
+        FilterExpression=Attr("rank").gt(0),
+        ProjectionExpression="#w", ExpressionAttributeNames={"#w": "week"},
+    )
+    while True:
+        for i in resp.get("Items", []):
+            w = i.get("week")
+            if w and w != "METADATA":
+                weeks.add(w)
+        if "LastEvaluatedKey" not in resp:
+            break
+        resp = table.scan(
+            FilterExpression=Attr("rank").gt(0),
+            ProjectionExpression="#w", ExpressionAttributeNames={"#w": "week"},
+            ExclusiveStartKey=resp["LastEvaluatedKey"],
+        )
+    return sorted(weeks)
+
+
+@app.get("/api/aurora-timeline")
+async def get_aurora_timeline(refresh: bool = False, weeks_limit: int = 24):
+    """오로라 상위 10 길드의 주간 수로 점수 추이.
+
+    수로는 목~수 주기이고 NEXON 은 '전일 데이터'만 제공한다. 그래서 주차 키
+    (정산 수요일)로 조회하면 화요일까지의 부분 집계가 나온다.
+    완결된 주차는 '주차 키 + 1일(목)' 스냅샷이므로 그 날짜로 조회한다.
+    """
+    now = time.time()
+    floor = 60 if refresh else 21600      # 새로고침 60초, 평시 6시간
+    if _AURORA_TL_CACHE["data"] and now - _AURORA_TL_CACHE["ts"] < floor:
+        return _AURORA_TL_CACHE["data"]
+
+    weeks = _all_weeks()[-max(2, weeks_limit):]
+    if not weeks:
+        raise HTTPException(status_code=404, detail="주차 데이터가 없습니다.")
+
+    sem = asyncio.Semaphore(5)
+
+    async def fetch(client: httpx.AsyncClient, week: str):
+        # 완결 주차 = 정산 수요일 + 1일(목) 스냅샷
+        d = (datetime.strptime(week, "%Y%m%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        params = {"type": "guild", "date": d, "page": 1, "size": 50,
+                  "worldName": "오로라", "rankingType": "지하 수로"}
+        async with sem:
+            try:
+                r = await client.get(_MEAEGI_URL, params=params,
+                                     headers={"User-Agent": _UA,
+                                              "Accept": "application/json"},
+                                     timeout=15.0)
+                r.raise_for_status()
+                rk = r.json().get("ranking") or []
+                return week, {g["guild_name"]: int(g["guild_point"]) for g in rk}
+            except Exception:
+                return week, None
+
+    try:
+        async with httpx.AsyncClient() as client:
+            pairs = await asyncio.gather(*[fetch(client, w) for w in weeks])
+    except Exception:
+        if _AURORA_TL_CACHE["data"]:
+            return {**_AURORA_TL_CACHE["data"], "stale": True}
+        raise HTTPException(status_code=502, detail="타임라인 조회 실패")
+
+    snaps = {w: m for w, m in pairs if m}
+    ok_weeks = [w for w in weeks if w in snaps]
+    if len(ok_weeks) < 2:
+        if _AURORA_TL_CACHE["data"]:
+            return {**_AURORA_TL_CACHE["data"], "stale": True}
+        raise HTTPException(status_code=502, detail="타임라인 데이터 부족")
+
+    # 최신 주차 상위 10 길드를 기준으로 시계열 구성
+    latest = snaps[ok_weeks[-1]]
+    top10 = [n for n, _ in sorted(latest.items(), key=lambda kv: -kv[1])[:10]]
+
+    pool = iter(_COLOR_POOL)
+    series = []
+    for name in top10:
+        color = _GUILD_COLORS.get(name) or next(pool, "#8a94a6")
+        row = {"n": name, "c": color,
+               "d": [snaps[w].get(name) for w in ok_weeks]}
+        if name == "나비":
+            row["our"] = True
+        series.append(row)
+
+    def label(week: str) -> str:
+        wed = datetime.strptime(week, "%Y%m%d")
+        return f"{wed.month}/{wed.day}"
+
+    out = {
+        "weeks": [label(w) for w in ok_weeks],
+        "week_keys": ok_weeks,
+        "series": series,
+        "fetched_at": int(now),
+    }
+    _AURORA_TL_CACHE.update(ts=now, data=out)
+    return out
+
+
 @app.get("/api/history")
 def get_history():
     cached = _cache_get("history")

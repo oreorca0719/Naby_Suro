@@ -875,7 +875,9 @@
     }
   }
 
-  // ---- 타임라인 데이터 (17주) ----
+  // ---- 타임라인 데이터 ----
+// /api/aurora-timeline 에서 매번 불러온다(새로고침 버튼으로 갱신).
+// 아래 값은 API 실패 시에만 쓰이는 폴백이다.
 // 출처: meaegi(넥슨 집계). 넥슨은 '전일 데이터'만 주므로 주차키(정산 수요일)로
 // 조회하면 화요일까지의 부분 집계가 나온다. 완결된 주는 '주차키+1일(목)' 스냅샷.
   var WK=["4/15","4/22","4/29","5/6","5/13","5/20","5/27","6/3","6/10","6/17","6/24","7/1","7/8","7/15","7/22","7/29","8/5"];
@@ -962,6 +964,25 @@
     });
   }
 
+  // 타임라인을 서버에서 받아 다시 그린다. 실패하면 기존 화면을 유지한다.
+  async function loadTimeline(refresh){
+    try{
+      var res=await fetch('/api/aurora-timeline'+(refresh?'?refresh=true':''));
+      if(!res.ok) throw new Error('http');
+      var d=await res.json();
+      if(!d.weeks||!d.weeks.length||!d.series||!d.series.length) throw new Error('empty');
+      WK=d.weeks; S=d.series;
+      pStart=0; pEnd=WK.length-1;
+      currentVisible=null; currentRanks=null;
+      if(tlChartInst){ tlChartInst.destroy(); tlChartInst=null; }
+      renderTimeline();
+      var dash=document.getElementById('cmpDash'); if(dash) dash.innerHTML='';
+      var inp=document.getElementById('cmpInput'); if(inp) inp.value='';
+    }catch(e){
+      if(!tlChartInst) renderTimeline();   // 최초 로드 실패 시 폴백 데이터로라도 표시
+    }
+  }
+
   function applyVisible(ranks){
     currentVisible=ranks;
     if(tlChartInst){
@@ -1024,13 +1045,13 @@
 
   // ---- init ----
   var _b=document.getElementById('suroRankRefresh');
-  if(_b) _b.addEventListener('click',function(){loadSuroRanking(true);});
+  if(_b) _b.addEventListener('click',function(){ loadSuroRanking(true); loadTimeline(true); });
   var _a=document.getElementById('cmpApply'); if(_a) _a.addEventListener('click',doApply);
   var _r=document.getElementById('cmpReset'); if(_r) _r.addEventListener('click',doReset);
   var _pr=document.getElementById('tlPeriodReset'); if(_pr) _pr.addEventListener('click',resetPeriod);
   var _i=document.getElementById('cmpInput'); if(_i) _i.addEventListener('keydown',function(e){ if(e.key==='Enter') doApply(); });
   loadSuroRanking();
-  renderTimeline();
+  loadTimeline();
 })();
 </script>
 </body>
