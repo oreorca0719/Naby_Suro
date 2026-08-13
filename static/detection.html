@@ -1238,6 +1238,18 @@
     }
     .tag.suspect { background: rgba(240,68,82,0.12); color: var(--danger); }
     .tag.unequipped { background: rgba(148,163,184,0.18); color: var(--ink-2); }
+
+    /* 열람 전용 계정: 스펙 다운 인정 등 변경 수단 제거. 차단은 서버가 한다. */
+    body.viewer-mode .tag-btn { pointer-events: none; }
+    body.viewer-mode .tag-btn::after { content: '' !important; }
+    body.viewer-mode #specDownAcceptSection { display: none !important; }
+    .viewer-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; margin-bottom: 16px;
+      background: var(--fill-2); border: 1px solid var(--line);
+      border-radius: var(--radius-sm, 8px);
+      font-size: 0.82rem; color: var(--muted); font-weight: 600;
+    }
     .tag-btn {
       display: inline-flex; align-items: center; gap: 5px;
       padding: 4px 11px; border-radius: 999px; cursor: pointer;
@@ -1477,11 +1489,26 @@ function escapeAttr(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+
+// 열람 전용 계정 처리: 변경 UI를 감추고 안내를 띄운다.
+// 화면만 막는 것은 우회 가능하므로, 실제 차단은 서버(require_editor)가 한다.
+function applyViewerMode(data) {
+  if (!data || data.can_edit !== false) return;
+  document.body.classList.add('viewer-mode');
+  var b = document.createElement('div');
+  b.className = 'viewer-banner';
+  b.textContent = '\uD83D\uDC41 \uC5F4\uB78C \uC804\uC6A9 \uACC4\uC815\uC785\uB2C8\uB2E4 \u00B7 \uC870\uD68C\uB9CC \uAC00\uB2A5\uD558\uBA70 \uBCC0\uACBD \uC791\uC5C5\uC740 \uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.';
+  var host = document.querySelector('header');
+  if (host && host.parentNode) host.parentNode.insertBefore(b, host.nextSibling);
+  else document.body.insertBefore(b, document.body.firstChild);
+}
+
 async function authGuard() {
   try {
     const res = await fetch('/api/auth-status');
     const data = await res.json();
     if (!data.is_admin) { location.replace('/login'); return false; }
+    applyViewerMode(data);
   } catch (e) { location.replace('/login'); return false; }
   return true;
 }

@@ -77,9 +77,18 @@ def _cache_clear():
 # ── 관리자 인증 설정 ───────────────────────────────────────────────
 # 관리자 닉네임 화이트리스트 (아이디로 사용)
 ADMIN_NAMES = {"볼땡글", "NAVYSEAL", "또치와댕댕이", "멜빵군", "바가", "외칼", "코료룽", "빠민"}
+# 열람 전용 계정. 관리자 페이지를 볼 수는 있으나 어떤 변경도 할 수 없다.
+# (벌금 처리·탈퇴·스펙다운 인정·닉네임 변경·무기 마크 갱신 전부 차단)
+VIEWER_NAMES = {"작당모의"}
+ALL_LOGIN_NAMES = ADMIN_NAMES | VIEWER_NAMES
+
 # 비밀번호는 평문 미저장. SHA-256(salt + password) 해시만 코드에 보관.
 _PW_SALT = "naby_suro_2026_salt"
 _PW_HASH = "3d3815fcafd5e08b806cb7a33bee30d7f0f3339d77b41a67aa254b285fb6b5ba"
+# 열람 전용 계정 비밀번호는 코드에 두지 않는다. 저장소가 공개라 해시를 넣어도
+# 솔트가 함께 노출돼 짧은 비밀번호는 사실상 평문이 되기 때문이다.
+# 운영 환경변수 VIEWER_PASSWORD 로 주입하며, 미설정 시 로그인 자체가 막힌다.
+_VIEWER_PASSWORD = os.environ.get("VIEWER_PASSWORD", "")
 # 세션 토큰 서명 키 (환경변수 우선, 없으면 해시 재사용)
 SESSION_SECRET = os.environ.get("SESSION_SECRET", _PW_HASH)
 SESSION_COOKIE = "naby_admin"
@@ -88,9 +97,14 @@ SESSION_MAX_AGE = 86400  # 1일
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() not in ("false", "0", "no")
 
 
-def _check_password(pw: str) -> bool:
+def _check_password(pw: str, username: str = "") -> bool:
     # 한글 정규화: 직접 타이핑(NFD)과 복붙(NFC) 입력을 동일하게 처리
     pw = unicodedata.normalize("NFC", pw or "")
+    if username in VIEWER_NAMES:
+        if not _VIEWER_PASSWORD:
+            return False               # 환경변수 미설정이면 로그인 불가
+        expected = unicodedata.normalize("NFC", _VIEWER_PASSWORD)
+        return hmac.compare_digest(pw, expected)
     h = hashlib.sha256((_PW_SALT + pw).encode("utf-8")).hexdigest()
     return hmac.compare_digest(h, _PW_HASH)
 
@@ -110,7 +124,7 @@ def _verify_session(cookie_val: str | None) -> str | None:
         return None
     enc_username, sig = cookie_val.rsplit(":", 1)
     username = unicodedata.normalize("NFC", urllib.parse.unquote(enc_username))
-    if username not in ADMIN_NAMES:
+    if username not in ALL_LOGIN_NAMES:
         return None
     expected = _make_session_token(username).rsplit(":", 1)[1]
     return username if hmac.compare_digest(sig, expected) else None
@@ -118,6 +132,23 @@ def _verify_session(cookie_val: str | None) -> str | None:
 
 def is_admin(naby_admin: str = Cookie(None)) -> bool:
     return _verify_session(naby_admin) is not None
+
+
+def require_editor(naby_admin: str = Cookie(None)) -> str:
+    """변경 작업용. 열람 전용 계정은 여기서 막힌다.
+
+    화면에서 버튼을 숨기더라도 API 를 직접 호출하면 그만이므로,
+    실제 차단은 반드시 서버에서 한다.
+    """
+    username = _verify_session(naby_admin)
+    if username is None:
+        raise HTTPException(status_code=401, detail="관리자 로그인이 필요합니다.")
+    if username in VIEWER_NAMES:
+        raise HTTPException(
+            status_code=403,
+            detail="열람 전용 계정입니다. 조회만 가능하며 변경 작업은 할 수 없습니다.",
+        )
+    return username
 
 
 def require_admin(naby_admin: str = Cookie(None)) -> str:
@@ -708,7 +739,7 @@ async def get_member_profile(name: str):
 
 
 @app.post("/api/refresh-weapon-marks")
-async def refresh_weapon_marks(_admin: str = Depends(require_admin)):
+async def refresh_weapon_marks(_admin: str = Depends(require_editor)):
     """최신 주차 회원 전원의 착용 무기를 넥슨 API로 조회해 weapon_tier 를 갱신한다.
     무기는 자주 바뀌지 않으므로 이 갱신은 관리자가 필요할 때만 수동 실행한다.
 
@@ -882,7 +913,7 @@ def get_zero_score_members(week: str, _admin: str = Depends(require_admin)):
 
 
 @app.post("/api/fine/{week}/{name}")
-def record_fine_payment(week: str, name: str, _admin: str = Depends(require_admin)):
+def record_fine_payment(week: str, name: str, _admin: str = Depends(require_editor)):
     """벌금 납부 기록 (미해결 pending_weeks 일괄 처리)
 
     - 회원의 pending_weeks가 N개면 한 번 클릭으로 fine_count += N
@@ -949,7 +980,7 @@ def record_fine_payment(week: str, name: str, _admin: str = Depends(require_admi
 
 
 @app.delete("/api/fine/{week}/{name}")
-def undo_fine_payment(week: str, name: str, _admin: str = Depends(require_admin)):
+def undo_fine_payment(week: str, name: str, _admin: str = Depends(require_editor)):
     """벌금 납부 취소 (이번 주 부과 건만 취소, 취소 후 last_fine_week 제거하여 재부과 가능 상태로 전환)"""
     from boto3.dynamodb.conditions import Key, Attr
 
@@ -1005,7 +1036,7 @@ def undo_fine_payment(week: str, name: str, _admin: str = Depends(require_admin)
 
 
 @app.post("/api/leave-guild/{name}")
-def leave_guild(name: str, _admin: str = Depends(require_admin)):
+def leave_guild(name: str, _admin: str = Depends(require_editor)):
     """길드 탈퇴 처리 — 벌금 납부 섹션에서만 제외
     - 최신 주차 레코드에 left_guild = True SET
     - pending_weeks 모두 소멸 (REMOVE)
@@ -1042,7 +1073,7 @@ def leave_guild(name: str, _admin: str = Depends(require_admin)):
 
 
 @app.post("/api/spec-down/{name}")
-def confirm_spec_down(name: str, _admin: str = Depends(require_admin)):
+def confirm_spec_down(name: str, _admin: str = Depends(require_editor)):
     """스펙 다운 인정 — 감지된 주차를 그 회원의 새 기준선으로 SET.
 
     장비 환산 점수가 실제로 하락한 것이 확인된 회원만 대상이다(탐지 시스템의
@@ -1090,7 +1121,7 @@ def confirm_spec_down(name: str, _admin: str = Depends(require_admin)):
 
 
 @app.delete("/api/spec-down/{name}")
-def cancel_spec_down(name: str, _admin: str = Depends(require_admin)):
+def cancel_spec_down(name: str, _admin: str = Depends(require_editor)):
     """스펙 다운 인정 취소 — 이번 주차에 처리한 건만 되돌린다.
 
     오클릭 복구용이므로 처리한 그 주차 안에서만 허용한다. 다음 주차 데이터가
@@ -1134,7 +1165,7 @@ def cancel_spec_down(name: str, _admin: str = Depends(require_admin)):
 
 
 @app.post("/api/rename-member")
-def rename_member(payload: dict = Body(...), _admin: str = Depends(require_admin)):
+def rename_member(payload: dict = Body(...), _admin: str = Depends(require_editor)):
     """닉네임 변경(이관) — 기존 닉네임의 모든 주차 레코드를 신규 닉네임으로 변경.
 
     - 점수/벌금 등 모든 히스토리는 레코드에 그대로 붙어 있으므로 name 필드만
@@ -1250,7 +1281,7 @@ def rename_member(payload: dict = Body(...), _admin: str = Depends(require_admin
 
 
 @app.post("/api/fine-exempt/{week}/{name}")
-def exempt_fine(week: str, name: str, _admin: str = Depends(require_admin)):
+def exempt_fine(week: str, name: str, _admin: str = Depends(require_editor)):
     """이번 주 벌금 면제 (신규 가입·부득이한 사유로 마감 임박 미참)
     - fine_exempt_weeks에 현재 주차 추가 (이번 주만 면제)
     - pending_weeks에서 현재 주차 제거 (다음 주 이월 방지)
@@ -1826,7 +1857,7 @@ def login(response: Response, payload: dict = Body(...)):
     """관리자 로그인 — 닉네임(아이디) + 비밀번호 검증 후 세션 쿠키 발급"""
     username = unicodedata.normalize("NFC", (payload.get("username") or "").strip())
     password = payload.get("password") or ""
-    if username not in ADMIN_NAMES or not _check_password(password):
+    if username not in ALL_LOGIN_NAMES or not _check_password(password, username):
         raise HTTPException(status_code=401, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
     token = _make_session_token(username)
     response.set_cookie(
@@ -1837,7 +1868,22 @@ def login(response: Response, payload: dict = Body(...)):
         samesite="lax",
         secure=COOKIE_SECURE,
     )
-    return {"ok": True, "username": username}
+    return {"ok": True, "username": username,
+            "role": "viewer" if username in VIEWER_NAMES else "editor"}
+
+
+@app.get("/api/me")
+def get_me(naby_admin: str = Cookie(None)):
+    """현재 로그인 계정과 권한. 화면에서 변경 버튼 노출 여부를 정하는 데 쓴다."""
+    username = _verify_session(naby_admin)
+    if username is None:
+        return {"logged_in": False}
+    return {
+        "logged_in": True,
+        "username": username,
+        "role": "viewer" if username in VIEWER_NAMES else "editor",
+        "can_edit": username not in VIEWER_NAMES,
+    }
 
 
 @app.post("/api/logout")
@@ -1850,7 +1896,12 @@ def logout(response: Response):
 def auth_status(naby_admin: str = Cookie(None)):
     """현재 세션의 관리자 여부 반환 (프론트엔드 분기용)"""
     username = _verify_session(naby_admin)
-    return {"is_admin": username is not None, "username": username}
+    return {
+        "is_admin": username is not None,
+        "username": username,
+        # 열람 전용 계정은 변경 버튼을 감춘다. 실제 차단은 서버(require_editor)에서 한다.
+        "can_edit": username is not None and username not in VIEWER_NAMES,
+    }
 
 
 @app.get("/")

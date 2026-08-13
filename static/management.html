@@ -1210,6 +1210,18 @@
   </nav>
   <style>
     /* 오른쪽 도구 버튼 묶음 — 함께 우측 정렬, 동일 간격 */
+
+    /* 열람 전용 계정: 변경 수단을 화면에서 제거. 실제 차단은 서버가 한다. */
+    body.viewer-mode .rename-tool-btn,
+    body.viewer-mode .fine-action-group,
+    body.viewer-mode .leave-btn { display: none !important; }
+    .viewer-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; margin-bottom: 16px;
+      background: var(--fill-2); border: 1px solid var(--line);
+      border-radius: var(--radius-sm, 8px);
+      font-size: 0.82rem; color: var(--muted); font-weight: 600;
+    }
     .nav-tools {
       margin-left: auto;
       align-self: center;
@@ -1422,11 +1434,26 @@
 <script>
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 // ── 인증 가드: 비로그인 시 로그인 페이지로 ──
+
+// 열람 전용 계정 처리: 변경 UI를 감추고 안내를 띄운다.
+// 화면만 막는 것은 우회 가능하므로, 실제 차단은 서버(require_editor)가 한다.
+function applyViewerMode(data) {
+  if (!data || data.can_edit !== false) return;
+  document.body.classList.add('viewer-mode');
+  var b = document.createElement('div');
+  b.className = 'viewer-banner';
+  b.textContent = '\uD83D\uDC41 \uC5F4\uB78C \uC804\uC6A9 \uACC4\uC815\uC785\uB2C8\uB2E4 \u00B7 \uC870\uD68C\uB9CC \uAC00\uB2A5\uD558\uBA70 \uBCC0\uACBD \uC791\uC5C5\uC740 \uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.';
+  var host = document.querySelector('header');
+  if (host && host.parentNode) host.parentNode.insertBefore(b, host.nextSibling);
+  else document.body.insertBefore(b, document.body.firstChild);
+}
+
 (async function authGuard() {
   try {
     const res = await fetch('/api/auth-status');
     const data = await res.json();
-    if (!data.is_admin) { location.replace('/login'); }
+    if (!data.is_admin) { location.replace('/login'); return; }
+    applyViewerMode(data);
   } catch (e) { location.replace('/login'); }
 })();
 
