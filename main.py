@@ -1456,6 +1456,15 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
 # 패치에서는 그대로 승계해, 배너가 재산출된 것처럼 보이지 않게 한다.
 DETECTION_VERSIONS = [
     {
+        "version": "v1.3",
+        "date": "2026-08-13",
+        "threshold": 0.15,
+        "threshold_since": "2026-08-03",
+        "trail_weeks": 3,
+        "min_history": 3,
+        "title": "기준선 빗장 도입 — 스펙이 안 떨어지면 기대치도 안 내려감",
+    },
+    {
         "version": "v1.2",
         "date": "2026-08-07",
         "threshold": 0.15,
@@ -1489,6 +1498,17 @@ DETECTION_CURRENT = DETECTION_VERSIONS[0]
 # v1.2 곱연산 데미지 지수는 스펙 미변경 회원이 정확히 0%, 실제 하향은 -20~50%로
 # 크게 벌어져(실측), -5%면 정상 변동과 확실히 구분된다.
 SPEC_DROP_THRESHOLD = 0.05
+
+# v1.3 기준선 빗장(래칫).
+# 기대치의 기준선(추세)이 본인 점수를 따라 내려가면, 낮춰 친 사람이 2~3주 만에
+# 그 낮은 점수를 '새 정상'으로 만들어 탐지를 빠져나간다(기조 오염).
+# 그래서 스펙이 실제로 떨어졌을 때만 기준선이 내려가도록 잠근다.
+#   · 비교 대상은 직전 주가 아니라 '기준 스펙(관측된 최고 스펙)'이다.
+#     직전 주와만 비교하면 매주 조금씩 파는 경우를 놓친다.
+#   · 해제 후에는 추세가 새 수준을 흡수할 때까지 TRAIL 주간 자유 하강을 허용한다.
+#     이 유예가 없으면 처분 직후 2~3주간 억울하게 탐지된다.
+#   · 스펙 이력이 있는 주차부터만 적용한다(그 이전은 스펙 하락을 확인할 수 없음).
+RATCHET_GRACE_WEEKS = 3
 
 
 @app.get("/api/detection")
@@ -1566,6 +1586,52 @@ def get_detection(_admin: str = Depends(require_admin)):
         ]
         return statistics.mean(vals) if len(vals) >= 2 else None
 
+    def baseline_at(name: str, wi: int, floor: str) -> float | None:
+        """기대치의 기준선. 추세를 쓰되 스펙이 안 떨어졌으면 내려가지 않는다.
+
+        주차를 앞에서부터 훑으며 기준선을 이월한다.
+          · 기준 스펙(관측 최고) 대비 SPEC_DROP_THRESHOLD 이상 하락 → 빗장 해제.
+            이후 RATCHET_GRACE_WEEKS 주간은 추세를 그대로 따라간다(새 수준 흡수).
+          · 그 외에는 max(추세, 직전 기준선) — 즉 내려가지 않는다.
+        스펙 기록이 없는 구간에서는 하락을 확인할 수 없으므로 빗장을 걸지 않는다.
+        """
+        base: float | None = None
+        ref_spec: float | None = None
+        grace_until = -1          # 이 인덱스 미만이면 자유 하강
+        ratchet_on = False        # 스펙 관측이 시작된 뒤부터 잠근다
+
+        for j in range(0, wi + 1):
+            wk_j = weeks[j]
+            if wk_j < floor:
+                continue
+            tr = trend_at(name, j, floor)
+            if tr is None:
+                continue
+
+            sp = (spec_by_name.get(name, {}).get(wk_j) or {}).get("score") or 0
+            if sp > 0:
+                if ref_spec is None:
+                    # 첫 스펙 관측 = 빗장 가동 시점. 그 이전 기준선은 버린다.
+                    # 스펙을 못 보던 구간의 고점을 끌고 오면, 이미 장비를 처분한
+                    # 회원까지 소급 탐지된다(실측: 고갓 5월 처분 건).
+                    # 가동 직후에도 추세가 현 수준을 흡수하도록 유예를 준다.
+                    ref_spec = sp
+                    ratchet_on = True
+                    grace_until = j + RATCHET_GRACE_WEEKS
+                    base = tr
+                    continue
+                if sp <= ref_spec * (1 - SPEC_DROP_THRESHOLD):
+                    grace_until = j + RATCHET_GRACE_WEEKS   # 해제 + 유예
+                    ref_spec = sp
+                elif sp > ref_spec:
+                    ref_spec = sp              # 기준 스펙은 위로만 갱신
+
+            if base is None or not ratchet_on or j < grace_until:
+                base = tr                      # 초기 · 스펙 미관측 · 유예 중
+            else:
+                base = max(tr, base)           # 빗장: 내려가지 않음
+        return base
+
     def history_count(name: str, wi: int, floor: str) -> int:
         return sum(
             1
@@ -1593,16 +1659,19 @@ def get_detection(_admin: str = Depends(require_admin)):
             tr = trend_at(name, wi, floor)
             if not tr:
                 continue
+            # 환경 변동률은 '실제 최근 성적' 기준이어야 한다. 기준선(정책값)이
+            # 아니라 추세로 계산해야 그 주 길드 분위기를 왜곡 없이 잡는다.
             ratios.append(score / tr)
-            cands.append((name, score, tr))
+            base = baseline_at(name, wi, floor) or tr
+            cands.append((name, score, tr, base))
 
         if len(ratios) < 10:                    # 표본이 적으면 환경 추정 불가
             return 1.0, []
 
         env = statistics.median(ratios)
         hits: list[dict] = []
-        for name, score, tr in cands:
-            expected = tr * env
+        for name, score, tr, base in cands:
+            expected = base * env
             if expected <= 0:
                 continue
             dev = (score - expected) / expected
@@ -1611,6 +1680,8 @@ def get_detection(_admin: str = Depends(require_admin)):
                     "name": name,
                     "score": score,
                     "trend": int(tr),
+                    "baseline": int(base),
+                    "ratcheted": bool(base > tr * 1.01),
                     "expected": int(expected),
                     "deviation_pct": round(dev * 100, 1),
                 })
