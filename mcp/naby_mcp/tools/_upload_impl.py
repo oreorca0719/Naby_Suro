@@ -28,7 +28,45 @@ def _norm(name: str) -> str:
     return unicodedata.normalize("NFC", (name or "").strip())
 
 
-def get_previous_fines(table) -> dict[str, dict]:
+
+def _resolve_prev_week(table, week: str | None) -> str | None:
+    """이월 기준이 될 직전 주차 키.
+
+    METADATA.latest_week 를 그대로 쓰면 주차를 순서대로 올리지 않았거나
+    과거 주차를 재적재할 때 '미래 주차'에서 이월해 이력이 뒤틀린다.
+    그래서 적재하려는 주차보다 앞선 주차 중 가장 최근 것을 직접 찾는다.
+    week 를 모르면 기존 동작(latest_week)으로 물러선다.
+    """
+    from boto3.dynamodb.conditions import Attr
+
+    meta = table.get_item(Key={"week": "METADATA", "rank": 0}).get("Item")
+    latest = (meta or {}).get("latest_week")
+    if not week:
+        return latest
+
+    resp = table.scan(
+        FilterExpression=Attr("rank").gt(0),
+        ProjectionExpression="#w",
+        ExpressionAttributeNames={"#w": "week"},
+    )
+    weeks = set()
+    while True:
+        for i in resp.get("Items", []):
+            w = i.get("week")
+            if w and w != "METADATA" and w < week:
+                weeks.add(w)
+        if "LastEvaluatedKey" not in resp:
+            break
+        resp = table.scan(
+            FilterExpression=Attr("rank").gt(0),
+            ProjectionExpression="#w",
+            ExpressionAttributeNames={"#w": "week"},
+            ExclusiveStartKey=resp["LastEvaluatedKey"],
+        )
+    return max(weeks) if weeks else None
+
+
+def get_previous_fines(table, week: str | None = None) -> dict[str, dict]:
     """직전 주차의 name → {fine_count, last_fine_week, pending_weeks, left_guild, job} 매핑.
 
     METADATA가 없거나 직전 주차 데이터가 없으면 빈 dict 반환.
@@ -37,11 +75,10 @@ def get_previous_fines(table) -> dict[str, dict]:
     """
     from boto3.dynamodb.conditions import Key
 
-    meta = table.get_item(Key={"week": "METADATA", "rank": 0}).get("Item")
-    if not meta or "latest_week" not in meta:
+    prev_week = _resolve_prev_week(table, week)
+    if not prev_week:
         return {}
 
-    prev_week = meta["latest_week"]
     resp = table.query(
         KeyConditionExpression=Key("week").eq(prev_week) & Key("rank").gt(0)
     )
@@ -88,7 +125,8 @@ def upload(file_path: str, week: str = None):
     table    = dynamodb.Table(TABLE_NAME)
 
     # 직전 주차 누적 벌금 정보 로드 (name 기준 매칭)
-    prev_fines = get_previous_fines(table)
+    # week 를 넘겨 '이 주차보다 앞선 가장 최근 주차' 에서 이월한다.
+    prev_fines = get_previous_fines(table, week)
     print(f"직전 주차 누적 벌금 보유 회원 수: {len(prev_fines)}명")
 
     members = []
