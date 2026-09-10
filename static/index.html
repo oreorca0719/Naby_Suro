@@ -1055,6 +1055,12 @@ function renderAnalysis(members) {
 
 
 // 이번 주 지하수로 점수 TOP 5 — 1등 챔피언 카드 + 2~5등 row
+
+// 같은 점수를 가진 다른 회원이 있으면 공동 등수로 표시한다.
+function tiedWith(list, member) {
+  if (!member || !member.score) return false;
+  return list.some(function (o) { return o !== member && o.score === member.score; });
+}
 function renderTop5(members) {
   const wrap = document.getElementById('top5Wrap');
   if (!wrap) return;
@@ -1072,7 +1078,7 @@ function renderTop5(members) {
     <div class="top5-champion">
       <div class="top5-crown">1</div>
       <div class="top5-champion-meta">
-        <div class="top5-champion-label">1위</div>
+        <div class="top5-champion-label">${(first.display_rank || 1)}위${tiedWith(sorted, first) ? " (공동)" : ""}</div>
         <div class="top5-champion-name">${escapeAttr(first.name)}${weaponMark(first.weapon_tier)}</div>
         <div class="top5-champion-job">${escapeAttr(normalizeJob(first.job))}</div>
       </div>
@@ -1080,10 +1086,10 @@ function renderTop5(members) {
     </div>
   `;
   const listHTML = rest.map((r, i) => {
-    const rank = i + 2;
+    const rank = r.display_rank || (i + 2);
     return `
-      <div class="top5-row rank-${rank}">
-        <div class="top5-medal">${REST_MEDALS[i]}</div>
+      <div class="top5-row rank-${Math.min(rank, 5)}">
+        <div class="top5-medal">${rank}${tiedWith(sorted, r) ? '=' : ''}</div>
         <div class="top5-meta">
           <div class="top5-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier)}</div>
           <div class="top5-job">${escapeAttr(normalizeJob(r.job))}</div>

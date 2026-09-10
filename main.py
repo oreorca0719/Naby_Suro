@@ -158,6 +158,31 @@ def require_admin(naby_admin: str = Cookie(None)) -> str:
     return username
 
 
+
+def add_display_ranks(rows: list[dict]) -> list[dict]:
+    """점수 기준 표시용 등수를 매긴다. 동점은 같은 등수(1, 2, 2, 4 …).
+
+    DB 의 rank 는 정렬키라 반드시 고유해야 하므로 동점을 표현할 수 없다.
+    화면·엑셀에 보이는 등수는 이 display_rank 를 쓴다.
+    0점(미참)은 등수를 매기지 않고 None 으로 둔다.
+    """
+    scored = sorted([r for r in rows if int(r.get("score") or 0) > 0],
+                    key=lambda r: -int(r["score"]))
+    prev_score = None
+    prev_rank = 0
+    for idx, r in enumerate(scored, 1):
+        sc = int(r["score"])
+        if sc == prev_score:
+            r["display_rank"] = prev_rank      # 앞사람과 동점 → 같은 등수
+        else:
+            r["display_rank"] = idx            # 자기 앞 인원수 + 1
+            prev_rank = idx
+        prev_score = sc
+    for r in rows:
+        r.setdefault("display_rank", None)
+    return rows
+
+
 def get_latest_week() -> str:
     """메타 아이템에서 최신 주차 조회"""
     resp = table.get_item(Key={"week": "METADATA", "rank": 0})
@@ -186,11 +211,12 @@ def get_members(week: str) -> list[dict]:
     )
     items = [i for i in resp.get("Items", []) if not i.get("is_ghost")]
     # rank 기준 정렬, Decimal → int 변환
-    return sorted(
+    rows = sorted(
         [{"rank": int(i["rank"]), "name": i["name"], "job": i["job"], "score": int(i["score"]),
           "fine_count": int(i.get("fine_count", 0)), "weapon_tier": i.get("weapon_tier")} for i in items],
         key=lambda x: x["rank"]
     )
+    return add_display_ranks(rows)
 
 
 def _find_member_at_week(week: str, name: str) -> dict | None:
