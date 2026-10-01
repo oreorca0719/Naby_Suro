@@ -134,8 +134,12 @@ def upload(file_path: str, week: str = None):
     rejoin_count = 0
     seen_keys: set[str] = set()
     max_rank = 0
-    for row in ws.iter_rows(min_row=2, values_only=True):
+    # 순위 컬럼은 동점을 같은 등수로 표기하므로(1,2,2,4) 값이 중복된다.
+    # DynamoDB 정렬키(rank)는 고유해야 하므로 '행 번호'를 키로 쓴다.
+    # 표시용 등수는 조회 시 점수로 다시 계산한다(main.py add_display_ranks).
+    for row_no, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 1):
         rank, name, job, score = row
+        rank = row_no
         if rank is None:
             continue
         name_str = str(name).strip()
