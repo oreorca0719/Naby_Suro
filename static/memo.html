@@ -1269,6 +1269,21 @@
   .memo-tool:hover { border-color:var(--accent); color:var(--accent); }
   .memo-tool.danger:hover { border-color:#f87171; color:#f87171; }
   .memo-empty { color:var(--muted); padding:28px 4px; text-align:center; font-size:0.92rem; }
+  .memo-history { margin-top:14px; border-top:1px dashed var(--border); padding-top:12px; }
+  .memo-history-title { font-size:0.74rem; color:var(--muted); font-weight:700; margin-bottom:10px; }
+  .rev { display:flex; gap:10px; padding:7px 0; }
+  .rev + .rev { border-top:1px solid var(--border); }
+  .rev-bar { flex:0 0 3px; border-radius:2px; background:var(--border); }
+  .rev.is-current .rev-bar { background:var(--accent); }
+  .rev-main { min-width:0; flex:1; }
+  .rev-head { font-size:0.73rem; color:var(--muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .rev-kind { font-weight:700; color:var(--text); }
+  .rev-who { font-weight:700; color:var(--text); }
+  .rev-now { font-size:0.66rem; font-weight:700; padding:1px 6px; border-radius:999px;
+             background:rgba(49,130,246,0.14); color:var(--accent); }
+  .rev-body { font-size:0.84rem; line-height:1.6; white-space:pre-wrap; word-break:break-word;
+              color:var(--muted); margin-top:3px; }
+  .rev.is-current .rev-body { color:var(--text); }
 
   .mention { color:var(--accent); font-weight:700; cursor:pointer; text-decoration:none; }
   .mention:hover { text-decoration:underline; }
@@ -1404,7 +1419,7 @@
         + '<div class="memo-meta"><span class="memo-author">'+esc(m.author)+'</span>'
         + '<span>'+fmtDate(m.id)+'</span>' + edited
         + '<span class="memo-tools">'
-        +   '<button class="memo-tool js-edit">수정</button>'
+        +   '<button class="memo-tool js-edit">수정'+(m.edit_count ? ' ('+m.edit_count+')' : '')+'</button>'
         +   '<button class="memo-tool danger js-del">삭제</button>'
         + '</span></div>'
         + '<div class="memo-body">'+linkify(m.body, m.mentions)+'</div></div>';
@@ -1427,7 +1442,10 @@
       +   '<button class="memo-btn js-save">저장</button>'
       +   '<button class="memo-btn ghost js-cancel">취소</button>'
       +   '<span class="memo-sub js-emsg"></span>'
-      + '</div>';
+      + '</div>'
+      + '<div class="memo-history js-history"><div class="memo-history-title">변경 이력</div>'
+      +   '<div class="memo-sub">불러오는 중…</div></div>';
+    loadHistory(id, bodyEl.querySelector('.js-history'));
     item.querySelector('.memo-tools').style.visibility = 'hidden';
 
     var ta = bodyEl.querySelector('textarea');
@@ -1460,6 +1478,35 @@
     }
     bodyEl.querySelector('.js-cancel').addEventListener('click', cancel);
     bodyEl.querySelector('.js-save').addEventListener('click', save);
+  }
+
+  // 이력: 누가 언제 어떤 내용으로 바꿨는지. 오래된 순으로 쌓아 보여준다.
+  async function loadHistory(id, host){
+    if (!host) return;
+    try{
+      var r = await fetch('/api/memos/'+id+'/history');
+      if (!r.ok) throw new Error();
+      var d = await r.json();
+      var rows = (d.history || []).map(function(h){
+        return '<div class="rev'+(h.current ? ' is-current' : '')+'">'
+          + '<div class="rev-bar"></div><div class="rev-main">'
+          +   '<div class="rev-head"><span class="rev-kind">'+esc(h.kind)+'</span>'
+          +     '<span class="rev-who">'+esc(h.by)+'</span>'
+          +     '<span>'+fmtDate(h.at)+'</span>'
+          +     (h.current ? '<span class="rev-now">현재</span>' : '')
+          +   '</div>'
+          +   '<div class="rev-body">'
+          +     (h.missing ? '<i>이력 기능 추가 전에 수정됨 — 원본 내용은 남아 있지 않습니다.</i>' : esc(h.body))
+          +   '</div>'
+          + '</div></div>';
+      }).join('');
+      var n = (d.history || []).length;
+      host.innerHTML = '<div class="memo-history-title">변경 이력 '
+        + (n > 1 ? '· ' + (n-1) + '번 수정됨' : '· 수정 없음') + '</div>' + rows;
+    }catch(e){
+      host.innerHTML = '<div class="memo-history-title">변경 이력</div>'
+        + '<div class="memo-sub">이력을 불러오지 못했습니다.</div>';
+    }
   }
 
   // ── 통신 ──────────────────────────────────────────────────────

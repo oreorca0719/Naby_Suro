@@ -51,6 +51,7 @@ memo_table = dynamodb.Table(MEMO_TABLE_NAME)
 MEMO_PK = "MEMO"
 MEMO_MAX_LEN = 500
 MEMO_LIST_LIMIT = 200
+MEMO_MAX_REVISIONS = 20      # 메모당 보관할 과거 판 수
 
 # ── Nexon Open API 설정 ───────────────────────────────────────────
 NEXON_API_KEY = os.environ.get("NEXON_API_KEY", "")
@@ -1988,6 +1989,7 @@ def list_memos(_admin: str = Depends(require_admin)):
             "mentions": list(i.get("mentions") or []),
             "edited_at": int(i["edited_at"]) if i.get("edited_at") else None,
             "edited_by": i.get("edited_by"),
+            "edit_count": len(i.get("revisions") or []),
         }
         for i in resp.get("Items", [])
     ]
@@ -2013,6 +2015,49 @@ def create_memo(payload: dict = Body(...), admin: str = Depends(require_editor))
     return {"id": created, "body": body, "author": admin, "mentions": mentions}
 
 
+def _memo_item(memo_id: int) -> dict:
+    item = memo_table.get_item(Key={"pk": MEMO_PK, "created_at": memo_id}).get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="이미 삭제된 메모입니다.")
+    return item
+
+
+def _memo_timeline(item: dict) -> list[dict]:
+    """작성 → 수정 … → 현재 순서의 전체 이력.
+
+    revisions 에는 '교체되기 전의 판'이 쌓여 있다. 맨 앞이 원본(작성)이고,
+    현재 내용은 저장돼 있지 않으므로 마지막에 붙여서 완성한다.
+    """
+    revisions = item.get("revisions") or []
+    entries = [
+        {"at": int(r["at"]), "by": r.get("by", ""), "body": r.get("body", "")}
+        for r in revisions
+    ]
+    if not revisions and item.get("edited_at"):
+        # 이력 기능 추가 전에 고쳐진 메모 — 원본 내용이 남아 있지 않다.
+        entries.append({"at": int(item["created_at"]), "by": item.get("author", ""),
+                        "body": None, "missing": True})
+    entries.append({
+        "at": int(item["edited_at"]) if item.get("edited_at") else int(item["created_at"]),
+        "by": item.get("edited_by") or item.get("author", ""),
+        "body": item.get("body", ""),
+    })
+    for i, e in enumerate(entries):
+        e.setdefault("missing", False)
+        e["kind"] = "작성" if i == 0 else "수정"
+        e["current"] = (i == len(entries) - 1)
+    return entries
+
+
+@app.get("/api/memos/{memo_id}/history")
+def memo_history(memo_id: int, _admin: str = Depends(require_admin)):
+    """누가 언제 어떤 내용으로 바꿨는지. 오래된 순."""
+    item = _memo_item(memo_id)
+    return {"id": memo_id, "author": item.get("author", ""),
+            "created_at": int(item["created_at"]),
+            "history": _memo_timeline(item)}
+
+
 @app.put("/api/memos/{memo_id}")
 def update_memo(memo_id: int, payload: dict = Body(...), admin: str = Depends(require_editor)):
     """간부 공용 게시판이므로 누가 쓴 메모든 고칠 수 있다. 누가 고쳤는지는 남긴다."""
@@ -2024,20 +2069,42 @@ def update_memo(memo_id: int, payload: dict = Body(...), admin: str = Depends(re
     if len(body) > MEMO_MAX_LEN:
         raise HTTPException(status_code=400, detail=f"{MEMO_MAX_LEN}자까지 입력할 수 있습니다.")
 
+    item = _memo_item(memo_id)
+    prev_body = item.get("body", "")
+    if prev_body == body:
+        return {"id": memo_id, "body": body, "mentions": list(item.get("mentions") or []),
+                "edited_at": int(item["edited_at"]) if item.get("edited_at") else None,
+                "edited_by": item.get("edited_by"), "unchanged": True}
+
+    # 교체되는 판을 이력에 쌓는다. 그 판을 쓴 사람은 직전 수정자(없으면 작성자).
+    revisions = list(item.get("revisions") or [])
+    revisions.append({
+        "at": int(item["edited_at"]) if item.get("edited_at") else int(item["created_at"]),
+        "by": item.get("edited_by") or item.get("author", ""),
+        "body": prev_body,
+    })
+    revisions = revisions[-MEMO_MAX_REVISIONS:]
+
     mentions = _extract_mentions(body, _memo_roster())
     edited = int(time.time() * 1000)
     try:
         memo_table.update_item(
             Key={"pk": MEMO_PK, "created_at": memo_id},
             # body 는 DynamoDB 예약어라 이름을 치환해서 쓴다.
-            UpdateExpression="SET #b = :b, mentions = :m, edited_at = :e, edited_by = :u",
+            UpdateExpression=("SET #b = :b, mentions = :m, edited_at = :e, "
+                              "edited_by = :u, revisions = :r"),
             ExpressionAttributeNames={"#b": "body"},
-            ExpressionAttributeValues={":b": body, ":m": mentions, ":e": edited, ":u": admin},
-            ConditionExpression="attribute_exists(created_at)",   # 이미 지워진 메모면 실패
+            ExpressionAttributeValues={":b": body, ":m": mentions, ":e": edited,
+                                       ":u": admin, ":r": revisions, ":prev": prev_body},
+            # 읽은 뒤 남이 먼저 고쳤다면 그 수정을 덮어쓰지 않는다.
+            ConditionExpression="attribute_exists(created_at) AND #b = :prev",
         )
     except ClientError as e:
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            raise HTTPException(status_code=404, detail="이미 삭제된 메모입니다.")
+            raise HTTPException(
+                status_code=409,
+                detail="다른 사람이 먼저 수정했거나 삭제된 메모입니다. 새로고침 후 다시 시도해주세요.",
+            )
         raise
 
     return {"id": memo_id, "body": body, "mentions": mentions,
