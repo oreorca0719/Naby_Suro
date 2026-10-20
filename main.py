@@ -45,6 +45,13 @@ AWS_REGION  = os.environ.get("AWS_REGION", "ap-northeast-1")
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 table    = dynamodb.Table(TABLE_NAME)
 
+# 간부 메모 — 수로 통계 scan 에 섞이지 않도록 물리적으로 분리된 테이블
+MEMO_TABLE_NAME = os.environ.get("MEMO_TABLE", "maple_guild_memo")
+memo_table = dynamodb.Table(MEMO_TABLE_NAME)
+MEMO_PK = "MEMO"
+MEMO_MAX_LEN = 500
+MEMO_LIST_LIMIT = 200
+
 # ── Nexon Open API 설정 ───────────────────────────────────────────
 NEXON_API_KEY = os.environ.get("NEXON_API_KEY", "")
 NEXON_BASE    = "https://open.api.nexon.com/maplestory/v1"
@@ -76,7 +83,7 @@ def _cache_clear():
 
 # ── 관리자 인증 설정 ───────────────────────────────────────────────
 # 관리자 닉네임 화이트리스트 (아이디로 사용)
-ADMIN_NAMES = {"볼땡글", "NAVYSEAL", "또치와댕댕이", "멜빵군", "바가", "외칼", "코료룽", "빠민"}
+ADMIN_NAMES = {"볼땡글", "NAVYSEAL", "멜빵군", "바가", "외칼", "코료룽"}
 # 비밀번호는 평문 미저장. SHA-256(salt + password) 해시만 코드에 보관.
 _PW_SALT = "naby_suro_2026_salt"
 _PW_HASH = "3d3815fcafd5e08b806cb7a33bee30d7f0f3339d77b41a67aa254b285fb6b5ba"
@@ -1665,6 +1672,87 @@ def auth_status(naby_admin: str = Cookie(None)):
     return {"is_admin": username is not None, "username": username}
 
 
+# ── 간부 메모 ────────────────────────────────────────────────────
+def _memo_roster() -> set[str]:
+    """멘션 대상 닉 집합 — 최신 주차 길드원."""
+    try:
+        return {m["name"] for m in get_members(get_latest_week())}
+    except Exception:
+        return set()
+
+
+def _extract_mentions(body: str, roster: set[str]) -> list[str]:
+    """본문의 @닉네임 을 명단과 대조해 추출한다.
+
+    메이플 닉에는 공백이 없으므로 @ 뒤 공백 전까지를 후보로 보고,
+    그 후보의 접두어 중 명단에 있는 **가장 긴 것**을 고른다.
+    (곰쑨 / 곰쑨이 처럼 한쪽이 다른 쪽의 접두어인 경우를 바르게 가른다.)
+    """
+    import re
+    found: list[str] = []
+    for m in re.finditer(r"@([^\s@]{1,20})", body or ""):
+        tok = m.group(1)
+        best = None
+        for n in roster:
+            if tok.startswith(n) and (best is None or len(n) > len(best)):
+                best = n
+        if best and best not in found:
+            found.append(best)
+    return found
+
+
+@app.get("/api/memo/members")
+def memo_members(_admin: str = Depends(require_admin)):
+    """멘션 자동완성용 길드원 닉 목록 (최신 주차)."""
+    return {"members": sorted(_memo_roster())}
+
+
+@app.get("/api/memos")
+def list_memos(_admin: str = Depends(require_admin)):
+    from boto3.dynamodb.conditions import Key
+    resp = memo_table.query(
+        KeyConditionExpression=Key("pk").eq(MEMO_PK),
+        ScanIndexForward=False,          # 최신순
+        Limit=MEMO_LIST_LIMIT,
+    )
+    memos = [
+        {
+            "id": int(i["created_at"]),
+            "body": i.get("body", ""),
+            "author": i.get("author", ""),
+            "mentions": list(i.get("mentions") or []),
+        }
+        for i in resp.get("Items", [])
+    ]
+    return {"memos": memos}
+
+
+@app.post("/api/memos")
+def create_memo(payload: dict = Body(...), admin: str = Depends(require_admin)):
+    body = unicodedata.normalize("NFC", (payload.get("body") or "")).strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="내용을 입력해주세요.")
+    if len(body) > MEMO_MAX_LEN:
+        raise HTTPException(status_code=400, detail=f"{MEMO_MAX_LEN}자까지 입력할 수 있습니다.")
+    mentions = _extract_mentions(body, _memo_roster())
+    created = int(time.time() * 1000)
+    memo_table.put_item(Item={
+        "pk": MEMO_PK,
+        "created_at": created,
+        "body": body,
+        "author": admin,
+        "mentions": mentions,
+    })
+    return {"id": created, "body": body, "author": admin, "mentions": mentions}
+
+
+@app.delete("/api/memos/{memo_id}")
+def delete_memo(memo_id: int, _admin: str = Depends(require_admin)):
+    """간부 공용 게시판이므로 누가 쓴 메모든 삭제할 수 있다."""
+    memo_table.delete_item(Key={"pk": MEMO_PK, "created_at": memo_id})
+    return {"ok": True}
+
+
 @app.get("/")
 def root():
     return FileResponse("static/index.html")          # 공개 페이지
@@ -1689,6 +1777,10 @@ def detection_page():
 @app.get("/member")
 def member_page():
     return FileResponse("static/member.html")         # 회원 히스토리 (공개)
+
+@app.get("/memo")
+def memo_page():
+    return FileResponse("static/memo.html")           # 간부 메모 (관리자)
 
 @app.get("/aurora")
 def aurora_page():

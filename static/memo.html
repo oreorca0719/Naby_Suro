@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>간부 메모 · 나비 길드</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --fill-2:    #F9FAFB;
+      --line:      #E9ECEF;
+      --radius:    18px;
+      --radius-sm: 12px;
+      --bg:        #F7F8FA;
+      --surface:   #FFFFFF;
+      --card:      #FFFFFF;
+      --fill:      #F2F4F6;
+      --border:    #E9ECEF;
+      --accent:    #3182F6;
+      --accent2:   #FFB020;
+      --gold:      #3182F6;
+      --silver:    #8B95A1;
+      --bronze:    #8B95A1;
+      --text:      #191F28;
+      --ink-2:     #4E5968;
+      --muted:     #8B95A1;
+      --danger:    #F04452;
+      --green:     #00A661;
+      --up:        #00A661;
+      --yellow:    #FFB020;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fill-2:  #212429;
+        --line:    #2E333A;
+        --bg:      #15171A;
+        --surface: #1B1E22;
+        --card:    #1B1E22;
+        --fill:    #24282E;
+        --border:  #2E333A;
+        --accent:  #4D93F8;
+        --accent2: #FFC14D;
+        --gold:    #4D93F8;
+        --silver:  #7B848F;
+        --bronze:  #7B848F;
+        --text:    #EDEFF2;
+        --ink-2:   #B0B8C1;
+        --muted:   #7B848F;
+        --danger:  #FF6B75;
+        --green:   #2FCB86;
+        --up:      #2FCB86;
+        --yellow:  #FFC14D;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; width: 100%; box-sizing: border-box; }
+
+    /* ── 로그아웃 버튼 ── */
+    .logout-btn {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      background: rgba(247,95,95,0.12);
+      border: 1px solid rgba(247,95,95,0.4);
+      color: var(--danger);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .logout-btn:hover {
+      background: rgba(247,95,95,0.25);
+      border-color: var(--danger);
+    }
+
+    /* ── PAGE TABS (개요/인사이트/관리) ── */
+    .page-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .page-tab {
+      padding: 12px 22px;
+      color: var(--muted);
+      text-decoration: none;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .page-tab:hover { color: var(--text); }
+    .beta-badge {
+      display: inline-block; margin-left: 6px; padding: 2px 7px;
+      border-radius: 999px; background: var(--accent2, #FFB020); color: #fff;
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em;
+      vertical-align: middle;
+    }
+    .page-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    @media (max-width: 480px) {
+      .page-tab { padding: 10px 16px; font-size: 0.82rem; }
+      .page-tabs { margin-bottom: 20px; }
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 32px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .header-left h1 {
+      font-weight: 800; letter-spacing: -0.035em;
+      font-size: 2rem;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+
+    .header-left .subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.08em;
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .updated-at { font-size: 0.72rem; color: var(--muted); }
+
+    /* ── CUTOFF CARDS (관리 페이지 상단) ── */
+    .cutoff-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .cutoff-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 26px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cutoff-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .cutoff-card-green::before  { background: var(--green); }
+    .cutoff-card-yellow::before { background: var(--yellow); }
+    .cutoff-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+    .cutoff-value {
+      font-weight: 800; letter-spacing: -0.035em;
+      font-size: 2.2rem;
+      line-height: 1.1;
+    }
+    .cutoff-value span {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-left: 6px;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-weight: 400;
+    }
+    .cutoff-value-green  { color: var(--green); }
+    .cutoff-value-yellow { color: var(--yellow); }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 18px;
+      color: var(--text);
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    /* ── CHART ── */
+    .chart-wrap { position: relative; height: 320px; }
+    .stat-trend-wrap { position: relative; height: 420px; }
+
+    /* ── JOB DONUT ── */
+    .donut-wrap { position: relative; height: 320px; }
+
+    /* ── LEADERBOARD ── */
+    .leaderboard-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .leaderboard-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .lb-row:hover { background: rgba(49,130,246,0.10); }
+
+    .job-legend {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .legend-name { flex: 1; color: var(--text); }
+    .legend-count { color: var(--muted); font-size: 0.72rem; }
+
+    .legend-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .legend-nav button {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 2px 10px;
+      line-height: 1.6;
+      transition: background 0.15s;
+    }
+
+    .legend-nav button:hover:not(:disabled) { background: var(--border); }
+    .legend-nav button:disabled { opacity: 0.3; cursor: default; }
+    .legend-page { font-size: 0.75rem; color: var(--muted); }
+
+    /* ── STATS ANALYSIS ── */
+    .analysis-block { margin-bottom: 16px; }
+    .analysis-block:last-child { margin-bottom: 0; }
+    .analysis-label {
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 7px;
+    }
+    .analysis-value {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+    }
+    .analysis-desc {
+      font-size: 0.85rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      line-height: 1.6;
+      margin: 5px 0 8px;
+    }
+    .quartile-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .quartile-item {
+      background: var(--fill-2);
+      border-radius: var(--radius-sm);
+      padding: 15px 16px;
+    }
+    .quartile-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .quartile-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .analysis-divider {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 22px 0;
+    }
+
+    /* ── RANKING TABLE ── */
+    .rank-table { width: 100%; border-collapse: collapse; }
+
+    .rank-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rank-table th {
+      text-align: center;
+    }
+    
+    .rank-table th:first-child,
+    .rank-table td:first-child {
+      text-align: center;
+    }
+    
+    .rank-table th:last-child,
+    .rank-table td:last-child { text-align: center; }
+
+    .rank-table td {
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+    
+    .rank-table th:nth-child(2), .rank-table td:nth-child(2) {
+      text-align: left;
+    }
+    
+    .rank-table td:last-child {
+      text-align: center;
+    }
+
+    .rank-table tbody tr {
+      transition: background 0.15s;
+    }
+
+    .rank-table tbody tr:hover { background: rgba(49,130,246,0.05); }
+
+    .rank-num {
+      font-weight: 800; letter-spacing: -0.035em;
+      font-size: 0.9rem;
+      color: var(--muted);
+      width: 36px;
+      text-align: center;
+    }
+
+    .rank-num.gold   { color: var(--gold); }
+    .rank-num.silver { color: var(--silver); }
+    .rank-num.bronze { color: var(--bronze); }
+
+    .rank-name { font-weight: 500; color: var(--text); }
+
+    .rank-job {
+      font-size: 0.78rem;
+      color: var(--ink-2);
+      background: var(--fill);
+      padding: 3px 9px;
+      border-radius: 7px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .rank-score {
+      font-weight: 800; letter-spacing: -0.035em;
+      font-size: 0.95rem;
+      color: var(--accent2);
+    }
+
+    .score-bar-wrap {
+      width: 80px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .score-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    /* ── FULL TABLE ── */
+    .full-table-section { margin-top: 32px; }
+
+    .table-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+      padding: 11px 15px;
+      border-radius: var(--radius-sm);
+      border: 0;
+      background: var(--fill);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      letter-spacing: -0.02em;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    .table-info { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; }
+
+    .full-table-wrap { overflow-x: auto; }
+
+    .full-table { width: 100%; border-collapse: collapse; min-width: 520px; }
+
+    .full-table th {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .full-table th:hover { color: var(--accent); }
+    
+    .full-table th {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+    
+    .full-table th:first-child,
+    .full-table td:first-child {
+      text-align: center;
+    }
+    
+    .full-table th:last-child,
+    .full-table td:last-child { text-align: center; }
+
+    .full-table td {
+      text-align: center;
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.9rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .full-table th:nth-child(2), .full-table td:nth-child(2) {
+      text-align: left;
+    }
+    
+    .full-table td:last-child {
+      text-align: center;
+    }
+
+    .full-table tbody tr:hover { background: rgba(49,130,246,0.04); }
+
+    .zero-score { color: var(--muted) !important; }
+
+    .history-btn {
+      background: rgba(49,130,246,0.1);
+      border: 1px solid rgba(49,130,246,0.3);
+      border-radius: 6px;
+      color: var(--accent);
+      cursor: pointer;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .history-btn:hover {
+      background: rgba(49,130,246,0.2);
+      border-color: var(--accent);
+    }
+
+    /* ── FINE PAYMENT SECTION ── */
+    .fine-table { width: 100%; border-collapse: collapse; }
+
+    .fine-table th {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 12px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .fine-table td {
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .fine-table th:nth-child(2), .fine-table td:nth-child(2) {
+      text-align: left;
+    }
+
+    .fine-table tbody tr:hover { background: rgba(240,68,82,0.05); }
+
+    .fine-btn {
+      background: rgba(240,68,82,0.1);
+      border: 1px solid rgba(240,68,82,0.3);
+      border-radius: 6px;
+      color: var(--danger);
+      cursor: pointer;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .fine-btn:hover {
+      background: rgba(240,68,82,0.2);
+      border-color: var(--danger);
+    }
+
+    .fine-btn-cancel {
+      background: rgba(240,68,82,0.2) !important;
+      border-color: var(--danger) !important;
+    }
+
+    .fine-btn-cancel:hover {
+      background: rgba(240,68,82,0.35) !important;
+    }
+
+    /* 연속 미참 배지 (벌금 납부 섹션 닉네임 옆 인라인) */
+    .miss-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 8px;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(240,68,82,0.15);
+      border: 1px solid rgba(240,68,82,0.4);
+      color: var(--danger);
+      pointer-events: none;
+      user-select: none;
+      letter-spacing: 0.02em;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .miss-badge:disabled { opacity: 1; cursor: default; }
+
+    /* 보약 효과 알림 배너 (메인 페이지 최상단) */
+    .guild-alert-banner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      background: rgba(251,146,60,0.10);
+      border: 1px solid rgba(251,146,60,0.4);
+      border-radius: 12px;
+    }
+    .guild-alert-icon { font-size: 1.6rem; }
+    .guild-alert-text { flex: 1; }
+    .guild-alert-title {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fb923c;
+      margin-bottom: 4px;
+    }
+    .guild-alert-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .guild-alert-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .alert-btn {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .alert-btn-secondary {
+      background: var(--card);
+      border-color: var(--border);
+      color: var(--muted);
+    }
+    .alert-btn-secondary:hover { background: var(--border); }
+    .alert-btn-primary {
+      background: #fb923c;
+      border-color: #fb923c;
+      color: #1a1f2e;
+    }
+    .alert-btn-primary:hover { background: #f97316; }
+
+
+
+
+    /* 이월 미해결 라벨 (지난주 미납부 인원) */
+    .carryover-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 8px;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(251,146,60,0.15);
+      border: 1px solid rgba(251,146,60,0.4);
+      color: #fb923c;
+      pointer-events: none;
+      user-select: none;
+      letter-spacing: 0.02em;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .carryover-badge:disabled { opacity: 1; cursor: default; }
+
+    /* 작업 컬럼 두 버튼 그룹 */
+    .fine-action-group {
+      /* 버튼별로 고정 폭 영역을 확보 — 라벨이 '벌금 취소'/'벌금 납부 확인'으로
+         바뀌어도 세 버튼의 위치가 행마다 동일하게 유지된다.
+         (측정 자연폭: 벌금 납부 확인 88px, 나머지 65px) */
+      display: inline-grid;
+      grid-template-columns: 96px 74px 74px;
+      gap: 6px;
+      justify-content: end;
+      align-items: center;
+    }
+    .fine-action-group > button { width: 100%; }
+
+    /* 길드 탈퇴 버튼 */
+    .leave-btn {
+      background: rgba(156,163,175,0.10);
+      border: 1px solid rgba(156,163,175,0.35);
+      border-radius: 6px;
+      color: #9ca3af;
+      cursor: pointer;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .leave-btn:hover {
+      background: rgba(156,163,175,0.22);
+      border-color: #9ca3af;
+    }
+
+    /* 예외 처리 버튼 (이번 주 벌금 면제) */
+    .exempt-btn {
+      background: rgba(49,130,246,0.10);
+      border: 1px solid rgba(49,130,246,0.35);
+      border-radius: 6px;
+      color: var(--accent);
+      cursor: pointer;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .exempt-btn:hover {
+      background: rgba(49,130,246,0.22);
+      border-color: var(--accent);
+    }
+
+    /* ── MODAL ── */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show { display: flex; }
+
+    .modal-content {
+      background: var(--surface);
+      border-radius: 22px;
+      padding: 28px 26px 22px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .modal-header {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      margin-bottom: 14px;
+    }
+
+    .modal-body {
+      font-size: 0.92rem;
+      color: var(--ink-2);
+      line-height: 1.65;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .modal-info {
+      background: var(--fill);
+      border-radius: var(--radius-sm);
+      padding: 13px 15px;
+      font-size: 0.85rem;
+      margin-top: 14px;
+      color: var(--text);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .modal-btn {
+      flex: 1;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 0;
+      cursor: pointer;
+      letter-spacing: -0.025em;
+    }
+
+    .modal-btn.primary { background: var(--accent); color: #fff; }
+
+    .modal-btn.primary:hover { background: #e74747; }
+
+    .modal-btn.secondary { background: var(--fill); color: var(--ink-2); }
+
+    .modal-btn.secondary:hover { background: var(--border); }
+
+    /* ── BRIEFING BOARD ── */
+    .brief-banner {
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    /* .brief-streak 의 margin-top 은 카드 안에서만 필요 — 배너에서는 밑선이 어긋난다 */
+    .brief-banner .brief-streak { margin-top: 0; }
+    .brief-banner.up   { background: rgba(0,166,97,0.1); border: 1px solid rgba(0,166,97,0.3); color: var(--green); }
+    .brief-banner.down { background: rgba(240,68,82,0.1); border: 1px solid rgba(240,68,82,0.3); color: var(--danger); }
+    .brief-banner .brief-icon { font-size: 1.3rem; }
+    .brief-streak { font-size: 0.8rem; font-weight: 400; opacity: 0.85; margin-left: auto; }
+    .brief-group-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 14px 0 8px;
+    }
+    .brief-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .brief-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .brief-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+    }
+    .brief-card-label {
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      font-weight: 600;
+      margin-bottom: 9px;
+    }
+    .brief-card-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-variant-numeric: tabular-nums;
+    }
+    .brief-change { font-size: 0.78rem; font-weight: 700; margin-bottom: 8px; }
+    .brief-change.up   { color: var(--green); }
+    .brief-change.down { color: var(--danger); }
+    .brief-change.flat { color: var(--muted); }
+    .brief-record { font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+    .brief-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .brief-bar { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.6s ease; }
+    .brief-pct { font-size: 0.65rem; color: var(--muted); margin-top: 3px; text-align: right; }
+
+    @media (max-width: 900px) {
+      .brief-grid-3, .brief-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 40px 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 1200px) {
+      .leaderboard-row { grid-template-columns: 1fr 1fr; gap: 20px; }
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .brief-grid-3, .brief-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .wrapper { padding: 0 16px 40px; }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .header-right {
+        align-items: flex-start;
+        width: 100%;
+      }
+      .cutoff-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
+      .cutoff-card { padding: 18px 20px; }
+      .cutoff-value { font-size: 1.8rem; }
+      .section-title { font-size: 0.9rem; margin-bottom: 12px; }
+      .main-grid { grid-template-columns: 1fr; gap: 20px; }
+      .chart-wrap { height: 280px; }
+      .donut-wrap { height: 280px; }
+      .stat-trend-wrap { height: 280px; }
+      .brief-grid-3, .brief-grid-4 { grid-template-columns: 1fr; }
+      .brief-card { padding: 12px 14px; }
+      .search-input { width: 100%; font-size: 0.8rem; padding: 6px 12px; }
+      .table-controls { flex-direction: column; gap: 10px; }
+      .table-info { margin-left: 0; font-size: 0.7rem; }
+      .full-table { font-size: 0.75rem; }
+      .full-table th, .full-table td { padding: 8px 10px; }
+      /* 벌금 납부 섹션 모바일 대응 */
+      .fine-table { font-size: 0.75rem; }
+      .fine-table th { font-size: 0.65rem; padding: 0 8px 10px; }
+      .fine-table td { padding: 8px 8px; font-size: 0.78rem; }
+      .fine-btn { font-size: 0.7rem; padding: 6px 12px; min-height: 32px; }
+      .miss-badge { font-size: 0.6rem; padding: 2px 6px; margin-left: 6px; }
+      .carryover-badge { font-size: 0.6rem; padding: 2px 6px; margin-left: 6px; }
+      .leave-btn { font-size: 0.7rem; padding: 6px 10px; min-height: 32px; }
+      .exempt-btn { font-size: 0.7rem; padding: 6px 10px; min-height: 32px; }
+      .fine-action-group { gap: 5px; }
+      /* 보약 효과 알림 배너 모바일 */
+      .guild-alert-banner { flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px 16px; }
+      .guild-alert-actions { width: 100%; }
+      .alert-btn { flex: 1; padding: 9px 12px; font-size: 0.8rem; }
+      /* 모달 모바일 대응 */
+      .modal-content { padding: 24px 20px; width: 92%; }
+      .modal-header { font-size: 1.05rem; margin-bottom: 14px; }
+      .modal-body { font-size: 0.85rem; margin-bottom: 16px; }
+      .modal-info { font-size: 0.78rem; padding: 10px 12px; }
+      .modal-btn { font-size: 0.82rem; padding: 9px 18px; }
+      /* 리더보드 모바일 대응 */
+      .leaderboard-stack { gap: 16px; }
+      .leaderboard-row { grid-template-columns: 1fr; gap: 16px; margin-bottom: 20px; }
+    }
+
+    @media (max-width: 480px) {
+      body { font-size: 14px; }
+      .wrapper { padding: 0 12px 32px; }
+      header { margin-bottom: 20px; padding: 20px 0 16px; }
+      .header-left h1 { font-size: 1.5rem; }
+      .header-left .subtitle { font-size: 0.7rem; }
+      .card { padding: 16px; border-radius: 8px; }
+      .section-title { font-size: 0.8rem; margin-bottom: 12px; }
+      .chart-wrap { height: 240px; }
+      .donut-wrap { height: 240px; }
+      .stat-trend-wrap { height: 240px; }
+      .quartile-row { grid-template-columns: 1fr; gap: 8px; }
+      .quartile-item { padding: 10px 12px; }
+      .analysis-label { font-size: 0.85rem; }
+      .analysis-value { font-size: 1.4rem; }
+      .analysis-desc { font-size: 0.75rem; }
+      .brief-card { padding: 10px 12px; }
+      .brief-card-label { font-size: 0.65rem; }
+      .brief-card-value { font-size: 1rem; }
+      .rank-table th, .rank-table td { padding: 8px 10px; font-size: 0.75rem; }
+      .full-table th, .full-table td { padding: 7px 8px; font-size: 0.7rem; }
+      .history-btn { font-size: 0.65rem; padding: 3px 8px; }
+      /* 벌금 납부 섹션 소형 모바일 대응 */
+      .fine-table th { font-size: 0.6rem; padding: 0 6px 8px; letter-spacing: 0.04em; }
+      .fine-table td { padding: 7px 6px; font-size: 0.72rem; }
+      .fine-btn { font-size: 0.68rem; padding: 7px 10px; min-height: 36px; }
+      .miss-badge { font-size: 0.55rem; padding: 2px 5px; margin-left: 4px; }
+      .carryover-badge { font-size: 0.55rem; padding: 2px 5px; margin-left: 4px; }
+      .leave-btn { font-size: 0.68rem; padding: 7px 10px; min-height: 36px; width: 100%; }
+      .exempt-btn { font-size: 0.68rem; padding: 7px 10px; min-height: 36px; width: 100%; }
+      .fine-action-group { grid-template-columns: 1fr; gap: 5px; }
+      .guild-alert-banner { padding: 12px 14px; }
+      .guild-alert-icon { font-size: 1.4rem; }
+      .guild-alert-title { font-size: 0.88rem; }
+      .guild-alert-desc { font-size: 0.72rem; }
+      .alert-btn { padding: 9px 10px; font-size: 0.75rem; min-height: 38px; }
+      /* 모달 소형 모바일 대응 */
+      .modal-content { padding: 20px 16px; width: 94%; border-radius: 10px; }
+      .modal-header { font-size: 1rem; margin-bottom: 12px; }
+      .modal-body { font-size: 0.82rem; margin-bottom: 14px; line-height: 1.55; }
+      .modal-info { font-size: 0.75rem; padding: 9px 10px; margin-bottom: 14px; }
+      .modal-actions { gap: 8px; }
+      .modal-btn { font-size: 0.8rem; padding: 10px 14px; flex: 1; min-height: 40px; }
+      /* 리더보드 소형 모바일 대응 */
+      .leaderboard-stack { gap: 12px; }
+      .leaderboard-row { gap: 12px; margin-bottom: 16px; }
+    }
+    /* 리더보드 — 메인 페이지와 동일한 스타일 */
+    .lb-list { margin-top: -4px; }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 0;
+    }
+    .lb-row + .lb-row { border-top: 1px solid var(--line); }
+    .lb-medal {
+      width: 22px;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .lb-row.rank-1 .lb-medal,
+    .lb-row.rank-2 .lb-medal,
+    .lb-row.rank-3 .lb-medal { color: var(--accent); }
+    .lb-meta { flex: 1; min-width: 0; }
+    .lb-name {
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lb-job { font-size: 0.76rem; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .lb-value {
+      font-size: 0.94rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .lb-value-sub {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .lb-value.fine { color: var(--danger); }
+    .lb-value.rise { color: var(--up); }
+    .lb-value.drop { color: var(--danger); }
+    /* 리더보드 행 — 클릭하면 히스토리로 이동 */
+    .lb-row[data-name] { cursor: pointer; }
+    .lb-row[data-name]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .lb-empty {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 26px 0;
+      text-align: center;
+      font-weight: 500;
+    }
+    /* ── 모션 ───────────────────────────────
+       장식이 아니라 피드백. 진입할 때 한 번 떠오르고, 조작에는 즉시 반응한다.
+       거리는 짧게(10px), 시간은 짧게(0.4s 이내). */
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .brief-banner,
+    .brief-grid-3 > .brief-card,
+    .brief-grid-4 > .brief-card,
+    .wrapper > .card,
+    .wrapper > .full-table-section,
+    .leaderboard-row-public > .card {
+      animation: riseIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    /* 순차 등장 — 같은 줄의 카드들이 왼쪽부터 차례로 */
+    .brief-grid-3 > .brief-card:nth-child(2),
+    .brief-grid-4 > .brief-card:nth-child(2),
+    .leaderboard-row-public > .card:nth-child(2) { animation-delay: 0.06s; }
+    .brief-grid-3 > .brief-card:nth-child(3),
+    .brief-grid-4 > .brief-card:nth-child(3) { animation-delay: 0.12s; }
+    .brief-grid-4 > .brief-card:nth-child(4) { animation-delay: 0.18s; }
+
+    /* 행 hover — 어디를 보고 있는지 알려준다 */
+    .top5-row, .lb-row { transition: background 0.15s; }
+    .top5-row:hover, .lb-row:hover { background: var(--fill-2); }
+
+    /* 누름 반응 */
+    button, .admin-link-btn { transition: background 0.15s, border-color 0.15s, transform 0.08s; }
+    button:active, .admin-link-btn:active { transform: scale(0.97); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation-duration: 2.4s; }
+      * { transition: none !important; }
+      .brief-banner, .brief-card, .card, .full-table-section { animation: none !important; }
+    }
+  
+    /* ── 무기 마크 (제네시스/데스티니 착용자) ── */
+    .wmark {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      line-height: 1.45;
+      position: relative;
+      overflow: hidden;
+    }
+    /* 압축 마크 — 좁은 리더보드용 (색·발광은 동일, 텍스트만 짧게) */
+    .wmark-sm { margin-left: 5px; padding: 1px 6px; font-size: 0.6rem; border-radius: 4px; }
+    /* 제네시스 — 검은 바탕, 빨간 글씨, 번쩍이는 발광 */
+    .wmark-genesis {
+      background: #0a0a0f;
+      color: #ff3b3b;
+      border: 1px solid #5c0d0d;
+      text-shadow: 0 0 5px rgba(255,59,59,0.9);
+      animation: wmarkGenesis 1.3s ease-in-out infinite;
+    }
+    @keyframes wmarkGenesis {
+      0%, 100% { box-shadow: 0 0 3px rgba(255,59,59,0.35); color: #ff3b3b;
+                 text-shadow: 0 0 4px rgba(255,59,59,0.7); }
+      50%      { box-shadow: 0 0 11px 2px rgba(255,59,59,0.85); color: #ff7a7a;
+                 text-shadow: 0 0 9px rgba(255,90,90,1); }
+    }
+    /* 붉은 광택 스윕 — 데스티니와 동일한 이펙트 구조 */
+    .wmark-genesis::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 32%, rgba(255,120,120,0.7) 50%, transparent 68%);
+      transform: translateX(-120%);
+      animation: wmarkShimmer 2.4s ease-in-out infinite;
+    }
+    /* 데스티니 — 하늘색 바탕, 노란 글씨, 반짝이는 광택 스윕 */
+    /* 데스티니 — 실제 무기 색감(아이보리골드 바디 · 시안 보석 · 바이올렛 오라) */
+    .wmark-destiny {
+      background: linear-gradient(135deg, #1f5f9e 0%, #37a6cf 45%, #8f7be0 100%);
+      color: #ffe6a3;
+      border: 1px solid rgba(160,224,255,0.75);
+      text-shadow: 0 0 6px rgba(255,205,110,0.95), 0 1px 1px rgba(0,0,0,0.45);
+      animation: wmarkDestinyGlow 2.4s ease-in-out infinite;
+    }
+    @keyframes wmarkDestinyGlow {
+      0%, 100% { box-shadow: 0 0 6px rgba(120,205,255,0.40), inset 0 0 6px rgba(175,150,255,0.30); }
+      50%      { box-shadow: 0 0 12px 2px rgba(150,225,255,0.75), inset 0 0 8px rgba(200,175,255,0.50); }
+    }
+    /* 골드빛 광택 스윕 — 금속에 빛이 스치듯 */
+    .wmark-destiny::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 32%, rgba(255,248,220,0.85) 50%, transparent 68%);
+      transform: translateX(-120%);
+      animation: wmarkShimmer 2.4s ease-in-out infinite;
+    }
+    @keyframes wmarkShimmer { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .wmark-genesis { animation: none; box-shadow: 0 0 6px rgba(255,59,59,0.6); }
+      .wmark-genesis::after { animation: none; opacity: 0; }
+      .wmark-destiny { animation: none; box-shadow: 0 0 7px rgba(140,215,255,0.6); }
+      .wmark-destiny::after { animation: none; opacity: 0; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <h1>나비 길드</h1>
+      <div class="subtitle">MAPLESTORY · 오로라 서버 · 지하수로 대시보드</div>
+    </div>
+    <div class="header-right">
+      <div class="updated-at" id="updatedAt"></div>
+      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+    </div>
+  </header>
+
+  <!-- 페이지 탭 -->
+  <nav class="page-tabs">
+    <a href="/manage" class="page-tab">관리</a>
+    <a href="/detection" class="page-tab">불성실 참여 탐지 시스템<span class="beta-badge">BETA</span></a>
+    <a href="/memo" class="page-tab active">메모</a>
+  </nav>
+
+  <!-- 작성 -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="section-title">간부 메모</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin:-6px 0 14px;">
+      대기자 · 장기미접자 등 공유할 내용을 남겨두세요.
+      <b style="color:var(--text);">@</b> 를 입력하면 길드원 닉을 멘션할 수 있고, 저장된 멘션은 눌러서 해당 길드원 기록으로 이동합니다.
+    </div>
+
+    <div style="position:relative;">
+      <textarea id="memoInput" rows="3" maxlength="500" placeholder="예) @닉네임 장기미접 2주째 — 연락 필요"
+        style="width:100%;box-sizing:border-box;background:var(--bg,#0f1115);border:1px solid var(--border);border-radius:10px;
+               color:var(--text);padding:12px 14px;font-family:inherit;font-size:0.95rem;line-height:1.6;resize:vertical;"></textarea>
+      <div id="mentionBox" style="display:none;position:absolute;z-index:40;background:var(--surface);border:1px solid var(--border);
+           border-radius:10px;max-height:220px;overflow-y:auto;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.45);"></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
+      <button id="memoSave" class="memo-btn">등록</button>
+      <span id="memoCount" style="font-size:0.78rem;color:var(--muted);">0 / 500</span>
+      <span id="memoMsg" style="font-size:0.82rem;color:var(--accent);"></span>
+    </div>
+  </div>
+
+  <!-- 목록 -->
+  <div class="card">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      메모 목록 <span id="memoTotal" style="font-size:0.74rem;color:var(--muted);font-weight:400;"></span>
+    </div>
+    <div id="memoList">
+      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .memo-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; background:rgba(49,130,246,0.12);
+              border:1px solid rgba(49,130,246,0.4); border-radius:8px; color:var(--text); font-size:0.82rem;
+              font-weight:700; font-family:inherit; cursor:pointer; transition:border-color .15s, background .15s; }
+  .memo-btn:hover:not(:disabled) { border-color:var(--accent); background:rgba(49,130,246,0.22); }
+  .memo-btn:disabled { opacity:0.6; cursor:default; }
+  .memo-item { border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; background:var(--surface); }
+  .memo-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:0.76rem; color:var(--muted); margin-bottom:8px; }
+  .memo-author { color:var(--text); font-weight:700; }
+  .memo-body { font-size:0.95rem; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
+  .memo-del { margin-left:auto; background:none; border:1px solid var(--border); color:var(--muted);
+              border-radius:6px; padding:3px 9px; font-size:0.72rem; cursor:pointer; font-family:inherit; }
+  .memo-del:hover { border-color:#f87171; color:#f87171; }
+  .mention { color:var(--accent); font-weight:700; cursor:pointer; text-decoration:none; }
+  .mention:hover { text-decoration:underline; }
+  .mention-opt { padding:9px 14px; cursor:pointer; font-size:0.9rem; white-space:nowrap; }
+  .mention-opt.on, .mention-opt:hover { background:var(--fill-2, rgba(255,255,255,0.06)); color:var(--accent); }
+  .memo-empty { color:var(--muted); padding:28px 4px; text-align:center; font-size:0.92rem; }
+</style>
+
+<script>
+(function(){
+  var MEMBERS = [];
+  var input = document.getElementById('memoInput');
+  var box   = document.getElementById('mentionBox');
+  var listEl= document.getElementById('memoList');
+  var msgEl = document.getElementById('memoMsg');
+  var cntEl = document.getElementById('memoCount');
+  var sel = -1, opts = [], tokenStart = -1;
+
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtDate(ms){
+    var d=new Date(ms), p=function(n){return (n<10?'0':'')+n;};
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+  }
+
+  // ── 멘션 자동완성 ──────────────────────────────────────────
+  function currentToken(){
+    var v = input.value, c = input.selectionStart;
+    var i = v.lastIndexOf('@', c-1);
+    if (i < 0) return null;
+    var seg = v.slice(i+1, c);
+    if (/[\s@]/.test(seg)) return null;      // 공백/다른 @ 나오면 멘션 아님
+    return { start:i, text:seg };
+  }
+  function hideBox(){ box.style.display='none'; opts=[]; sel=-1; tokenStart=-1; }
+  function showBox(){
+    var tk = currentToken();
+    if (!tk) return hideBox();
+    var q = tk.text.toLowerCase();
+    var m = MEMBERS.filter(function(n){ return n.toLowerCase().indexOf(q) === 0; });
+    if (!m.length && q) m = MEMBERS.filter(function(n){ return n.toLowerCase().indexOf(q) >= 0; });
+    m = m.slice(0, 20);
+    if (!m.length) return hideBox();
+    opts = m; sel = 0; tokenStart = tk.start;
+    box.innerHTML = m.map(function(n,i){
+      return '<div class="mention-opt'+(i===0?' on':'')+'" data-i="'+i+'">'+esc(n)+'</div>';
+    }).join('');
+    box.style.display = 'block';
+    box.style.left = '8px';
+    box.style.top  = (input.offsetTop + input.offsetHeight + 4) + 'px';
+  }
+  function applyOpt(i){
+    if (i<0 || i>=opts.length || tokenStart<0) return;
+    var v = input.value, c = input.selectionStart;
+    var next = v.slice(0, tokenStart) + '@' + opts[i] + ' ' + v.slice(c);
+    var pos = tokenStart + opts[i].length + 2;
+    input.value = next; input.focus(); input.setSelectionRange(pos, pos);
+    hideBox(); updateCount();
+  }
+  box.addEventListener('mousedown', function(e){
+    var el = e.target.closest('.mention-opt'); if(!el) return;
+    e.preventDefault(); applyOpt(parseInt(el.dataset.i,10));
+  });
+  input.addEventListener('input', function(){ updateCount(); showBox(); });
+  input.addEventListener('keydown', function(e){
+    if (box.style.display === 'block' && opts.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); sel=(sel+1)%opts.length; paint(); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); sel=(sel-1+opts.length)%opts.length; paint(); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applyOpt(sel); return; }
+      if (e.key === 'Escape')    { hideBox(); return; }
+    }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
+  });
+  input.addEventListener('blur', function(){ setTimeout(hideBox, 120); });
+  function paint(){
+    Array.prototype.forEach.call(box.children, function(c,i){ c.classList.toggle('on', i===sel); });
+    if (box.children[sel]) box.children[sel].scrollIntoView({block:'nearest'});
+  }
+  function updateCount(){ cntEl.textContent = input.value.length + ' / 500'; }
+
+  // ── 렌더 ───────────────────────────────────────────────────
+  function linkify(body, mentions){
+    var html = esc(body);
+    (mentions||[]).slice().sort(function(a,b){ return b.length-a.length; }).forEach(function(n){
+      var e = esc(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      html = html.replace(new RegExp('@'+e, 'g'),
+        '<a class="mention" href="/static/member.html?name='+encodeURIComponent(n)+'" target="_blank" rel="noopener">@'+esc(n)+'</a>');
+    });
+    return html;
+  }
+  function render(memos){
+    document.getElementById('memoTotal').textContent = memos.length ? memos.length+'건' : '';
+    if (!memos.length){ listEl.innerHTML = '<div class="memo-empty">아직 등록된 메모가 없습니다.</div>'; return; }
+    listEl.innerHTML = memos.map(function(m){
+      return '<div class="memo-item">'
+        + '<div class="memo-meta"><span class="memo-author">'+esc(m.author)+'</span>'
+        + '<span>'+fmtDate(m.id)+'</span>'
+        + '<button class="memo-del" data-id="'+m.id+'">삭제</button></div>'
+        + '<div class="memo-body">'+linkify(m.body, m.mentions)+'</div></div>';
+    }).join('');
+  }
+
+  // ── 통신 ───────────────────────────────────────────────────
+  function flash(t, bad){ msgEl.style.color = bad ? '#f87171' : 'var(--accent)'; msgEl.textContent = t;
+    setTimeout(function(){ msgEl.textContent=''; }, 2500); }
+
+  async function load(){
+    try{
+      var r = await fetch('/api/memos');
+      if (r.status === 401) { location.href = '/login'; return; }
+      if (!r.ok) throw new Error('http');
+      render((await r.json()).memos || []);
+    }catch(e){ listEl.innerHTML = '<div class="memo-empty">메모를 불러오지 못했습니다.</div>'; }
+  }
+  async function save(){
+    var body = input.value.trim();
+    if (!body) { flash('내용을 입력해주세요.', true); return; }
+    var btn = document.getElementById('memoSave');
+    btn.disabled = true; btn.textContent = '등록 중…';
+    try{
+      var r = await fetch('/api/memos', {method:'POST', headers:{'Content-Type':'application/json'},
+                                         body: JSON.stringify({body: body})});
+      if (r.status === 401) { location.href='/login'; return; }
+      if (!r.ok) { var d = await r.json().catch(function(){return {};}); throw new Error(d.detail||'실패'); }
+      input.value=''; updateCount(); flash('등록했습니다.'); await load();
+    }catch(e){ flash(e.message || '등록에 실패했습니다.', true); }
+    finally{ btn.disabled=false; btn.textContent='등록'; }
+  }
+  listEl.addEventListener('click', async function(e){
+    var b = e.target.closest('.memo-del'); if(!b) return;
+    if (!confirm('이 메모를 삭제할까요?')) return;
+    try{
+      var r = await fetch('/api/memos/'+b.dataset.id, {method:'DELETE'});
+      if (!r.ok) throw new Error();
+      await load();
+    }catch(e){ flash('삭제에 실패했습니다.', true); }
+  });
+
+  document.getElementById('memoSave').addEventListener('click', save);
+
+  (async function init(){
+    try{
+      var r = await fetch('/api/memo/members');
+      if (r.status === 401) { location.href='/login'; return; }
+      MEMBERS = (await r.json()).members || [];
+    }catch(e){ MEMBERS = []; }
+    updateCount();
+    await load();
+  })();
+})();
+
+async function doLogout(){
+  try{ await fetch('/api/logout', {method:'POST'}); }catch(e){}
+  location.href = '/login';
+}
+</script>
+</body>
+</html>
