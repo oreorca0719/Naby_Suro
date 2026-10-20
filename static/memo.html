@@ -1180,7 +1180,6 @@
     }
   </style>
 </head>
-
 <body>
 <div class="wrapper">
 
@@ -1206,23 +1205,18 @@
   <!-- 작성 -->
   <div class="card" id="memoCompose" style="margin-bottom:24px;">
     <div class="section-title">간부 메모</div>
-    <div style="font-size:0.82rem;color:var(--muted);margin:-6px 0 14px;">
+    <div class="memo-hint">
       대기자 · 장기미접자 등 공유할 내용을 남겨두세요.
       <b style="color:var(--text);">@</b> 를 입력하면 길드원 닉을 멘션할 수 있고, 저장된 멘션은 눌러서 해당 길드원 기록으로 이동합니다.
     </div>
 
-    <div style="position:relative;">
-      <textarea id="memoInput" rows="3" maxlength="500" placeholder="예) @닉네임 장기미접 2주째 — 연락 필요"
-        style="width:100%;box-sizing:border-box;background:var(--bg,#0f1115);border:1px solid var(--border);border-radius:10px;
-               color:var(--text);padding:12px 14px;font-family:inherit;font-size:0.95rem;line-height:1.6;resize:vertical;"></textarea>
-      <div id="mentionBox" style="display:none;position:absolute;z-index:40;background:var(--surface);border:1px solid var(--border);
-           border-radius:10px;max-height:220px;overflow-y:auto;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.45);"></div>
-    </div>
+    <textarea id="memoInput" class="memo-ta" rows="3" maxlength="500"
+              placeholder="예) @닉네임 장기미접 2주째 — 연락 필요"></textarea>
 
-    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
+    <div class="memo-actions">
       <button id="memoSave" class="memo-btn">등록</button>
-      <span id="memoCount" style="font-size:0.78rem;color:var(--muted);">0 / 500</span>
-      <span id="memoMsg" style="font-size:0.82rem;color:var(--accent);"></span>
+      <span id="memoCount" class="memo-sub">0 / 500</span>
+      <span id="memoMsg" class="memo-sub"></span>
     </div>
   </div>
 
@@ -1238,41 +1232,75 @@
 
 </div>
 
+<!-- 멘션 자동완성 — body 직속. 카드 안에 두면 다음 섹션에 가려진다. -->
+<div id="mentionBox"></div>
+
 <style>
-  .memo-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; background:rgba(49,130,246,0.12);
-              border:1px solid rgba(49,130,246,0.4); border-radius:8px; color:var(--text); font-size:0.82rem;
-              font-weight:700; font-family:inherit; cursor:pointer; transition:border-color .15s, background .15s; }
+  .memo-hint { font-size:0.82rem; color:var(--muted); margin:-6px 0 14px; }
+  .memo-ta {
+    width:100%; box-sizing:border-box; background:var(--bg,#0f1115);
+    border:1px solid var(--border); border-radius:10px; color:var(--text);
+    padding:12px 14px; font-family:inherit; font-size:0.95rem; line-height:1.6; resize:vertical;
+  }
+  .memo-ta:focus { outline:none; border-color:var(--accent); }
+  .memo-actions { display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
+  .memo-sub { font-size:0.8rem; color:var(--muted); }
+  .memo-btn {
+    display:inline-flex; align-items:center; gap:6px; padding:8px 16px;
+    background:rgba(49,130,246,0.12); border:1px solid rgba(49,130,246,0.4);
+    border-radius:8px; color:var(--text); font-size:0.82rem; font-weight:700;
+    font-family:inherit; cursor:pointer; transition:border-color .15s, background .15s;
+  }
   .memo-btn:hover:not(:disabled) { border-color:var(--accent); background:rgba(49,130,246,0.22); }
   .memo-btn:disabled { opacity:0.6; cursor:default; }
+  .memo-btn.ghost { background:none; border-color:var(--border); font-weight:600; color:var(--muted); }
+  .memo-btn.ghost:hover:not(:disabled) { border-color:var(--accent); background:none; color:var(--text); }
+
   .memo-item { border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; background:var(--surface); }
   .memo-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:0.76rem; color:var(--muted); margin-bottom:8px; }
   .memo-author { color:var(--text); font-weight:700; }
+  .memo-edited { font-style:italic; }
   .memo-body { font-size:0.95rem; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
-  .memo-del { margin-left:auto; background:none; border:1px solid var(--border); color:var(--muted);
-              border-radius:6px; padding:3px 9px; font-size:0.72rem; cursor:pointer; font-family:inherit; }
-  .memo-del:hover { border-color:#f87171; color:#f87171; }
+  .memo-tools { margin-left:auto; display:flex; gap:6px; }
+  .memo-tool {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    border-radius:6px; padding:3px 9px; font-size:0.72rem; cursor:pointer; font-family:inherit;
+  }
+  .memo-tool:hover { border-color:var(--accent); color:var(--accent); }
+  .memo-tool.danger:hover { border-color:#f87171; color:#f87171; }
+  .memo-empty { color:var(--muted); padding:28px 4px; text-align:center; font-size:0.92rem; }
+
   .mention { color:var(--accent); font-weight:700; cursor:pointer; text-decoration:none; }
   .mention:hover { text-decoration:underline; }
+
+  /* 드롭다운은 어떤 카드에도 갇히지 않도록 body 직속 + 최상단 */
+  #mentionBox {
+    display:none; position:absolute; z-index:9999;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    max-height:220px; overflow-y:auto; min-width:200px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.28);
+  }
   .mention-opt { padding:9px 14px; cursor:pointer; font-size:0.9rem; white-space:nowrap; }
   .mention-opt.on, .mention-opt:hover { background:var(--fill-2, rgba(255,255,255,0.06)); color:var(--accent); }
-  .memo-empty { color:var(--muted); padding:28px 4px; text-align:center; font-size:0.92rem; }
+
   /* 열람 전용 계정: 변경 수단을 화면에서 제거. 실제 차단은 서버(require_editor)가 한다. */
   body.viewer-mode #memoCompose,
-  body.viewer-mode .memo-del { display:none !important; }
-  .viewer-banner { display:flex; align-items:center; gap:8px; padding:10px 14px; margin-bottom:16px;
+  body.viewer-mode .memo-tools { display:none !important; }
+  .viewer-banner {
+    display:flex; align-items:center; gap:8px; padding:10px 14px; margin-bottom:16px;
     background:var(--fill-2); border:1px solid var(--border); border-radius:8px;
-    font-size:0.82rem; color:var(--muted); font-weight:600; }
+    font-size:0.82rem; color:var(--muted); font-weight:600;
+  }
 </style>
 
 <script>
 (function(){
   var MEMBERS = [];
-  var input = document.getElementById('memoInput');
-  var box   = document.getElementById('mentionBox');
-  var listEl= document.getElementById('memoList');
-  var msgEl = document.getElementById('memoMsg');
-  var cntEl = document.getElementById('memoCount');
-  var sel = -1, opts = [], tokenStart = -1;
+  var listEl = document.getElementById('memoList');
+  var msgEl  = document.getElementById('memoMsg');
+  var cntEl  = document.getElementById('memoCount');
+  var box    = document.getElementById('mentionBox');
+  var input  = document.getElementById('memoInput');
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function fmtDate(ms){
@@ -1280,62 +1308,82 @@
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
   }
 
-  // ── 멘션 자동완성 ──────────────────────────────────────────
-  function currentToken(){
-    var v = input.value, c = input.selectionStart;
+  // ── 멘션 자동완성 ─────────────────────────────────────────────
+  // 작성칸과 수정칸이 같은 드롭다운 하나를 돌려 쓴다. activeTA 가 대상.
+  var activeTA = null, opts = [], sel = -1, tokenStart = -1;
+
+  function currentToken(ta){
+    var v = ta.value, c = ta.selectionStart;
     var i = v.lastIndexOf('@', c-1);
     if (i < 0) return null;
     var seg = v.slice(i+1, c);
-    if (/[\s@]/.test(seg)) return null;      // 공백/다른 @ 나오면 멘션 아님
+    if (/[\s@]/.test(seg)) return null;      // 공백/다른 @ 가 끼면 멘션 아님
     return { start:i, text:seg };
   }
   function hideBox(){ box.style.display='none'; opts=[]; sel=-1; tokenStart=-1; }
-  function showBox(){
-    var tk = currentToken();
+  function place(ta){
+    var r = ta.getBoundingClientRect();
+    box.style.left = (r.left + window.scrollX) + 'px';
+    box.style.width = 'auto';
+    box.style.minWidth = Math.min(r.width, 260) + 'px';
+    // 아래 공간이 모자라면 입력칸 위로 띄운다.
+    var below = window.innerHeight - r.bottom;
+    box.style.display = 'block';
+    var h = Math.min(box.scrollHeight, 220);
+    if (below < h + 12 && r.top > h + 12) box.style.top = (r.top + window.scrollY - h - 4) + 'px';
+    else                                   box.style.top = (r.bottom + window.scrollY + 4) + 'px';
+  }
+  function showBox(ta){
+    var tk = currentToken(ta);
     if (!tk) return hideBox();
     var q = tk.text.toLowerCase();
     var m = MEMBERS.filter(function(n){ return n.toLowerCase().indexOf(q) === 0; });
     if (!m.length && q) m = MEMBERS.filter(function(n){ return n.toLowerCase().indexOf(q) >= 0; });
     m = m.slice(0, 20);
     if (!m.length) return hideBox();
-    opts = m; sel = 0; tokenStart = tk.start;
+    activeTA = ta; opts = m; sel = 0; tokenStart = tk.start;
     box.innerHTML = m.map(function(n,i){
       return '<div class="mention-opt'+(i===0?' on':'')+'" data-i="'+i+'">'+esc(n)+'</div>';
     }).join('');
-    box.style.display = 'block';
-    box.style.left = '8px';
-    box.style.top  = (input.offsetTop + input.offsetHeight + 4) + 'px';
+    box.scrollTop = 0;
+    place(ta);
   }
   function applyOpt(i){
-    if (i<0 || i>=opts.length || tokenStart<0) return;
-    var v = input.value, c = input.selectionStart;
+    if (!activeTA || i<0 || i>=opts.length || tokenStart<0) return;
+    var ta = activeTA, v = ta.value, c = ta.selectionStart;
     var next = v.slice(0, tokenStart) + '@' + opts[i] + ' ' + v.slice(c);
-    var pos = tokenStart + opts[i].length + 2;
-    input.value = next; input.focus(); input.setSelectionRange(pos, pos);
-    hideBox(); updateCount();
+    var pos  = tokenStart + opts[i].length + 2;
+    ta.value = next; ta.focus(); ta.setSelectionRange(pos, pos);
+    hideBox(); if (ta === input) updateCount();
+  }
+  function paint(){
+    Array.prototype.forEach.call(box.children, function(c,i){ c.classList.toggle('on', i===sel); });
+    if (box.children[sel]) box.children[sel].scrollIntoView({block:'nearest'});
   }
   box.addEventListener('mousedown', function(e){
     var el = e.target.closest('.mention-opt'); if(!el) return;
     e.preventDefault(); applyOpt(parseInt(el.dataset.i,10));
   });
-  input.addEventListener('input', function(){ updateCount(); showBox(); });
-  input.addEventListener('keydown', function(e){
-    if (box.style.display === 'block' && opts.length) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); sel=(sel+1)%opts.length; paint(); return; }
-      if (e.key === 'ArrowUp')   { e.preventDefault(); sel=(sel-1+opts.length)%opts.length; paint(); return; }
-      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applyOpt(sel); return; }
-      if (e.key === 'Escape')    { hideBox(); return; }
-    }
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
-  });
-  input.addEventListener('blur', function(){ setTimeout(hideBox, 120); });
-  function paint(){
-    Array.prototype.forEach.call(box.children, function(c,i){ c.classList.toggle('on', i===sel); });
-    if (box.children[sel]) box.children[sel].scrollIntoView({block:'nearest'});
+  window.addEventListener('scroll', function(){ if (box.style.display==='block' && activeTA) place(activeTA); }, true);
+  window.addEventListener('resize', function(){ if (box.style.display==='block' && activeTA) place(activeTA); });
+
+  // 멘션 자동완성을 textarea 에 붙인다. onSubmit 이 있으면 Ctrl+Enter 로 저장.
+  function attachMention(ta, onSubmit){
+    ta.addEventListener('input', function(){ if (ta === input) updateCount(); showBox(ta); });
+    ta.addEventListener('keydown', function(e){
+      if (box.style.display === 'block' && activeTA === ta && opts.length) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); sel=(sel+1)%opts.length; paint(); return; }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); sel=(sel-1+opts.length)%opts.length; paint(); return; }
+        if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applyOpt(sel); return; }
+        if (e.key === 'Escape')    { e.preventDefault(); hideBox(); return; }
+      }
+      if (onSubmit && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onSubmit(); }
+    });
+    ta.addEventListener('blur', function(){ setTimeout(function(){ if (activeTA === ta) hideBox(); }, 120); });
   }
   function updateCount(){ cntEl.textContent = input.value.length + ' / 500'; }
 
-  // ── 렌더 ───────────────────────────────────────────────────
+  // ── 렌더 ──────────────────────────────────────────────────────
   function linkify(body, mentions){
     var html = esc(body);
     (mentions||[]).slice().sort(function(a,b){ return b.length-a.length; }).forEach(function(n){
@@ -1349,18 +1397,77 @@
     document.getElementById('memoTotal').textContent = memos.length ? memos.length+'건' : '';
     if (!memos.length){ listEl.innerHTML = '<div class="memo-empty">아직 등록된 메모가 없습니다.</div>'; return; }
     listEl.innerHTML = memos.map(function(m){
-      return '<div class="memo-item">'
+      var edited = m.edited_at
+        ? '<span class="memo-edited" title="'+fmtDate(m.edited_at)+(m.edited_by ? ' · '+esc(m.edited_by) : '')+' 수정">· 수정됨</span>'
+        : '';
+      return '<div class="memo-item" data-id="'+m.id+'">'
         + '<div class="memo-meta"><span class="memo-author">'+esc(m.author)+'</span>'
-        + '<span>'+fmtDate(m.id)+'</span>'
-        + '<button class="memo-del" data-id="'+m.id+'">삭제</button></div>'
+        + '<span>'+fmtDate(m.id)+'</span>' + edited
+        + '<span class="memo-tools">'
+        +   '<button class="memo-tool js-edit">수정</button>'
+        +   '<button class="memo-tool danger js-del">삭제</button>'
+        + '</span></div>'
         + '<div class="memo-body">'+linkify(m.body, m.mentions)+'</div></div>';
     }).join('');
+    listEl._memos = memos;
   }
 
-  // ── 통신 ───────────────────────────────────────────────────
-  function flash(t, bad){ msgEl.style.color = bad ? '#f87171' : 'var(--accent)'; msgEl.textContent = t;
-    setTimeout(function(){ msgEl.textContent=''; }, 2500); }
+  // ── 수정 ──────────────────────────────────────────────────────
+  function startEdit(item){
+    if (item.querySelector('.memo-ta')) return;           // 이미 수정 중
+    var id = Number(item.dataset.id);
+    var memo = (listEl._memos || []).filter(function(m){ return m.id === id; })[0];
+    if (!memo) return;
 
+    var bodyEl = item.querySelector('.memo-body');
+    var orig = bodyEl.innerHTML;
+    bodyEl.innerHTML =
+      '<textarea class="memo-ta" rows="3" maxlength="500"></textarea>'
+      + '<div class="memo-actions">'
+      +   '<button class="memo-btn js-save">저장</button>'
+      +   '<button class="memo-btn ghost js-cancel">취소</button>'
+      +   '<span class="memo-sub js-emsg"></span>'
+      + '</div>';
+    item.querySelector('.memo-tools').style.visibility = 'hidden';
+
+    var ta = bodyEl.querySelector('textarea');
+    ta.value = memo.body;
+    attachMention(ta, save);
+    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+
+    function cancel(){
+      hideBox();
+      bodyEl.innerHTML = orig;
+      item.querySelector('.memo-tools').style.visibility = '';
+    }
+    async function save(){
+      var body = ta.value.trim();
+      var emsg = bodyEl.querySelector('.js-emsg');
+      if (!body) { emsg.style.color = '#f87171'; emsg.textContent = '내용을 입력해주세요.'; return; }
+      if (body === memo.body) { cancel(); return; }
+      var btn = bodyEl.querySelector('.js-save');
+      btn.disabled = true; btn.textContent = '저장 중…';
+      try{
+        var r = await fetch('/api/memos/'+id, {method:'PUT', headers:{'Content-Type':'application/json'},
+                                               body: JSON.stringify({body: body})});
+        if (r.status === 401) { location.href='/login'; return; }
+        if (!r.ok) { var d = await r.json().catch(function(){return {};}); throw new Error(d.detail || '수정 실패'); }
+        hideBox(); await load(); flash('수정했습니다.');
+      }catch(e){
+        emsg.style.color = '#f87171'; emsg.textContent = e.message || '수정에 실패했습니다.';
+        btn.disabled = false; btn.textContent = '저장';
+      }
+    }
+    bodyEl.querySelector('.js-cancel').addEventListener('click', cancel);
+    bodyEl.querySelector('.js-save').addEventListener('click', save);
+  }
+
+  // ── 통신 ──────────────────────────────────────────────────────
+  function flash(t, bad){
+    msgEl.style.color = bad ? '#f87171' : 'var(--accent)';
+    msgEl.textContent = t;
+    setTimeout(function(){ msgEl.textContent=''; }, 2500);
+  }
   async function load(){
     try{
       var r = await fetch('/api/memos');
@@ -1379,21 +1486,26 @@
                                          body: JSON.stringify({body: body})});
       if (r.status === 401) { location.href='/login'; return; }
       if (!r.ok) { var d = await r.json().catch(function(){return {};}); throw new Error(d.detail||'실패'); }
-      input.value=''; updateCount(); flash('등록했습니다.'); await load();
+      input.value=''; updateCount(); hideBox(); flash('등록했습니다.'); await load();
     }catch(e){ flash(e.message || '등록에 실패했습니다.', true); }
     finally{ btn.disabled=false; btn.textContent='등록'; }
   }
+
   listEl.addEventListener('click', async function(e){
-    var b = e.target.closest('.memo-del'); if(!b) return;
-    if (!confirm('이 메모를 삭제할까요?')) return;
-    try{
-      var r = await fetch('/api/memos/'+b.dataset.id, {method:'DELETE'});
-      if (!r.ok) throw new Error();
-      await load();
-    }catch(e){ flash('삭제에 실패했습니다.', true); }
+    var item = e.target.closest('.memo-item'); if (!item) return;
+    if (e.target.closest('.js-edit')) { startEdit(item); return; }
+    if (e.target.closest('.js-del')) {
+      if (!confirm('이 메모를 삭제할까요?')) return;
+      try{
+        var r = await fetch('/api/memos/'+item.dataset.id, {method:'DELETE'});
+        if (!r.ok) throw new Error();
+        await load();
+      }catch(err){ flash('삭제에 실패했습니다.', true); }
+    }
   });
 
   document.getElementById('memoSave').addEventListener('click', save);
+  attachMention(input, save);
 
   // 열람 전용 계정: 변경 UI를 감추고 안내를 띄운다.
   // 화면만 막는 것은 우회 가능하므로, 실제 차단은 서버(require_editor)가 한다.
@@ -1405,7 +1517,7 @@
       document.body.classList.add('viewer-mode');
       var b = document.createElement('div');
       b.className = 'viewer-banner';
-      b.textContent = '\uD83D\uDC41 \uC5F4\uB78C \uC804\uC6A9 \uACC4\uC815\uC785\uB2C8\uB2E4 \u00B7 \uBA54\uBAA8 \uC870\uD68C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4.';
+      b.textContent = '👁 열람 전용 계정입니다 · 메모 조회만 가능합니다.';
       var host = document.querySelector('header');
       if (host && host.parentNode) host.parentNode.insertBefore(b, host.nextSibling);
     }catch(e){}

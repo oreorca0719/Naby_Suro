@@ -1986,6 +1986,8 @@ def list_memos(_admin: str = Depends(require_admin)):
             "body": i.get("body", ""),
             "author": i.get("author", ""),
             "mentions": list(i.get("mentions") or []),
+            "edited_at": int(i["edited_at"]) if i.get("edited_at") else None,
+            "edited_by": i.get("edited_by"),
         }
         for i in resp.get("Items", [])
     ]
@@ -2009,6 +2011,37 @@ def create_memo(payload: dict = Body(...), admin: str = Depends(require_editor))
         "mentions": mentions,
     })
     return {"id": created, "body": body, "author": admin, "mentions": mentions}
+
+
+@app.put("/api/memos/{memo_id}")
+def update_memo(memo_id: int, payload: dict = Body(...), admin: str = Depends(require_editor)):
+    """간부 공용 게시판이므로 누가 쓴 메모든 고칠 수 있다. 누가 고쳤는지는 남긴다."""
+    from botocore.exceptions import ClientError
+
+    body = unicodedata.normalize("NFC", (payload.get("body") or "")).strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="내용을 입력해주세요.")
+    if len(body) > MEMO_MAX_LEN:
+        raise HTTPException(status_code=400, detail=f"{MEMO_MAX_LEN}자까지 입력할 수 있습니다.")
+
+    mentions = _extract_mentions(body, _memo_roster())
+    edited = int(time.time() * 1000)
+    try:
+        memo_table.update_item(
+            Key={"pk": MEMO_PK, "created_at": memo_id},
+            # body 는 DynamoDB 예약어라 이름을 치환해서 쓴다.
+            UpdateExpression="SET #b = :b, mentions = :m, edited_at = :e, edited_by = :u",
+            ExpressionAttributeNames={"#b": "body"},
+            ExpressionAttributeValues={":b": body, ":m": mentions, ":e": edited, ":u": admin},
+            ConditionExpression="attribute_exists(created_at)",   # 이미 지워진 메모면 실패
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise HTTPException(status_code=404, detail="이미 삭제된 메모입니다.")
+        raise
+
+    return {"id": memo_id, "body": body, "mentions": mentions,
+            "edited_at": edited, "edited_by": admin}
 
 
 @app.delete("/api/memos/{memo_id}")
