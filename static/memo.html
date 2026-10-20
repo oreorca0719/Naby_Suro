@@ -1220,14 +1220,19 @@
     </div>
   </div>
 
-  <!-- 목록 -->
-  <div class="card">
-    <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      메모 목록 <span id="memoTotal" style="font-size:0.74rem;color:var(--muted);font-weight:400;"></span>
+  <!-- 목록 + 자동 집계 패널 -->
+  <div class="memo-cols">
+    <div class="memo-col-main">
+      <div class="card">
+        <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          메모 목록 <span id="memoTotal" style="font-size:0.74rem;color:var(--muted);font-weight:400;"></span>
+        </div>
+        <div id="memoList">
+          <div class="loading"><div class="spinner"></div> 불러오는 중</div>
+        </div>
+      </div>
     </div>
-    <div id="memoList">
-      <div class="loading"><div class="spinner"></div> 불러오는 중</div>
-    </div>
+    <aside class="memo-col-side" id="memoSide"></aside>
   </div>
 
 </div>
@@ -1269,6 +1274,28 @@
   .memo-tool:hover { border-color:var(--accent); color:var(--accent); }
   .memo-tool.danger:hover { border-color:#f87171; color:#f87171; }
   .memo-empty { color:var(--muted); padding:28px 4px; text-align:center; font-size:0.92rem; }
+
+  /* 목록 + 집계 패널 2단. 좁은 화면에서는 아래로 내려간다. */
+  .memo-cols { display:flex; gap:20px; align-items:flex-start; }
+  .memo-col-main { flex:1 1 auto; min-width:0; }
+  .memo-col-side { flex:0 0 300px; display:flex; flex-direction:column; gap:14px; position:sticky; top:16px; }
+  @media (max-width: 1000px) {
+    .memo-cols { flex-direction:column; }
+    .memo-col-side { flex:1 1 auto; width:100%; position:static; }
+  }
+  .side-card { background:var(--surface); border-radius:var(--radius); padding:18px 20px; }
+  .side-head { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .side-title { font-size:0.9rem; font-weight:800; }
+  .side-count { font-size:0.72rem; color:var(--muted); font-weight:700; }
+  .side-src { margin-left:auto; font-size:0.68rem; color:var(--muted); }
+  .side-names { display:flex; flex-direction:column; gap:1px; }
+  .side-name { display:flex; align-items:baseline; gap:8px; padding:5px 0; font-size:0.86rem; }
+  .side-name + .side-name { border-top:1px solid var(--border); }
+  .side-no { flex:0 0 1.6em; text-align:right; color:var(--muted); font-size:0.74rem; font-variant-numeric:tabular-nums; }
+  .side-nick { word-break:break-all; }
+  a.side-nick { color:var(--accent); font-weight:700; text-decoration:none; }
+  a.side-nick:hover { text-decoration:underline; }
+  .side-empty { font-size:0.82rem; color:var(--muted); line-height:1.6; }
   .memo-history { margin-top:14px; border-top:1px dashed var(--border); padding-top:12px; }
   .memo-history-title { font-size:0.74rem; color:var(--muted); font-weight:700; margin-bottom:10px; }
   .rev { display:flex; gap:10px; padding:7px 0; }
@@ -1410,6 +1437,7 @@
   }
   function render(memos){
     document.getElementById('memoTotal').textContent = memos.length ? memos.length+'건' : '';
+    renderSide(memos);
     if (!memos.length){ listEl.innerHTML = '<div class="memo-empty">아직 등록된 메모가 없습니다.</div>'; return; }
     listEl.innerHTML = memos.map(function(m){
       var edited = m.edited_at
@@ -1478,6 +1506,70 @@
     }
     bodyEl.querySelector('.js-cancel').addEventListener('click', cancel);
     bodyEl.querySelector('.js-save').addEventListener('click', save);
+  }
+
+  // ── 목록형 메모 자동 집계 ────────────────────────────────────
+  // '대기자' 처럼 첫 줄이 짧은 제목이고 그 아래가 1. 2. 3. 목록인 메모를
+  // 알아보고 우측 패널로 뽑아 올린다. 메모를 고치면 같이 바뀐다.
+  var LIST_PRIORITY = ['대기자'];          // 맨 위에 둘 제목
+
+  function parseListMemo(body){
+    var lines = String(body || '').split(/\r?\n/);
+    var title = (lines[0] || '').trim();
+    // 제목 줄: 짧고, 문장이 아니고, 번호로 시작하지 않아야 한다.
+    if (!title || title.length > 14) return null;
+    if (/[.!?]$/.test(title) || /^[0-9]/.test(title) || title.indexOf('@') === 0) return null;
+    var rest = lines.slice(1).join('\n').trim();
+    if (!rest) return null;
+
+    // "1. 이름 2. 이름" / 줄바꿈 혼용 모두 처리. 닉에 숫자가 섞여 있어도
+    // 구분자는 '숫자 + . 또는 )' 형태라 안전하다.
+    var names = rest.split(/(?:^|\s)\d{1,3}[.)]\s*/).map(function(s){ return s.trim(); })
+                    .filter(function(s){ return s; });
+    if (names.length < 2) {
+      names = rest.split(/[\n,·]+/).map(function(s){ return s.trim(); })
+                  .filter(function(s){ return s; });
+    }
+    if (names.length < 2) return null;
+    return { title: title, names: names };
+  }
+
+  function renderSide(memos){
+    var host = document.getElementById('memoSide');
+    var groups = [];
+    (memos || []).forEach(function(m){
+      var g = parseListMemo(m.body);
+      if (g) { g.author = m.author; g.at = m.edited_at || m.id; groups.push(g); }
+    });
+    groups.sort(function(a,b){
+      var ia = LIST_PRIORITY.indexOf(a.title), ib = LIST_PRIORITY.indexOf(b.title);
+      if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return 0;
+    });
+
+    if (!groups.length){
+      host.innerHTML = '<div class="side-card">'
+        + '<div class="side-head"><span class="side-title">목록</span></div>'
+        + '<div class="side-empty">첫 줄에 <b>대기자</b> 같은 제목을 쓰고 아래에 '
+        + '<b>1. 닉네임 2. 닉네임</b> 형식으로 적으면 여기에 자동으로 모입니다.</div></div>';
+      return;
+    }
+    host.innerHTML = groups.map(function(g){
+      return '<div class="side-card">'
+        + '<div class="side-head"><span class="side-title">'+esc(g.title)+'</span>'
+        +   '<span class="side-count">'+g.names.length+'명</span>'
+        +   '<span class="side-src">'+esc(g.author)+'</span></div>'
+        + '<div class="side-names">'
+        + g.names.map(function(nm, i){
+            // 길드원이면 기록으로 바로 갈 수 있게. 대기자는 아직 길드원이 아니라 링크가 없다.
+            var inGuild = MEMBERS.indexOf(nm) >= 0;
+            var cell = inGuild
+              ? '<a class="side-nick" href="/static/member.html?name='+encodeURIComponent(nm)+'" target="_blank" rel="noopener">'+esc(nm)+'</a>'
+              : '<span class="side-nick">'+esc(nm)+'</span>';
+            return '<div class="side-name"><span class="side-no">'+(i+1)+'</span>'+cell+'</div>';
+          }).join('')
+        + '</div></div>';
+    }).join('');
   }
 
   // 이력: 누가 언제 어떤 내용으로 바꿨는지. 오래된 순으로 쌓아 보여준다.
