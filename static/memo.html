@@ -1208,7 +1208,12 @@
     <div class="memo-hint">
       대기자 · 장기미접자 등 공유할 내용을 남겨두세요.
       <b style="color:var(--text);">@</b> 를 입력하면 길드원 닉을 멘션할 수 있고, 저장된 멘션은 눌러서 해당 길드원 기록으로 이동합니다.
-      <b style="color:var(--text);">@대기자 닉네임</b> 으로 적으면 메모가 아니라 오른쪽 대기자 명단으로 들어갑니다.
+      <b style="color:var(--text);">@대기자</b> 를 적고 엔터를 누르면 대기자 모드로 바뀝니다 — 그 뒤 닉네임만 적으면 오른쪽 명단으로 들어갑니다.
+    </div>
+
+    <div id="waitChipRow" class="wait-chip-row" style="display:none;">
+      <span class="wait-chip">대기자 명단<button type="button" id="waitChipX" title="대기자 모드 끄기">×</button></span>
+      <span class="wait-chip-hint">닉네임만 적으면 됩니다 · 메모 목록에는 남지 않습니다</span>
     </div>
 
     <textarea id="memoInput" class="memo-ta" rows="3" maxlength="500"
@@ -1249,6 +1254,24 @@
     padding:12px 14px; font-family:inherit; font-size:0.95rem; line-height:1.6; resize:vertical;
   }
   .memo-ta:focus { outline:none; border-color:var(--accent); }
+
+  /* 대기자 모드 — @대기자 를 치면 글자가 이 태그로 바뀐다. */
+  .wait-chip-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .wait-chip {
+    display:inline-flex; align-items:center; gap:6px; padding:5px 8px 5px 12px;
+    background:rgba(49,130,246,0.14); border:1px solid var(--accent); border-radius:999px;
+    color:var(--accent); font-size:0.82rem; font-weight:800;
+    animation:waitPop .18s ease-out;
+  }
+  .wait-chip button {
+    background:none; border:none; color:var(--accent); font-family:inherit;
+    font-size:1rem; line-height:1; padding:0 2px; cursor:pointer; opacity:0.65;
+  }
+  .wait-chip button:hover { opacity:1; }
+  .wait-chip-hint { font-size:0.78rem; color:var(--muted); }
+  @keyframes waitPop { from { transform:scale(0.82); opacity:0; } to { transform:scale(1); opacity:1; } }
+  #memoCompose.wait-mode .memo-ta { border-color:var(--accent); background:rgba(49,130,246,0.04); }
+  @media (prefers-reduced-motion: reduce) { .wait-chip { animation:none; } }
   .memo-actions { display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
   .memo-sub { font-size:0.8rem; color:var(--muted); }
   .memo-btn {
@@ -1418,8 +1441,25 @@
 
   // 멘션 자동완성을 textarea 에 붙인다. onSubmit 이 있으면 Ctrl+Enter 로 저장.
   function attachMention(ta, onSubmit){
-    ta.addEventListener('input', function(){ if (ta === input) updateCount(); showBox(ta); });
+    ta.addEventListener('input', function(){
+      if (ta === input) { absorbWaitCommand(); updateCount(); }
+      showBox(ta);
+    });
     ta.addEventListener('keydown', function(e){
+      if (ta === input && e.key === 'Enter' && !e.ctrlKey && !e.metaKey
+          && box.style.display !== 'block' && !waitMode
+          && input.value.slice(0, input.selectionStart).trim() === '@대기자') {
+        // '@대기자' 치고 엔터 → 태그로 전환. 줄바꿈은 넣지 않는다.
+        e.preventDefault();
+        input.value = input.value.slice(input.selectionStart).replace(/^\s+/, '');
+        setWaitMode(true); input.setSelectionRange(0, 0); updateCount();
+        return;
+      }
+      // 태그 바로 뒤에서 백스페이스 → 태그 해제 (칩 UI 의 보통 동작)
+      if (ta === input && waitMode && e.key === 'Backspace'
+          && input.selectionStart === 0 && input.selectionEnd === 0) {
+        e.preventDefault(); setWaitMode(false); return;
+      }
       if (box.style.display === 'block' && activeTA === ta && opts.length) {
         if (e.key === 'ArrowDown') { e.preventDefault(); sel=(sel+1)%opts.length; paint(); return; }
         if (e.key === 'ArrowUp')   { e.preventDefault(); sel=(sel-1+opts.length)%opts.length; paint(); return; }
@@ -1547,6 +1587,43 @@
       + '</div>';
   }
 
+  // '@대기자' 를 태그로 바꿔 지금 무엇을 적는 중인지 보이게 한다.
+  var waitMode = false;
+  var chipRow = document.getElementById('waitChipRow');
+  var compose = document.getElementById('memoCompose');
+  var saveBtn = document.getElementById('memoSave');
+
+  function setWaitMode(on){
+    if (waitMode === on) return;
+    waitMode = on;
+    chipRow.style.display = on ? 'flex' : 'none';
+    compose.classList.toggle('wait-mode', on);
+    saveBtn.textContent = on ? '명단에 추가' : '등록';
+    input.placeholder = on
+      ? '예) 아오이히츠지 범무덤 남은귤 — 번호·줄바꿈·쉼표 아무거나'
+      : '예) @닉네임 장기미접 2주째 — 연락 필요';
+    if (on) { chipRow.firstElementChild.style.animation = 'none'; void chipRow.offsetWidth;
+              chipRow.firstElementChild.style.animation = ''; }
+  }
+
+  // 맨 앞의 '@대기자' + 공백 을 먹어서 태그로 올린다.
+  function absorbWaitCommand(){
+    if (waitMode) return false;
+    var m = /^@대기자(?:\s+|$)/.exec(input.value);
+    if (!m) return false;
+    // '@대기자' 만 덩그러니 있고 아직 공백도 없으면 '@대기자들' 일 수 있으니 기다린다.
+    if (m[0] === '@대기자') return false;
+    input.value = input.value.slice(m[0].length);
+    setWaitMode(true);
+    input.setSelectionRange(0, 0);
+    updateCount();
+    return true;
+  }
+
+  document.getElementById('waitChipX').addEventListener('click', function(){
+    setWaitMode(false); input.focus();
+  });
+
   async function loadWaitlist(){
     try{
       var r = await fetch('/api/waitlist');
@@ -1615,17 +1692,21 @@
   }
   async function save(){
     var body = input.value.trim();
-    if (!body) { flash('내용을 입력해주세요.', true); return; }
+    if (!body) { flash(waitMode ? '닉네임을 적어주세요.' : '내용을 입력해주세요.', true); return; }
     var btn = document.getElementById('memoSave');
-    btn.disabled = true; btn.textContent = '등록 중…';
+    var label = btn.textContent;
+    btn.disabled = true; btn.textContent = waitMode ? '추가 중…' : '등록 중…';
     try{
-      var r = await fetch('/api/memos', {method:'POST', headers:{'Content-Type':'application/json'},
-                                         body: JSON.stringify({body: body})});
+      var r = waitMode
+        ? await fetch('/api/waitlist', {method:'POST', headers:{'Content-Type':'application/json'},
+                                        body: JSON.stringify({names: body})})
+        : await fetch('/api/memos', {method:'POST', headers:{'Content-Type':'application/json'},
+                                     body: JSON.stringify({body: body})});
       if (r.status === 401) { location.href='/login'; return; }
       if (!r.ok) { var d = await r.json().catch(function(){return {};}); throw new Error(d.detail||'실패'); }
       var res = await r.json().catch(function(){ return {}; });
       input.value=''; updateCount(); hideBox();
-      if (res.waitlist) {
+      if (res.waitlist || waitMode) {
         var added = res.added || [], skipped = res.skipped || [];
         flash(added.length
           ? '대기자 ' + added.length + '명 추가' + (skipped.length ? ' (이미 있던 ' + skipped.length + '명 제외)' : '')
@@ -1635,8 +1716,8 @@
         flash('등록했습니다.');
         await load();
       }
-    }catch(e){ flash(e.message || '등록에 실패했습니다.', true); }
-    finally{ btn.disabled=false; btn.textContent='등록'; }
+    }catch(e){ flash(e.message || (waitMode ? '추가에 실패했습니다.' : '등록에 실패했습니다.'), true); }
+    finally{ btn.disabled=false; btn.textContent=label; }
   }
 
   listEl.addEventListener('click', async function(e){
