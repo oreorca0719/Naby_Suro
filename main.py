@@ -84,9 +84,18 @@ def _cache_clear():
 # ── 관리자 인증 설정 ───────────────────────────────────────────────
 # 관리자 닉네임 화이트리스트 (아이디로 사용)
 ADMIN_NAMES = {"볼땡글", "NAVYSEAL", "멜빵군", "바가", "외칼", "코료룽"}
+# 열람 전용 계정. 관리자 페이지를 볼 수는 있으나 어떤 변경도 할 수 없다.
+# (벌금 처리·탈퇴·스펙다운 인정·닉네임 변경·무기 마크 갱신 전부 차단)
+VIEWER_NAMES = {"작당모의"}
+ALL_LOGIN_NAMES = ADMIN_NAMES | VIEWER_NAMES
+
 # 비밀번호는 평문 미저장. SHA-256(salt + password) 해시만 코드에 보관.
 _PW_SALT = "naby_suro_2026_salt"
 _PW_HASH = "3d3815fcafd5e08b806cb7a33bee30d7f0f3339d77b41a67aa254b285fb6b5ba"
+# 열람 전용 계정 비밀번호는 코드에 두지 않는다. 저장소가 공개라 해시를 넣어도
+# 솔트가 함께 노출돼 짧은 비밀번호는 사실상 평문이 되기 때문이다.
+# 운영 환경변수 VIEWER_PASSWORD 로 주입하며, 미설정 시 로그인 자체가 막힌다.
+_VIEWER_PASSWORD = os.environ.get("VIEWER_PASSWORD", "")
 # 세션 토큰 서명 키 (환경변수 우선, 없으면 해시 재사용)
 SESSION_SECRET = os.environ.get("SESSION_SECRET", _PW_HASH)
 SESSION_COOKIE = "naby_admin"
@@ -95,9 +104,14 @@ SESSION_MAX_AGE = 86400  # 1일
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() not in ("false", "0", "no")
 
 
-def _check_password(pw: str) -> bool:
+def _check_password(pw: str, username: str = "") -> bool:
     # 한글 정규화: 직접 타이핑(NFD)과 복붙(NFC) 입력을 동일하게 처리
     pw = unicodedata.normalize("NFC", pw or "")
+    if username in VIEWER_NAMES:
+        if not _VIEWER_PASSWORD:
+            return False               # 환경변수 미설정이면 로그인 불가
+        expected = unicodedata.normalize("NFC", _VIEWER_PASSWORD)
+        return hmac.compare_digest(pw, expected)
     h = hashlib.sha256((_PW_SALT + pw).encode("utf-8")).hexdigest()
     return hmac.compare_digest(h, _PW_HASH)
 
@@ -117,7 +131,7 @@ def _verify_session(cookie_val: str | None) -> str | None:
         return None
     enc_username, sig = cookie_val.rsplit(":", 1)
     username = unicodedata.normalize("NFC", urllib.parse.unquote(enc_username))
-    if username not in ADMIN_NAMES:
+    if username not in ALL_LOGIN_NAMES:
         return None
     expected = _make_session_token(username).rsplit(":", 1)[1]
     return username if hmac.compare_digest(sig, expected) else None
@@ -127,11 +141,53 @@ def is_admin(naby_admin: str = Cookie(None)) -> bool:
     return _verify_session(naby_admin) is not None
 
 
+def require_editor(naby_admin: str = Cookie(None)) -> str:
+    """변경 작업용. 열람 전용 계정은 여기서 막힌다.
+
+    화면에서 버튼을 숨기더라도 API 를 직접 호출하면 그만이므로,
+    실제 차단은 반드시 서버에서 한다.
+    """
+    username = _verify_session(naby_admin)
+    if username is None:
+        raise HTTPException(status_code=401, detail="관리자 로그인이 필요합니다.")
+    if username in VIEWER_NAMES:
+        raise HTTPException(
+            status_code=403,
+            detail="열람 전용 계정입니다. 조회만 가능하며 변경 작업은 할 수 없습니다.",
+        )
+    return username
+
+
 def require_admin(naby_admin: str = Cookie(None)) -> str:
     username = _verify_session(naby_admin)
     if username is None:
         raise HTTPException(status_code=401, detail="관리자 로그인이 필요합니다.")
     return username
+
+
+
+def add_display_ranks(rows: list[dict]) -> list[dict]:
+    """점수 기준 표시용 등수를 매긴다. 동점은 같은 등수(1, 2, 2, 4 …).
+
+    DB 의 rank 는 정렬키라 반드시 고유해야 하므로 동점을 표현할 수 없다.
+    화면·엑셀에 보이는 등수는 이 display_rank 를 쓴다.
+    0점(미참)은 등수를 매기지 않고 None 으로 둔다.
+    """
+    scored = sorted([r for r in rows if int(r.get("score") or 0) > 0],
+                    key=lambda r: -int(r["score"]))
+    prev_score = None
+    prev_rank = 0
+    for idx, r in enumerate(scored, 1):
+        sc = int(r["score"])
+        if sc == prev_score:
+            r["display_rank"] = prev_rank      # 앞사람과 동점 → 같은 등수
+        else:
+            r["display_rank"] = idx            # 자기 앞 인원수 + 1
+            prev_rank = idx
+        prev_score = sc
+    for r in rows:
+        r.setdefault("display_rank", None)
+    return rows
 
 
 def get_latest_week() -> str:
@@ -162,11 +218,12 @@ def get_members(week: str) -> list[dict]:
     )
     items = [i for i in resp.get("Items", []) if not i.get("is_ghost")]
     # rank 기준 정렬, Decimal → int 변환
-    return sorted(
+    rows = sorted(
         [{"rank": int(i["rank"]), "name": i["name"], "job": i["job"], "score": int(i["score"]),
           "fine_count": int(i.get("fine_count", 0)), "weapon_tier": i.get("weapon_tier")} for i in items],
         key=lambda x: x["rank"]
     )
+    return add_display_ranks(rows)
 
 
 def _find_member_at_week(week: str, name: str) -> dict | None:
@@ -364,6 +421,123 @@ def get_suro_ranking(refresh: bool = False):
         "fetched_at": int(now),
     }
     _SURO_RANK_CACHE.update(ts=now, data=out)
+    return out
+
+
+# 오로라 상위 길드 주간 타임라인. 외부(meaegi) 주차별 조회라 6시간 캐시.
+_AURORA_TL_CACHE = {"ts": 0.0, "data": None}
+_MEAEGI_URL = "https://meaegi.com/api/maplestory/ranking/guild"
+_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+       "AppleWebKit/537.36 (KHTML, like Gecko)")
+# 길드별 고정 색상. 순위가 바뀌어도 선 색이 튀지 않게 이름 기준으로 고정한다.
+_GUILD_COLORS = {
+    "뷰티": "#eb6834", "니니": "#1baf7a", "피너": "#eda100", "은인": "#e87ba4",
+    "나비": "#4f8ef7", "이별": "#9085e9", "귀신": "#e34948", "투썸": "#00a37a",
+    "Rose": "#d55181", "천상": "#8a94a6",
+}
+_COLOR_POOL = ["#7c8cf8", "#3fb0c9", "#c98f3f", "#b45fd1", "#5fa85f",
+               "#d16b6b", "#6bd1c0", "#c0c06b"]
+
+
+def _all_weeks() -> list[str]:
+    """DB에 적재된 주차 키 목록(오름차순). METADATA 제외."""
+    from boto3.dynamodb.conditions import Attr
+    weeks: set[str] = set()
+    resp = table.scan(
+        FilterExpression=Attr("rank").gt(0),
+        ProjectionExpression="#w", ExpressionAttributeNames={"#w": "week"},
+    )
+    while True:
+        for i in resp.get("Items", []):
+            w = i.get("week")
+            if w and w != "METADATA":
+                weeks.add(w)
+        if "LastEvaluatedKey" not in resp:
+            break
+        resp = table.scan(
+            FilterExpression=Attr("rank").gt(0),
+            ProjectionExpression="#w", ExpressionAttributeNames={"#w": "week"},
+            ExclusiveStartKey=resp["LastEvaluatedKey"],
+        )
+    return sorted(weeks)
+
+
+@app.get("/api/aurora-timeline")
+async def get_aurora_timeline(refresh: bool = False, weeks_limit: int = 24):
+    """오로라 상위 10 길드의 주간 수로 점수 추이.
+
+    수로는 목~수 주기이고 NEXON 은 '전일 데이터'만 제공한다. 그래서 주차 키
+    (정산 수요일)로 조회하면 화요일까지의 부분 집계가 나온다.
+    완결된 주차는 '주차 키 + 1일(목)' 스냅샷이므로 그 날짜로 조회한다.
+    """
+    now = time.time()
+    floor = 60 if refresh else 21600      # 새로고침 60초, 평시 6시간
+    if _AURORA_TL_CACHE["data"] and now - _AURORA_TL_CACHE["ts"] < floor:
+        return _AURORA_TL_CACHE["data"]
+
+    weeks = _all_weeks()[-max(2, weeks_limit):]
+    if not weeks:
+        raise HTTPException(status_code=404, detail="주차 데이터가 없습니다.")
+
+    sem = asyncio.Semaphore(5)
+
+    async def fetch(client: httpx.AsyncClient, week: str):
+        # 완결 주차 = 정산 수요일 + 1일(목) 스냅샷
+        d = (datetime.strptime(week, "%Y%m%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        params = {"type": "guild", "date": d, "page": 1, "size": 50,
+                  "worldName": "오로라", "rankingType": "지하 수로"}
+        async with sem:
+            try:
+                r = await client.get(_MEAEGI_URL, params=params,
+                                     headers={"User-Agent": _UA,
+                                              "Accept": "application/json"},
+                                     timeout=15.0)
+                r.raise_for_status()
+                rk = r.json().get("ranking") or []
+                return week, {g["guild_name"]: int(g["guild_point"]) for g in rk}
+            except Exception:
+                return week, None
+
+    try:
+        async with httpx.AsyncClient() as client:
+            pairs = await asyncio.gather(*[fetch(client, w) for w in weeks])
+    except Exception:
+        if _AURORA_TL_CACHE["data"]:
+            return {**_AURORA_TL_CACHE["data"], "stale": True}
+        raise HTTPException(status_code=502, detail="타임라인 조회 실패")
+
+    snaps = {w: m for w, m in pairs if m}
+    ok_weeks = [w for w in weeks if w in snaps]
+    if len(ok_weeks) < 2:
+        if _AURORA_TL_CACHE["data"]:
+            return {**_AURORA_TL_CACHE["data"], "stale": True}
+        raise HTTPException(status_code=502, detail="타임라인 데이터 부족")
+
+    # 최신 주차 상위 10 길드를 기준으로 시계열 구성
+    latest = snaps[ok_weeks[-1]]
+    top10 = [n for n, _ in sorted(latest.items(), key=lambda kv: -kv[1])[:10]]
+
+    pool = iter(_COLOR_POOL)
+    series = []
+    for name in top10:
+        color = _GUILD_COLORS.get(name) or next(pool, "#8a94a6")
+        row = {"n": name, "c": color,
+               "d": [snaps[w].get(name) for w in ok_weeks]}
+        if name == "나비":
+            row["our"] = True
+        series.append(row)
+
+    def label(week: str) -> str:
+        wed = datetime.strptime(week, "%Y%m%d")
+        return f"{wed.month}/{wed.day}"
+
+    out = {
+        "weeks": [label(w) for w in ok_weeks],
+        "week_keys": ok_weeks,
+        "series": series,
+        "fetched_at": int(now),
+    }
+    _AURORA_TL_CACHE.update(ts=now, data=out)
     return out
 
 
@@ -598,7 +772,7 @@ async def get_member_profile(name: str):
 
 
 @app.post("/api/refresh-weapon-marks")
-async def refresh_weapon_marks(_admin: str = Depends(require_admin)):
+async def refresh_weapon_marks(_admin: str = Depends(require_editor)):
     """최신 주차 회원 전원의 착용 무기를 넥슨 API로 조회해 weapon_tier 를 갱신한다.
     무기는 자주 바뀌지 않으므로 이 갱신은 관리자가 필요할 때만 수동 실행한다.
 
@@ -772,7 +946,7 @@ def get_zero_score_members(week: str, _admin: str = Depends(require_admin)):
 
 
 @app.post("/api/fine/{week}/{name}")
-def record_fine_payment(week: str, name: str, _admin: str = Depends(require_admin)):
+def record_fine_payment(week: str, name: str, _admin: str = Depends(require_editor)):
     """벌금 납부 기록 (미해결 pending_weeks 일괄 처리)
 
     - 회원의 pending_weeks가 N개면 한 번 클릭으로 fine_count += N
@@ -839,7 +1013,7 @@ def record_fine_payment(week: str, name: str, _admin: str = Depends(require_admi
 
 
 @app.delete("/api/fine/{week}/{name}")
-def undo_fine_payment(week: str, name: str, _admin: str = Depends(require_admin)):
+def undo_fine_payment(week: str, name: str, _admin: str = Depends(require_editor)):
     """벌금 납부 취소 (이번 주 부과 건만 취소, 취소 후 last_fine_week 제거하여 재부과 가능 상태로 전환)"""
     from boto3.dynamodb.conditions import Key, Attr
 
@@ -895,7 +1069,7 @@ def undo_fine_payment(week: str, name: str, _admin: str = Depends(require_admin)
 
 
 @app.post("/api/leave-guild/{name}")
-def leave_guild(name: str, _admin: str = Depends(require_admin)):
+def leave_guild(name: str, _admin: str = Depends(require_editor)):
     """길드 탈퇴 처리 — 벌금 납부 섹션에서만 제외
     - 최신 주차 레코드에 left_guild = True SET
     - pending_weeks 모두 소멸 (REMOVE)
@@ -932,7 +1106,7 @@ def leave_guild(name: str, _admin: str = Depends(require_admin)):
 
 
 @app.post("/api/spec-down/{name}")
-def confirm_spec_down(name: str, _admin: str = Depends(require_admin)):
+def confirm_spec_down(name: str, _admin: str = Depends(require_editor)):
     """스펙 다운 인정 — 감지된 주차를 그 회원의 새 기준선으로 SET.
 
     장비 환산 점수가 실제로 하락한 것이 확인된 회원만 대상이다(탐지 시스템의
@@ -980,7 +1154,7 @@ def confirm_spec_down(name: str, _admin: str = Depends(require_admin)):
 
 
 @app.delete("/api/spec-down/{name}")
-def cancel_spec_down(name: str, _admin: str = Depends(require_admin)):
+def cancel_spec_down(name: str, _admin: str = Depends(require_editor)):
     """스펙 다운 인정 취소 — 이번 주차에 처리한 건만 되돌린다.
 
     오클릭 복구용이므로 처리한 그 주차 안에서만 허용한다. 다음 주차 데이터가
@@ -1024,7 +1198,7 @@ def cancel_spec_down(name: str, _admin: str = Depends(require_admin)):
 
 
 @app.post("/api/rename-member")
-def rename_member(payload: dict = Body(...), _admin: str = Depends(require_admin)):
+def rename_member(payload: dict = Body(...), _admin: str = Depends(require_editor)):
     """닉네임 변경(이관) — 기존 닉네임의 모든 주차 레코드를 신규 닉네임으로 변경.
 
     - 점수/벌금 등 모든 히스토리는 레코드에 그대로 붙어 있으므로 name 필드만
@@ -1140,7 +1314,7 @@ def rename_member(payload: dict = Body(...), _admin: str = Depends(require_admin
 
 
 @app.post("/api/fine-exempt/{week}/{name}")
-def exempt_fine(week: str, name: str, _admin: str = Depends(require_admin)):
+def exempt_fine(week: str, name: str, _admin: str = Depends(require_editor)):
     """이번 주 벌금 면제 (신규 가입·부득이한 사유로 마감 임박 미참)
     - fine_exempt_weeks에 현재 주차 추가 (이번 주만 면제)
     - pending_weeks에서 현재 주차 제거 (다음 주 이월 방지)
@@ -1346,6 +1520,15 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
 # 패치에서는 그대로 승계해, 배너가 재산출된 것처럼 보이지 않게 한다.
 DETECTION_VERSIONS = [
     {
+        "version": "v1.3",
+        "date": "2026-08-13",
+        "threshold": 0.15,
+        "threshold_since": "2026-08-03",
+        "trail_weeks": 3,
+        "min_history": 3,
+        "title": "기준선 빗장 도입 — 스펙이 안 떨어지면 기대치도 안 내려감",
+    },
+    {
         "version": "v1.2",
         "date": "2026-08-07",
         "threshold": 0.15,
@@ -1379,6 +1562,17 @@ DETECTION_CURRENT = DETECTION_VERSIONS[0]
 # v1.2 곱연산 데미지 지수는 스펙 미변경 회원이 정확히 0%, 실제 하향은 -20~50%로
 # 크게 벌어져(실측), -5%면 정상 변동과 확실히 구분된다.
 SPEC_DROP_THRESHOLD = 0.05
+
+# v1.3 기준선 빗장(래칫).
+# 기대치의 기준선(추세)이 본인 점수를 따라 내려가면, 낮춰 친 사람이 2~3주 만에
+# 그 낮은 점수를 '새 정상'으로 만들어 탐지를 빠져나간다(기조 오염).
+# 그래서 스펙이 실제로 떨어졌을 때만 기준선이 내려가도록 잠근다.
+#   · 비교 대상은 직전 주가 아니라 '기준 스펙(관측된 최고 스펙)'이다.
+#     직전 주와만 비교하면 매주 조금씩 파는 경우를 놓친다.
+#   · 해제 후에는 추세가 새 수준을 흡수할 때까지 TRAIL 주간 자유 하강을 허용한다.
+#     이 유예가 없으면 처분 직후 2~3주간 억울하게 탐지된다.
+#   · 스펙 이력이 있는 주차부터만 적용한다(그 이전은 스펙 하락을 확인할 수 없음).
+RATCHET_GRACE_WEEKS = 3
 
 
 @app.get("/api/detection")
@@ -1456,6 +1650,52 @@ def get_detection(_admin: str = Depends(require_admin)):
         ]
         return statistics.mean(vals) if len(vals) >= 2 else None
 
+    def baseline_at(name: str, wi: int, floor: str) -> float | None:
+        """기대치의 기준선. 추세를 쓰되 스펙이 안 떨어졌으면 내려가지 않는다.
+
+        주차를 앞에서부터 훑으며 기준선을 이월한다.
+          · 기준 스펙(관측 최고) 대비 SPEC_DROP_THRESHOLD 이상 하락 → 빗장 해제.
+            이후 RATCHET_GRACE_WEEKS 주간은 추세를 그대로 따라간다(새 수준 흡수).
+          · 그 외에는 max(추세, 직전 기준선) — 즉 내려가지 않는다.
+        스펙 기록이 없는 구간에서는 하락을 확인할 수 없으므로 빗장을 걸지 않는다.
+        """
+        base: float | None = None
+        ref_spec: float | None = None
+        grace_until = -1          # 이 인덱스 미만이면 자유 하강
+        ratchet_on = False        # 스펙 관측이 시작된 뒤부터 잠근다
+
+        for j in range(0, wi + 1):
+            wk_j = weeks[j]
+            if wk_j < floor:
+                continue
+            tr = trend_at(name, j, floor)
+            if tr is None:
+                continue
+
+            sp = (spec_by_name.get(name, {}).get(wk_j) or {}).get("score") or 0
+            if sp > 0:
+                if ref_spec is None:
+                    # 첫 스펙 관측 = 빗장 가동 시점. 그 이전 기준선은 버린다.
+                    # 스펙을 못 보던 구간의 고점을 끌고 오면, 이미 장비를 처분한
+                    # 회원까지 소급 탐지된다(실측: 고갓 5월 처분 건).
+                    # 가동 직후에도 추세가 현 수준을 흡수하도록 유예를 준다.
+                    ref_spec = sp
+                    ratchet_on = True
+                    grace_until = j + RATCHET_GRACE_WEEKS
+                    base = tr
+                    continue
+                if sp <= ref_spec * (1 - SPEC_DROP_THRESHOLD):
+                    grace_until = j + RATCHET_GRACE_WEEKS   # 해제 + 유예
+                    ref_spec = sp
+                elif sp > ref_spec:
+                    ref_spec = sp              # 기준 스펙은 위로만 갱신
+
+            if base is None or not ratchet_on or j < grace_until:
+                base = tr                      # 초기 · 스펙 미관측 · 유예 중
+            else:
+                base = max(tr, base)           # 빗장: 내려가지 않음
+        return base
+
     def history_count(name: str, wi: int, floor: str) -> int:
         return sum(
             1
@@ -1483,16 +1723,19 @@ def get_detection(_admin: str = Depends(require_admin)):
             tr = trend_at(name, wi, floor)
             if not tr:
                 continue
+            # 환경 변동률은 '실제 최근 성적' 기준이어야 한다. 기준선(정책값)이
+            # 아니라 추세로 계산해야 그 주 길드 분위기를 왜곡 없이 잡는다.
             ratios.append(score / tr)
-            cands.append((name, score, tr))
+            base = baseline_at(name, wi, floor) or tr
+            cands.append((name, score, tr, base))
 
         if len(ratios) < 10:                    # 표본이 적으면 환경 추정 불가
             return 1.0, []
 
         env = statistics.median(ratios)
         hits: list[dict] = []
-        for name, score, tr in cands:
-            expected = tr * env
+        for name, score, tr, base in cands:
+            expected = base * env
             if expected <= 0:
                 continue
             dev = (score - expected) / expected
@@ -1501,6 +1744,8 @@ def get_detection(_admin: str = Depends(require_admin)):
                     "name": name,
                     "score": score,
                     "trend": int(tr),
+                    "baseline": int(base),
+                    "ratcheted": bool(base > tr * 1.01),
                     "expected": int(expected),
                     "deviation_pct": round(dev * 100, 1),
                 })
@@ -1645,7 +1890,7 @@ def login(response: Response, payload: dict = Body(...)):
     """관리자 로그인 — 닉네임(아이디) + 비밀번호 검증 후 세션 쿠키 발급"""
     username = unicodedata.normalize("NFC", (payload.get("username") or "").strip())
     password = payload.get("password") or ""
-    if username not in ADMIN_NAMES or not _check_password(password):
+    if username not in ALL_LOGIN_NAMES or not _check_password(password, username):
         raise HTTPException(status_code=401, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
     token = _make_session_token(username)
     response.set_cookie(
@@ -1656,7 +1901,22 @@ def login(response: Response, payload: dict = Body(...)):
         samesite="lax",
         secure=COOKIE_SECURE,
     )
-    return {"ok": True, "username": username}
+    return {"ok": True, "username": username,
+            "role": "viewer" if username in VIEWER_NAMES else "editor"}
+
+
+@app.get("/api/me")
+def get_me(naby_admin: str = Cookie(None)):
+    """현재 로그인 계정과 권한. 화면에서 변경 버튼 노출 여부를 정하는 데 쓴다."""
+    username = _verify_session(naby_admin)
+    if username is None:
+        return {"logged_in": False}
+    return {
+        "logged_in": True,
+        "username": username,
+        "role": "viewer" if username in VIEWER_NAMES else "editor",
+        "can_edit": username not in VIEWER_NAMES,
+    }
 
 
 @app.post("/api/logout")
@@ -1669,7 +1929,12 @@ def logout(response: Response):
 def auth_status(naby_admin: str = Cookie(None)):
     """현재 세션의 관리자 여부 반환 (프론트엔드 분기용)"""
     username = _verify_session(naby_admin)
-    return {"is_admin": username is not None, "username": username}
+    return {
+        "is_admin": username is not None,
+        "username": username,
+        # 열람 전용 계정은 변경 버튼을 감춘다. 실제 차단은 서버(require_editor)에서 한다.
+        "can_edit": username is not None and username not in VIEWER_NAMES,
+    }
 
 
 # ── 간부 메모 ────────────────────────────────────────────────────
@@ -1728,7 +1993,7 @@ def list_memos(_admin: str = Depends(require_admin)):
 
 
 @app.post("/api/memos")
-def create_memo(payload: dict = Body(...), admin: str = Depends(require_admin)):
+def create_memo(payload: dict = Body(...), admin: str = Depends(require_editor)):
     body = unicodedata.normalize("NFC", (payload.get("body") or "")).strip()
     if not body:
         raise HTTPException(status_code=400, detail="내용을 입력해주세요.")
@@ -1747,7 +2012,7 @@ def create_memo(payload: dict = Body(...), admin: str = Depends(require_admin)):
 
 
 @app.delete("/api/memos/{memo_id}")
-def delete_memo(memo_id: int, _admin: str = Depends(require_admin)):
+def delete_memo(memo_id: int, _admin: str = Depends(require_editor)):
     """간부 공용 게시판이므로 누가 쓴 메모든 삭제할 수 있다."""
     memo_table.delete_item(Key={"pk": MEMO_PK, "created_at": memo_id})
     return {"ok": True}

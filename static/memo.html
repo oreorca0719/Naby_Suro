@@ -1204,7 +1204,7 @@
   </nav>
 
   <!-- 작성 -->
-  <div class="card" style="margin-bottom:24px;">
+  <div class="card" id="memoCompose" style="margin-bottom:24px;">
     <div class="section-title">간부 메모</div>
     <div style="font-size:0.82rem;color:var(--muted);margin:-6px 0 14px;">
       대기자 · 장기미접자 등 공유할 내용을 남겨두세요.
@@ -1256,6 +1256,12 @@
   .mention-opt { padding:9px 14px; cursor:pointer; font-size:0.9rem; white-space:nowrap; }
   .mention-opt.on, .mention-opt:hover { background:var(--fill-2, rgba(255,255,255,0.06)); color:var(--accent); }
   .memo-empty { color:var(--muted); padding:28px 4px; text-align:center; font-size:0.92rem; }
+  /* 열람 전용 계정: 변경 수단을 화면에서 제거. 실제 차단은 서버(require_editor)가 한다. */
+  body.viewer-mode #memoCompose,
+  body.viewer-mode .memo-del { display:none !important; }
+  .viewer-banner { display:flex; align-items:center; gap:8px; padding:10px 14px; margin-bottom:16px;
+    background:var(--fill-2); border:1px solid var(--border); border-radius:8px;
+    font-size:0.82rem; color:var(--muted); font-weight:600; }
 </style>
 
 <script>
@@ -1389,7 +1395,24 @@
 
   document.getElementById('memoSave').addEventListener('click', save);
 
+  // 열람 전용 계정: 변경 UI를 감추고 안내를 띄운다.
+  // 화면만 막는 것은 우회 가능하므로, 실제 차단은 서버(require_editor)가 한다.
+  async function applyViewerMode(){
+    try{
+      var r = await fetch('/api/auth-status');
+      var d = await r.json();
+      if (!d || d.can_edit !== false) return;
+      document.body.classList.add('viewer-mode');
+      var b = document.createElement('div');
+      b.className = 'viewer-banner';
+      b.textContent = '\uD83D\uDC41 \uC5F4\uB78C \uC804\uC6A9 \uACC4\uC815\uC785\uB2C8\uB2E4 \u00B7 \uBA54\uBAA8 \uC870\uD68C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4.';
+      var host = document.querySelector('header');
+      if (host && host.parentNode) host.parentNode.insertBefore(b, host.nextSibling);
+    }catch(e){}
+  }
+
   (async function init(){
+    await applyViewerMode();
     try{
       var r = await fetch('/api/memo/members');
       if (r.status === 401) { location.href='/login'; return; }

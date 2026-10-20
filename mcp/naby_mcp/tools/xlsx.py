@@ -13,6 +13,22 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 FONT = "맑은 고딕"
 
 
+
+def competition_ranks(scores: list[int]) -> list[int]:
+    """동점은 같은 등수, 다음 등수는 인원수만큼 건너뛴다 (1, 2, 2, 4 …).
+
+    내림차순 정렬된 점수 목록을 받는다. 순위는 '몇 명보다 앞서 있는가'로
+    정해지므로, 동점자는 같은 등수를 받고 그 뒤가 밀린다.
+    """
+    ranks: list[int] = []
+    for idx, s in enumerate(scores):
+        if idx and s == scores[idx - 1]:
+            ranks.append(ranks[-1])      # 앞사람과 동점 → 같은 등수
+        else:
+            ranks.append(idx + 1)        # 자기 앞 인원수 + 1
+    return ranks
+
+
 def build_xlsx(rows: list[dict], out_path: str) -> dict:
     """rows: [{"name","job","score"}, ...] → xlsx 저장."""
     data = sorted(rows, key=lambda r: -int(r["score"]))
@@ -36,8 +52,9 @@ def build_xlsx(rows: list[dict], out_path: str) -> dict:
     for c in ws[1]:
         c.fill, c.font, c.alignment, c.border = hf, hfont, C, bd
 
-    for i, r in enumerate(data, 1):
-        ws.append([i, r["name"], r["job"], int(r["score"])])
+    ranks = competition_ranks([int(r["score"]) for r in data])
+    for i, (r, rk) in enumerate(zip(data, ranks), 1):
+        ws.append([rk, r["name"], r["job"], int(r["score"])])
         row = ws[i + 1]
         row[0].alignment = C
         row[1].alignment = L

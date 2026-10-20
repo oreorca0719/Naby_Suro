@@ -17,6 +17,7 @@ from ..config import NEXON_BASE, require_nexon_key
 from . import db
 from .roster import week_to_date
 from .spec import character_spec
+from .class_const import class_factor
 
 # NEXON API 호출 간격 (레이트 리밋 여유)
 _DELAY = 0.1
@@ -40,7 +41,23 @@ def fetch_one(name: str, date: str) -> dict | None:
         stat = _get("/character/stat", {"ocid": ocid, "date": date})
         equip = _get("/character/item-equipment", {"ocid": ocid, "date": date})
         # 세트효과는 최강 프리셋 아이템으로 직접 계산하므로 set-effect API 불필요
-        return character_spec(basic, stat, equip)
+        spec = character_spec(basic, stat, equip)
+
+        # 헥사 코어 총 레벨. 장비 지수가 못 보는 성장분이라 수로 점수 예측에
+        # 크게 기여한다(실측: 스펙 단독 R²=0.79 → 스펙+코어 0.86).
+        # 조회 실패해도 스펙 수집 자체는 살린다.
+        try:
+            hexa = _get("/character/hexamatrix", {"ocid": ocid, "date": date})
+            cores = hexa.get("character_hexa_core_equipment") or []
+            spec["core_level"] = sum(int(c.get("hexa_core_level") or 0) for c in cores)
+        except Exception:
+            spec["core_level"] = 0
+
+        # 직업 배율을 곱한 전투력 지수. spec_score 는 직업을 무시하므로
+        # 직업이 다른 회원끼리 비교가 성립하지 않는다.
+        spec["class_factor"] = class_factor(spec.get("character_class"))
+        spec["power_index"] = round((spec.get("score") or 0) * spec["class_factor"], 1)
+        return spec
     except Exception:
         return None
 
@@ -79,6 +96,8 @@ def collect_week(week: str, names: list[str] | None = None,
             "spec_score": spec["score"],
             "spec_set_score": spec.get("set_score", 0),
             "spec_items": spec["item_count"],
+            "core_level": spec.get("core_level", 0),
+            "power_index": spec.get("power_index", 0),
             "spec_preset": spec["best_preset"],
             "spec_level": spec["level"],
             "spec_main_stat": spec["main_stat"],
@@ -88,7 +107,8 @@ def collect_week(week: str, names: list[str] | None = None,
                 Key={"week": week, "rank": int(r["rank"])},
                 UpdateExpression=(
                     "SET spec_score = :s, spec_set_score = :ss, spec_items = :i, "
-                    "spec_preset = :p, spec_level = :l, spec_main_stat = :m"
+                    "spec_preset = :p, spec_level = :l, spec_main_stat = :m, "
+                    "core_level = :c, power_index = :pi"
                 ),
                 ExpressionAttributeValues={
                     ":s": int(spec["score"]),
@@ -97,6 +117,8 @@ def collect_week(week: str, names: list[str] | None = None,
                     ":p": int(spec["best_preset"]),
                     ":l": int(spec["level"]),
                     ":m": spec["main_stat"],
+                    ":c": int(spec.get("core_level", 0)),
+                    ":pi": int(spec.get("power_index", 0)),
                 },
             )
 
