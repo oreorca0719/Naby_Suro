@@ -52,6 +52,10 @@ MEMO_PK = "MEMO"
 MEMO_MAX_LEN = 500
 MEMO_LIST_LIMIT = 200
 MEMO_MAX_REVISIONS = 20      # 메모당 보관할 과거 판 수
+# 대기자 명단 — 같은 테이블의 다른 파티션. 메모 목록과 섞이지 않는다.
+WAIT_PK = "WAITLIST"
+WAIT_CMD = "@대기자"
+WAIT_MAX = 200
 
 # ── Nexon Open API 설정 ───────────────────────────────────────────
 NEXON_API_KEY = os.environ.get("NEXON_API_KEY", "")
@@ -1996,6 +2000,92 @@ def list_memos(_admin: str = Depends(require_admin)):
     return {"memos": memos}
 
 
+def _split_names(text: str) -> list[str]:
+    """어떻게 적든 닉 목록으로 읽는다. 번호 → 줄바꿈/쉼표 → 공백 순으로 시도."""
+    import re
+
+    def pick(parts):
+        return [p for p in (s.strip() for s in parts) if p]
+
+    names = pick(re.split(r"(?:^|\s)\d{1,3}[.)]\s*", text))
+    if len(names) < 2:
+        names = pick(re.split(r"[\n,、·]+", text))
+    if len(names) < 2:
+        names = pick(re.split(r"\s+", text))
+
+    out: list[str] = []
+    for nm in names:
+        nm = re.sub(r"^[-–—*]\s*", "", nm).strip()
+        if nm and nm not in out:
+            out.append(nm)
+    return out
+
+
+def _parse_waitlist_command(body: str) -> list[str] | None:
+    """'@대기자 닉 닉 …' 이면 닉 목록을, 아니면 None."""
+    if not body.startswith(WAIT_CMD):
+        return None
+    rest = body[len(WAIT_CMD):]
+    # '@대기자' 바로 뒤에 글자가 붙어 있으면 다른 멘션이다 (@대기자들 …)
+    if rest and not rest[0].isspace():
+        return None
+    return _split_names(rest.strip())
+
+
+def _waitlist_rows() -> list[dict]:
+    from boto3.dynamodb.conditions import Key
+    resp = memo_table.query(
+        KeyConditionExpression=Key("pk").eq(WAIT_PK),
+        ScanIndexForward=True,            # 들어온 순서대로
+        Limit=WAIT_MAX,
+    )
+    return [
+        {"id": int(i["created_at"]), "name": i.get("name", ""), "by": i.get("added_by", "")}
+        for i in resp.get("Items", [])
+    ]
+
+
+def _waitlist_add(names: list[str], admin: str) -> list[str]:
+    """이미 있는 이름은 건너뛴다. 실제로 추가된 이름만 돌려준다."""
+    have = {r["name"] for r in _waitlist_rows()}
+    added: list[str] = []
+    now = int(time.time() * 1000)
+    for k, nm in enumerate(names):
+        if nm in have or len(nm) > 40:
+            continue
+        have.add(nm)
+        memo_table.put_item(Item={
+            "pk": WAIT_PK,
+            "created_at": now + k,        # 정렬키 충돌 방지
+            "name": nm,
+            "added_by": admin,
+        })
+        added.append(nm)
+    return added
+
+
+@app.get("/api/waitlist")
+def list_waitlist(_admin: str = Depends(require_admin)):
+    return {"waitlist": _waitlist_rows()}
+
+
+@app.post("/api/waitlist")
+def add_waitlist(payload: dict = Body(...), admin: str = Depends(require_editor)):
+    raw = payload.get("names")
+    names = raw if isinstance(raw, list) else _split_names(str(raw or ""))
+    names = [unicodedata.normalize("NFC", str(n)).strip() for n in names]
+    names = [n for n in names if n]
+    if not names:
+        raise HTTPException(status_code=400, detail="닉네임을 입력해주세요.")
+    return {"added": _waitlist_add(names, admin), "waitlist": _waitlist_rows()}
+
+
+@app.delete("/api/waitlist/{entry_id}")
+def delete_waitlist(entry_id: int, _admin: str = Depends(require_editor)):
+    memo_table.delete_item(Key={"pk": WAIT_PK, "created_at": entry_id})
+    return {"ok": True}
+
+
 @app.post("/api/memos")
 def create_memo(payload: dict = Body(...), admin: str = Depends(require_editor)):
     body = unicodedata.normalize("NFC", (payload.get("body") or "")).strip()
@@ -2003,6 +2093,16 @@ def create_memo(payload: dict = Body(...), admin: str = Depends(require_editor))
         raise HTTPException(status_code=400, detail="내용을 입력해주세요.")
     if len(body) > MEMO_MAX_LEN:
         raise HTTPException(status_code=400, detail=f"{MEMO_MAX_LEN}자까지 입력할 수 있습니다.")
+
+    # '@대기자 …' 는 메모로 남기지 않고 대기자 명단으로 보낸다.
+    wait_names = _parse_waitlist_command(body)
+    if wait_names is not None:
+        if not wait_names:
+            raise HTTPException(status_code=400, detail="@대기자 뒤에 닉네임을 적어주세요.")
+        added = _waitlist_add(wait_names, admin)
+        return {"waitlist": True, "added": added,
+                "skipped": [n for n in wait_names if n not in added]}
+
     mentions = _extract_mentions(body, _memo_roster())
     created = int(time.time() * 1000)
     memo_table.put_item(Item={
