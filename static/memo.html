@@ -1508,68 +1508,65 @@
     bodyEl.querySelector('.js-save').addEventListener('click', save);
   }
 
-  // ── 목록형 메모 자동 집계 ────────────────────────────────────
-  // '대기자' 처럼 첫 줄이 짧은 제목이고 그 아래가 1. 2. 3. 목록인 메모를
-  // 알아보고 우측 패널로 뽑아 올린다. 메모를 고치면 같이 바뀐다.
-  var LIST_PRIORITY = ['대기자'];          // 맨 위에 둘 제목
+  // ── 대기자 자동 집계 ─────────────────────────────────────────
+  // 첫 줄이 '대기자' 인 메모만 본다. 적는 형식은 사람마다 다르므로
+  // 번호·줄바꿈·쉼표·공백 뭐로 나눠 적든 읽어낸다.
+  var WAIT_KEY = '대기자';
 
-  function parseListMemo(body){
+  function parseWaitlist(body){
     var lines = String(body || '').split(/\r?\n/);
-    var title = (lines[0] || '').trim();
-    // 제목 줄: 짧고, 문장이 아니고, 번호로 시작하지 않아야 한다.
-    if (!title || title.length > 14) return null;
-    if (/[.!?]$/.test(title) || /^[0-9]/.test(title) || title.indexOf('@') === 0) return null;
+    var head = (lines[0] || '').trim();
+    if (head.indexOf(WAIT_KEY) !== 0) return null;      // 첫 줄이 '대기자' 로 시작해야 한다
+
     var rest = lines.slice(1).join('\n').trim();
     if (!rest) return null;
 
-    // "1. 이름 2. 이름" / 줄바꿈 혼용 모두 처리. 닉에 숫자가 섞여 있어도
-    // 구분자는 '숫자 + . 또는 )' 형태라 안전하다.
-    var names = rest.split(/(?:^|\s)\d{1,3}[.)]\s*/).map(function(s){ return s.trim(); })
-                    .filter(function(s){ return s; });
-    if (names.length < 2) {
-      names = rest.split(/[\n,·]+/).map(function(s){ return s.trim(); })
-                  .filter(function(s){ return s; });
-    }
-    if (names.length < 2) return null;
-    return { title: title, names: names };
+    // 1) 번호 매김: "1. 이름 2) 이름". 구분자가 '숫자 + . 또는 )' 라
+    //    닉에 숫자가 섞여 있어도 쪼개지지 않는다.
+    var names = rest.split(/(?:^|\s)\d{1,3}[.)]\s*/);
+    // 2) 번호가 없으면 줄바꿈·쉼표·가운뎃점, 그래도 하나뿐이면 공백으로.
+    if (names.filter(Boolean).length < 2) names = rest.split(/[\n,、·]+/);
+    if (names.filter(Boolean).length < 2) names = rest.split(/\s+/);
+
+    var seen = {}, out = [];
+    names.forEach(function(s){
+      s = s.trim().replace(/^[-–—*]\s*/, '');          // 불릿 기호 제거
+      if (!s || seen[s]) return;
+      seen[s] = 1; out.push(s);
+    });
+    return out.length ? out : null;
   }
 
   function renderSide(memos){
     var host = document.getElementById('memoSide');
-    var groups = [];
+    var names = [], sources = [], seen = {};
     (memos || []).forEach(function(m){
-      var g = parseListMemo(m.body);
-      if (g) { g.author = m.author; g.at = m.edited_at || m.id; groups.push(g); }
-    });
-    groups.sort(function(a,b){
-      var ia = LIST_PRIORITY.indexOf(a.title), ib = LIST_PRIORITY.indexOf(b.title);
-      if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-      return 0;
+      var got = parseWaitlist(m.body);
+      if (!got) return;
+      sources.push(m.author);
+      got.forEach(function(n){ if (!seen[n]) { seen[n] = 1; names.push(n); } });
     });
 
-    if (!groups.length){
+    if (!sources.length){
       host.innerHTML = '<div class="side-card">'
-        + '<div class="side-head"><span class="side-title">목록</span></div>'
-        + '<div class="side-empty">첫 줄에 <b>대기자</b> 같은 제목을 쓰고 아래에 '
-        + '<b>1. 닉네임 2. 닉네임</b> 형식으로 적으면 여기에 자동으로 모입니다.</div></div>';
+        + '<div class="side-head"><span class="side-title">대기자</span></div>'
+        + '<div class="side-empty">메모 첫 줄에 <b>대기자</b> 라고 쓰고 그 아래에 닉네임을 적으면 '
+        + '여기에 자동으로 모입니다. 번호·줄바꿈·쉼표 어느 쪽으로 적어도 됩니다.</div></div>';
       return;
     }
-    host.innerHTML = groups.map(function(g){
-      return '<div class="side-card">'
-        + '<div class="side-head"><span class="side-title">'+esc(g.title)+'</span>'
-        +   '<span class="side-count">'+g.names.length+'명</span>'
-        +   '<span class="side-src">'+esc(g.author)+'</span></div>'
-        + '<div class="side-names">'
-        + g.names.map(function(nm, i){
-            // 길드원이면 기록으로 바로 갈 수 있게. 대기자는 아직 길드원이 아니라 링크가 없다.
-            var inGuild = MEMBERS.indexOf(nm) >= 0;
-            var cell = inGuild
-              ? '<a class="side-nick" href="/static/member.html?name='+encodeURIComponent(nm)+'" target="_blank" rel="noopener">'+esc(nm)+'</a>'
-              : '<span class="side-nick">'+esc(nm)+'</span>';
-            return '<div class="side-name"><span class="side-no">'+(i+1)+'</span>'+cell+'</div>';
-          }).join('')
-        + '</div></div>';
-    }).join('');
+    host.innerHTML = '<div class="side-card">'
+      + '<div class="side-head"><span class="side-title">대기자</span>'
+      +   '<span class="side-count">'+names.length+'명</span>'
+      +   '<span class="side-src">'+esc(sources[0])+(sources.length>1 ? ' 외' : '')+'</span></div>'
+      + '<div class="side-names">'
+      + names.map(function(nm, i){
+          // 이미 길드원이면 기록으로 바로 갈 수 있게 해 둔다.
+          var cell = MEMBERS.indexOf(nm) >= 0
+            ? '<a class="side-nick" href="/static/member.html?name='+encodeURIComponent(nm)+'" target="_blank" rel="noopener">'+esc(nm)+'</a>'
+            : '<span class="side-nick">'+esc(nm)+'</span>';
+          return '<div class="side-name"><span class="side-no">'+(i+1)+'</span>'+cell+'</div>';
+        }).join('')
+      + '</div></div>';
   }
 
   // 이력: 누가 언제 어떤 내용으로 바꿨는지. 오래된 순으로 쌓아 보여준다.
