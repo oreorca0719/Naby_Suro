@@ -1449,10 +1449,10 @@ function showFineConfirmModal(name, rank, fineCount, pendingCount, week) {
   const processCount = Math.max(parseInt(pendingCount) || 0, 1);
   const newCount = currentCount + processCount;
 
-  // 누진 산식 합산: amount(N회차) = 10 + (N - 1)
+  // 누진 산식 합산: amount(N회차) = 10 × N
   let totalAmount = 0;
   for (let fc = currentCount + 1; fc <= newCount; fc++) {
-    totalAmount += 10 + (fc - 1);
+    totalAmount += 10 * fc;
   }
 
   const batchLine = processCount > 1
@@ -1536,7 +1536,7 @@ function showFineUndoModal(name, fineCount, amount, week, isPreExisting = false)
   currentFineData = { name, fineCount, amount, week };
   
   if (isPreExisting) {
-    const currentAmount = 10 + (fineCount - 1);
+    const currentAmount = 10 * fineCount;
     document.getElementById('fineUndoText').innerHTML = `
       <strong>${name}</strong> 길드원의 벌금을 취소하시겠습니까?<br><br>
       현재 부과 벌금: 솔 에르다 조각 <strong>${fmt(currentAmount)}</strong>개<br>

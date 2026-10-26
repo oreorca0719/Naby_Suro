@@ -983,8 +983,8 @@ def record_fine_payment(week: str, name: str, _admin: str = Depends(require_edit
     process_count = max(len(pending_weeks), 1)
     new_fine_count = cur_fine_count + process_count
 
-    # 누진 산식: amount(N회차) = 10 + (N - 1)
-    total_amount = sum(10 + (fc - 1) for fc in range(cur_fine_count + 1, new_fine_count + 1))
+    # 누진 산식: amount(N회차) = 10 × N (회차당 10개씩 증가)
+    total_amount = sum(10 * fc for fc in range(cur_fine_count + 1, new_fine_count + 1))
 
     # 취소 대비: 처리한 pending_weeks / 처리 건수를 백업 필드로 저장 후 pending_weeks 제거
     # processed_by/at/action: 어느 관리자가 언제 어떤 작업을 했는지 감사 기록
