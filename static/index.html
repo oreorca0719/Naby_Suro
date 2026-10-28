@@ -1649,7 +1649,7 @@ function renderDeltaList(rows, kind) {
         <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}${r.basis_week_display ? '<span class="lb-rejoin">복귀 유저</span>' : ''}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
-      <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">${r.basis_score ? `복귀 전 평균 ${fmt(r.basis_score)} 대비` : `평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}`}</span></div>
+      <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}</span></div>
     </div>
     `;
   }).join('') + `</div>`;
