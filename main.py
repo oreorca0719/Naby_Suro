@@ -250,6 +250,41 @@ MIN_TRAIL = 2            # 판정에 필요한 최소 직전 이력 주차 (미�
 MIN_PARTICIPATION = 3    # 분석 가능한 최소 참여 주차
 
 
+def pick_delta_basis(
+    weekly: dict[str, int],
+    prev_week: str | None,
+    latest: str,
+    sorted_weeks: list[str],
+) -> tuple[int, str | None, int]:
+    """상승/하락폭의 비교 기준을 고른다. 반환 (기준 점수, 기준 주차, 공백 주 수).
+
+    보통은 직전 주차와 비교한다. 다만 직전 주차에 **레코드 자체가 없는**
+    복귀 회원은 마지막으로 참여한 주차를 '전주'로 삼는다.
+
+    0점으로 기록된 미참 회원은 여기 해당하지 않는다. 그 주에 길드에 있었고
+    0 이 실제 기록이므로, 0 과 비교하면 복귀가 아니라 '이번 주에 뛰었다'가
+    통째로 상승폭이 되어 순위를 왜곡한다. 기존대로 순위에서 제외한다.
+    """
+    if not prev_week:
+        return 0, None, 0
+
+    prev_score = int(weekly.get(prev_week, 0))
+    if prev_score > 0:
+        return prev_score, prev_week, 0
+    if prev_week in weekly:
+        return 0, None, 0                      # 미참(0점) → 순위 제외
+
+    past = sorted(w for w, s in weekly.items() if s > 0 and w < latest)
+    if not past:
+        return 0, None, 0                      # 과거 참여 기록이 아예 없음
+    basis = past[-1]
+
+    gap = 0
+    if basis in sorted_weeks and latest in sorted_weeks:
+        gap = sorted_weeks.index(latest) - sorted_weeks.index(basis) - 1
+    return int(weekly[basis]), basis, gap
+
+
 def detect_outliers_trailing(
     participating: list[tuple[str, int]],
 ) -> tuple[set[str], dict[str, float]]:
@@ -1484,15 +1519,23 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
         # 계속 상위에 남는 문제가 있었다. (예: 이번 주 +4,407 인데 평균 대비로는
         # +49,560 이라 1위) avg_delta 는 참고용으로 함께 내려준다.
         if curr > 0:
-            prev_score = score_by_name_week.get(name, {}).get(prev_week, 0) if prev_week else 0
+            prev_score, basis_week, gap_weeks = pick_delta_basis(
+                weekly, prev_week, latest, sorted_weeks
+            )
+            rejoined = bool(basis_week) and basis_week != prev_week
             delta_list.append({
                 "name":         name,
                 "job":          m.get("job", ""),
                 "curr_score":   curr,
                 "prev_score":   int(prev_score),
-                # 전주에 미참(0점)이면 상승폭을 계산할 수 없다 → 순위에서 제외
+                # 비교 대상이 없으면(미참 등) 상승폭을 계산할 수 없다 → 순위에서 제외
                 "delta":        int(curr - prev_score) if prev_score > 0 else None,
                 "avg_delta":    int(curr - clean_mean),
+                # 복귀 회원은 전주가 아니라 '마지막으로 뛴 주차' 와 비교한 값이다.
+                # 화면에서 그 사실을 밝힐 수 있도록 기준 주차를 같이 내려준다.
+                "basis_week":   basis_week if rejoined else None,
+                "basis_week_display": get_week_display(basis_week) if rejoined else None,
+                "gap_weeks":    gap_weeks if rejoined else 0,
             })
 
     # delta 가 None(전주 미참)인 회원은 상승/하락 순위에서 제외

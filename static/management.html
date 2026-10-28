@@ -1061,6 +1061,15 @@
     }
     .lb-value.fine { color: var(--danger); }
     .lb-value.rise { color: var(--up); }
+
+    /* 복귀 회원: 전주가 아니라 마지막으로 뛴 주차와 비교한 값임을 밝힌다. */
+    .lb-rejoin {
+      display: inline-block; margin-left: 6px; padding: 1px 6px;
+      border-radius: 999px; font-size: 0.62rem; font-weight: 700;
+      background: rgba(49,130,246,0.14); color: var(--accent);
+      vertical-align: middle; white-space: nowrap;
+    }
+
     .lb-value.drop { color: var(--danger); }
     /* 리더보드 행 — 클릭하면 히스토리로 이동 */
     .lb-row[data-name] { cursor: pointer; }
@@ -2287,10 +2296,10 @@ function renderDeltaList(rows, kind) {
     <div class="lb-row rank-${i + 1}" data-name="${escapeAttr(r.name)}">
       <div class="lb-medal">${MEDALS[i] ?? (i + 1)}</div>
       <div class="lb-meta">
-        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}</div>
+        <div class="lb-name">${escapeAttr(r.name)}${weaponMark(r.weapon_tier, true)}${r.basis_week_display ? `<span class="lb-rejoin">복귀${r.gap_weeks ? ' · ' + r.gap_weeks + '주 공백' : ''}</span>` : ''}</div>
         <div class="lb-job">${escapeAttr(normalizeJob(r.job))}</div>
       </div>
-      <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}</span></div>
+      <div class="lb-value ${cls}">${sign}${fmt(r.delta)}<span class="lb-value-sub">${r.basis_week_display ? escapeAttr(r.basis_week_display) + ' 대비' : `평균 대비 ${r.avg_delta > 0 ? '+' : ''}${fmt(r.avg_delta ?? 0)}`}</span></div>
     </div>
     `;
   }).join('') + `</div>`;
