@@ -255,34 +255,37 @@ def pick_delta_basis(
     prev_week: str | None,
     latest: str,
     sorted_weeks: list[str],
-) -> tuple[int, str | None, int]:
-    """상승/하락폭의 비교 기준을 고른다. 반환 (기준 점수, 기준 주차, 공백 주 수).
+) -> tuple[str, str | None, int]:
+    """상승/하락폭을 무엇과 비교할지 정한다. 반환 (방식, 기준 주차, 공백 주 수).
 
-    보통은 직전 주차와 비교한다. 다만 직전 주차에 **레코드 자체가 없는**
-    복귀 회원은 마지막으로 참여한 주차를 '전주'로 삼는다.
+    - "prev"   : 직전 주차 점수와 비교 (보통의 경우)
+    - "rejoin" : 직전 주차에 **레코드 자체가 없는** 복귀 회원.
+                 마지막으로 참여한 주차까지의 **평균**과 비교한다.
+                 한 주 점수만 집으면 그 주가 유난히 높거나 낮았을 때
+                 복귀폭이 통째로 왜곡되므로, 복귀 전 실력을 평균으로 본다.
+                 기준 주차는 '마지막으로 뛴 주차'(평균 구간의 끝)다.
+    - "none"   : 비교 불가 → 순위에서 제외.
 
-    0점으로 기록된 미참 회원은 여기 해당하지 않는다. 그 주에 길드에 있었고
-    0 이 실제 기록이므로, 0 과 비교하면 복귀가 아니라 '이번 주에 뛰었다'가
-    통째로 상승폭이 되어 순위를 왜곡한다. 기존대로 순위에서 제외한다.
+    0점으로 기록된 미참 회원은 복귀가 아니다. 그 주에 길드에 있었고 0 이
+    실제 기록이므로, 0 과 비교하면 이번 주 점수가 통째로 상승폭이 된다.
     """
     if not prev_week:
-        return 0, None, 0
+        return "none", None, 0
 
-    prev_score = int(weekly.get(prev_week, 0))
-    if prev_score > 0:
-        return prev_score, prev_week, 0
+    if int(weekly.get(prev_week, 0)) > 0:
+        return "prev", prev_week, 0
     if prev_week in weekly:
-        return 0, None, 0                      # 미참(0점) → 순위 제외
+        return "none", None, 0                 # 미참(0점) → 순위 제외
 
     past = sorted(w for w, s in weekly.items() if s > 0 and w < latest)
     if not past:
-        return 0, None, 0                      # 과거 참여 기록이 아예 없음
+        return "none", None, 0                 # 과거 참여 기록이 아예 없음
     basis = past[-1]
 
     gap = 0
     if basis in sorted_weeks and latest in sorted_weeks:
         gap = sorted_weeks.index(latest) - sorted_weeks.index(basis) - 1
-    return int(weekly[basis]), basis, gap
+    return "rejoin", basis, gap
 
 
 def detect_outliers_trailing(
@@ -1519,22 +1522,35 @@ def get_leaderboards(naby_admin: str = Cookie(None)):
         # 계속 상위에 남는 문제가 있었다. (예: 이번 주 +4,407 인데 평균 대비로는
         # +49,560 이라 1위) avg_delta 는 참고용으로 함께 내려준다.
         if curr > 0:
-            prev_score, basis_week, gap_weeks = pick_delta_basis(
+            mode, basis_week, gap_weeks = pick_delta_basis(
                 weekly, prev_week, latest, sorted_weeks
             )
-            rejoined = bool(basis_week) and basis_week != prev_week
+            rejoined = mode == "rejoin"
+            basis_score, basis_n = 0, 0
+            if mode == "prev":
+                basis_score = int(weekly.get(basis_week, 0))
+            elif rejoined:
+                # 복귀 전 실력 = 마지막으로 뛴 주차까지의 평균(이상치 제외).
+                past = [(w, s) for w, s in participating if w < latest]
+                ow, _ = detect_outliers_trailing(past)
+                clean_past = [s for w, s in past if w not in ow] or [s for _, s in past]
+                basis_score = round(sum(clean_past) / len(clean_past))
+                basis_n = len(clean_past)
+
             delta_list.append({
                 "name":         name,
                 "job":          m.get("job", ""),
                 "curr_score":   curr,
-                "prev_score":   int(prev_score),
+                "prev_score":   int(basis_score),
                 # 비교 대상이 없으면(미참 등) 상승폭을 계산할 수 없다 → 순위에서 제외
-                "delta":        int(curr - prev_score) if prev_score > 0 else None,
+                "delta":        int(curr - basis_score) if basis_score > 0 else None,
                 "avg_delta":    int(curr - clean_mean),
-                # 복귀 회원은 전주가 아니라 '마지막으로 뛴 주차' 와 비교한 값이다.
-                # 화면에서 그 사실을 밝힐 수 있도록 기준 주차를 같이 내려준다.
+                # 복귀 회원은 전주가 아니라 '복귀 전 평균' 과 비교한 값이다.
+                # 화면에서 그 사실을 밝힐 수 있도록 기준을 같이 내려준다.
                 "basis_week":   basis_week if rejoined else None,
                 "basis_week_display": get_week_display(basis_week) if rejoined else None,
+                "basis_score":  int(basis_score) if rejoined else None,
+                "basis_weeks":  basis_n if rejoined else 0,
                 "gap_weeks":    gap_weeks if rejoined else 0,
             })
 
