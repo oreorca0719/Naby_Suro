@@ -391,7 +391,8 @@ def get_week(week: str):
 
 import json as _json
 
-# 오로라 주간 지하수로 길드 랭킹 (chuchu.gg 프록시). 주간 갱신이라 5분 캐시.
+# 오로라 주간 지하수로 길드 랭킹. 점수는 meaegi, 인원수는 chuchu.gg.
+# 주간 갱신이라 5분 캐시.
 _SURO_RANK_CACHE = {"ts": 0.0, "data": None}
 
 
@@ -423,45 +424,111 @@ def _parse_suro_world(html: str, world: str):
     return _json.loads(frag)
 
 
-@app.get("/api/suro-ranking")
-def get_suro_ranking(refresh: bool = False):
-    """오로라 서버 주간 지하수로 길드 랭킹 상위 10 (chuchu.gg 프록시)."""
-    now = time.time()
-    floor = 15 if refresh else 300
-    if _SURO_RANK_CACHE["data"] and now - _SURO_RANK_CACHE["ts"] < floor:
-        return _SURO_RANK_CACHE["data"]
+def _fetch_chuchu_suro(world: str = "오로라") -> list[dict]:
+    """chuchu.gg 의 해당 월드 길드 수로 랭킹 원본 배열. 실패하면 빈 배열."""
     try:
         resp = httpx.get(
             "https://chuchu.gg/ranking/suro",
-            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                                   "AppleWebKit/537.36 (KHTML, like Gecko)"},
+            headers={"User-Agent": _UA},
             timeout=15,
             follow_redirects=True,
         )
         resp.raise_for_status()
-        rk = _parse_suro_world(resp.text, "오로라")
-        if not rk:
-            raise ValueError("parse failed")
+        return _parse_suro_world(resp.text, world) or []
     except Exception:
+        return []
+
+
+def _fetch_meaegi_suro(date: str, world: str = "오로라") -> list[dict]:
+    """meaegi 의 해당 날짜 길드 수로 랭킹. 실패하면 빈 배열."""
+    try:
+        r = httpx.get(
+            _MEAEGI_URL,
+            params={"type": "guild", "date": date, "page": 1, "size": 50,
+                    "worldName": world, "rankingType": "지하 수로"},
+            headers={"User-Agent": _UA, "Accept": "application/json"},
+            timeout=15,
+        )
+        r.raise_for_status()
+        return r.json().get("ranking") or []
+    except Exception:
+        return []
+
+
+@app.get("/api/suro-ranking")
+def get_suro_ranking(refresh: bool = False):
+    """오로라 서버 주간 지하수로 길드 랭킹 상위 10.
+
+    점수·순위는 meaegi 에서, 인원수는 chuchu.gg 에서 받아 이름으로 합친다.
+    chuchu 한 곳만 쓰면 그 사이트가 주차를 올릴 때까지 표가 멈춘다. 같은 화면의
+    타임라인은 meaegi 를 보기 때문에 둘이 어긋나 보였다(실측 10/29: meaegi 는
+    10-29 보유, chuchu 는 10-22 까지). 인원수는 meaegi 응답에 없는 값이라
+    chuchu 가 올라오는 대로 따라간다 — 천천히 변하는 값이라 직전 주차 것을 써도
+    된다. 비어 있으면 화면에서 인원수만 빠진다.
+    """
+    now = time.time()
+    floor = 15 if refresh else 300
+    if _SURO_RANK_CACHE["data"] and now - _SURO_RANK_CACHE["ts"] < floor:
+        return _SURO_RANK_CACHE["data"]
+
+    # 인원수 — 길드 이름으로 붙인다. chuchu 쪽 기준 날짜도 같이 들고 간다.
+    chuchu = _fetch_chuchu_suro()
+    counts = {
+        g.get("guild_name"): int((g.get("basic") or {}).get("guild_user_count") or 0)
+        for g in chuchu if g.get("guild_name")
+    }
+    members_date = chuchu[0].get("date") if chuchu else None
+
+    # 점수 — 기준 날짜는 '최신 주차(정산 수요일) + 1일'. 타임라인 마지막 점과 같다.
+    # 그 날짜가 아직 없으면 한 주씩 거슬러 찾는다. 하루씩 빼면 주 중간의
+    # 미완결 집계를 집어오게 되므로 반드시 7일 단위로 물러난다.
+    try:
+        d0 = datetime.strptime(get_latest_week(), "%Y%m%d") + timedelta(days=1)
+    except Exception:
+        d0 = datetime.now()
+    rk, date = [], None
+    for back in range(4):
+        d = (d0 - timedelta(days=7 * back)).strftime("%Y-%m-%d")
+        rk = _fetch_meaegi_suro(d)
+        if rk:
+            date = d
+            break
+
+    if rk:
+        rows = [
+            {
+                "rank":    g.get("ranking"),
+                "name":    g.get("guild_name", ""),
+                "point":   int(g.get("guild_point") or 0),
+                "members": counts.get(g.get("guild_name")) or 0,
+                "master":  g.get("guild_master_name", ""),
+            }
+            for g in rk[:10]
+        ]
+    elif chuchu:                 # meaegi 가 죽었을 때는 chuchu 단독으로 버틴다
+        date = members_date
+        rows = [
+            {
+                "rank":    g.get("ranking"),
+                "name":    g.get("guild_name", ""),
+                "point":   int(g.get("guild_point") or 0),
+                "members": int((g.get("basic") or {}).get("guild_user_count") or 0),
+                "master":  g.get("guild_master_name", ""),
+            }
+            for g in chuchu[:10]
+        ]
+    else:
         if _SURO_RANK_CACHE["data"]:
             return {**_SURO_RANK_CACHE["data"], "stale": True}
         raise HTTPException(status_code=502, detail="수로 랭킹을 불러오지 못했습니다.")
-    top = rk[:10]
+
     out = {
-        "date": top[0].get("date") if top else None,
-        "world": "오로라",
-        "our_guild": "나비",
-        "ranking": [
-            {
-                "rank": g.get("ranking"),
-                "name": g.get("guild_name", ""),
-                "point": int(g.get("guild_point") or 0),
-                "members": int((g.get("basic") or {}).get("guild_user_count") or 0),
-                "master": g.get("guild_master_name", ""),
-            }
-            for g in top
-        ],
-        "fetched_at": int(now),
+        "date":         date,
+        "members_date": members_date,
+        "world":        "오로라",
+        "our_guild":    "나비",
+        "ranking":      rows,
+        "fetched_at":   int(now),
     }
     _SURO_RANK_CACHE.update(ts=now, data=out)
     return out

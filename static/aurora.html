@@ -855,7 +855,9 @@
       var res=await fetch('/api/suro-ranking'+(refresh?'?refresh=true':''));
       if(!res.ok) throw new Error('http');
       var d=await res.json();
-      if(meta) meta.textContent=(d.date?d.date+' 기준':'')+(d.stale?' · 캐시':'');
+      // 점수는 meaegi, 인원수는 chuchu 라 기준 날짜가 다를 수 있다. 다르면 밝힌다.
+      var mdate=(d.members_date&&d.members_date!==d.date)?' · 인원수 '+d.members_date+' 기준':'';
+      if(meta) meta.textContent=(d.date?d.date+' 기준':'')+mdate+(d.stale?' · 캐시':'');
       if(upd) upd.textContent=(d.date?d.date+' 기준':'');
       wrap.innerHTML=(d.ranking||[]).map(function(g){
         var ours=g.name===d.our_guild;
@@ -865,7 +867,7 @@
         return '<div class="lb-row rank-'+g.rank+'"'+rowStyle+'>'+
           '<div class="lb-medal">'+medal+'</div>'+
           '<div class="lb-meta"><div class="lb-name">'+escapeAttr(g.name)+tag+'</div>'+
-          '<div class="lb-job">길드마스터 '+escapeAttr(g.master)+' · '+g.members+'명</div></div>'+
+          '<div class="lb-job">길드마스터 '+escapeAttr(g.master)+(g.members?' · '+g.members+'명':'')+'</div></div>'+
           '<div class="lb-value">'+g.point.toLocaleString()+'점</div></div>';
       }).join('');
     }catch(e){
