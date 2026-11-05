@@ -3,10 +3,16 @@
 """나비 길드 지하수로 XLSX 생성기 + 교차검증기.
 
 사용법:
-  python generate_xlsx.py --data data.json --out out.xlsx [--last 지난주.xlsx]
+  python generate_xlsx.py --data data.json --out out.xlsx [--week YYYYMMDD] [--last 지난주.xlsx]
 
 data.json 형식:
-  {"rows": [["닉네임","직업", 점수], ...]}   # 순위는 정렬 후 자동 부여
+  {"rows": [["닉네임","직업", 점수, "직위"], ...]}   # 순위는 정렬 후 자동 부여
+  직위(4번째 값)는 0점 규칙용. 0점이 아닌 행은 생략해도 된다.
+
+0점 규칙 (--week 가 ZERO_RULE_FROM 이상일 때):
+  0점 + 직위 '나방'  -> 미참으로 포함
+  0점 + 그 밖 직위   -> 제외 (XLSX 에 넣지 않음)
+  0점 + 직위 없음    -> 중단 (직위를 확인해 넣을 것)
 
 동작:
   - 지하수로(점수) 내림차순 정렬 → 순위/닉네임/직업/지하수로 4컬럼 XLSX
@@ -21,6 +27,24 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 FONT = "맑은 고딕"
+ZERO_RULE_FROM = "20261111"
+MISS_RANK = "나방"
+
+
+def apply_zero_rule(rows, week):
+    """0점 규칙 적용. (남길 행[닉,직업,점수], 제외 행[(닉,직위)], 직위 누락[닉])"""
+    keep, excluded, missing = [], [], []
+    active = bool(week) and week >= ZERO_RULE_FROM
+    for r in rows:
+        nick, job, score = r[0], r[1], int(r[2])
+        rank = (r[3] if len(r) > 3 else "") or ""
+        if active and score == 0:
+            if not rank.strip():
+                missing.append(nick); continue
+            if rank.strip() != MISS_RANK:
+                excluded.append((nick, rank.strip())); continue
+        keep.append([nick, job, score])
+    return keep, excluded, missing
 
 
 def build(rows, out):
@@ -74,10 +98,15 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--last", default=None, help="직전 주차 xlsx (교차검증용)")
+    ap.add_argument("--week", default=None, help="주차 키 YYYYMMDD (0점 규칙 적용 판단)")
     a = ap.parse_args()
 
     data = json.load(open(a.data, encoding="utf-8"))
-    rows = data["rows"]
+    rows, excluded, missing = apply_zero_rule(data["rows"], a.week)
+    if missing:
+        print("⛔ 0점인데 직위가 없는 행:", missing)
+        print("   직위를 확인해 4번째 값으로 넣은 뒤 다시 실행하세요. (파일 생성 안 함)")
+        sys.exit(1)
 
     names = [r[0] for r in rows]
     dup = [k for k, v in Counter(names).items() if v > 1]
@@ -92,6 +121,9 @@ def main():
     print("중복 닉:", dup if dup else "없음")
     if bad_job:
         print("⚠️  '워드브레이커' 오표기 잔존 → '윈드브레이커'로 고칠 것")
+    if excluded:
+        print(f"0점 제외({len(excluded)}명, 직위 {MISS_RANK} 아님):",
+              ", ".join(f"{n}({k})" for n, k in excluded))
     print("저장:", a.out)
 
     if a.last:

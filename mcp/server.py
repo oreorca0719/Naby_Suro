@@ -58,20 +58,26 @@ def resolve_rows(
     raw_rows: list[dict],
     roster: list[str],
     prev_week_rows: list[dict] | None = None,
+    week: str | None = None,
 ) -> dict:
     """OCR 원본 행을 규칙에 따라 확정 데이터로 변환한다.
 
     적용 규칙: 괄호 기반 본캐 환산, 철자/직업 정규화, 개명 반영,
-    부캐 접속 시 직업 백필, 중복 병합.
+    부캐 접속 시 직업 백필, 중복 병합, 0점 규칙.
     확신할 수 없는 건은 고치지 않고 ambiguous 로 반환한다.
 
+    0점 규칙(20261111 주차부터): 0점 행은 직위가 '나방'인 회원만 미참으로
+    적재하고, 그 밖의 직위(신입 등) 0점 행은 적재하지 않고 excluded 로 보고한다.
+
     Args:
-        raw_rows: [{"name": "A(B)", "job": "비숍", "score": 43030}, ...]
+        raw_rows: [{"name": "A(B)", "job": "비숍", "score": 43030, "rank": "나비"}, ...]
                   name 은 괄호를 포함한 화면 표기 그대로 넣을 것.
+                  rank 는 화면의 '직위' 칸 — 0점 행에는 반드시 넣을 것.
         roster:   fetch_roster 로 받은 members 배열
         prev_week_rows: get_previous_week 의 rows (직업 백필용)
+        week:     이번 주차 키 YYYYMMDD (0점 규칙 적용 여부 판단)
     """
-    return resolve_tool.resolve(raw_rows, roster, prev_week_rows)
+    return resolve_tool.resolve(raw_rows, roster, prev_week_rows, week)
 
 
 @mcp.tool()

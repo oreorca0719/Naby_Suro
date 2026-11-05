@@ -9,6 +9,11 @@
     A(A)    (안 == 밖)   -> 본캐 A, 그대로 (본캐 접속 중)
     A(B)    (안 != 밖)   -> 본캐 B, 직업은 B의 것으로 백필
                             (행에 보이는 직업은 접속 중인 부캐 것이므로)
+
+0점 규칙 (ZERO_SCORE_RULE_FROM_WEEK 주차부터):
+    0점 + 직위 '나방'   -> 미참으로 적재
+    0점 + 그 밖의 직위  -> 적재하지 않음 (excluded 로 따로 보고)
+    0점 + 직위 미기재   -> 판단 불가, ambiguous
 """
 from __future__ import annotations
 
@@ -18,7 +23,7 @@ import re
 import unicodedata
 from collections import Counter
 
-from ..config import DATA_DIR
+from ..config import DATA_DIR, ZERO_SCORE_MISS_RANK, ZERO_SCORE_RULE_FROM_WEEK
 
 _BRACKET = re.compile(r"^(?P<outer>[^()]+)\((?P<inner>[^()]*)\)$")
 # 게임이 괄호 안을 잘라낸 형태: A(..), A(…), A( )
@@ -72,25 +77,35 @@ def _split_bracket(raw_name: str) -> tuple[str, str | None, bool]:
     return outer, inner, False
 
 
+def zero_rule_active(week: str | None) -> bool:
+    """이 주차에 '0점은 나방만 미참' 규칙을 적용하는지."""
+    return bool(week) and str(week) >= ZERO_SCORE_RULE_FROM_WEEK
+
+
 def resolve(
     raw_rows: list[dict],
     roster: list[str],
     prev_week_rows: list[dict] | None = None,
+    week: str | None = None,
 ) -> dict:
     """OCR 원본 행들을 확정 데이터로 변환한다.
 
     Args:
         raw_rows: Claude 가 이미지에서 읽은 원본.
-                  [{"name": "A(B)", "job": "비숍", "score": 43030}, ...]
+                  [{"name": "A(B)", "job": "비숍", "score": 43030, "rank": "나비"}, ...]
                   name 은 괄호를 포함한 화면 표기 그대로여야 한다.
+                  rank 는 화면의 '직위' 칸. 0점 규칙 적용 주차에는 0점 행에 필수.
         roster:   NEXON 길드 명단 (철자 정답지, 부캐 그룹 인접 순서)
         prev_week_rows: 직전 주차 확정 데이터 (직업 백필용)
                   [{"name": "...", "job": "...", "score": 123}, ...]
+        week:     이번 주차 키 YYYYMMDD. 0점 규칙 적용 여부 판단에 쓴다.
+                  비우면 기존 규칙(0점 전원 적재)을 따른다.
 
     Returns:
         {
           "resolved":  [{"name","job","score","source_name","note"}, ...],
           "ambiguous": [{"reason","raw","candidates","detail"}, ...],
+          "excluded":  [{"raw","rank","reason"}, ...],   # 0점 규칙으로 적재 제외
           "stats": {...}
         }
     """
@@ -107,6 +122,8 @@ def resolve(
 
     resolved: list[dict] = []
     ambiguous: list[dict] = []
+    excluded: list[dict] = []
+    zero_rule = zero_rule_active(week)
 
     def canon_ingame(name: str) -> str:
         """오독만 교정한 '인게임 현재 닉'. 길드 명단 대조는 이 값으로 한다."""
@@ -143,9 +160,32 @@ def resolve(
             })
             continue
 
+        # 0점 규칙 — 본캐 환산·명단 대조보다 먼저 거른다.
+        #   제외 대상(신입 등)은 명단에 아직 없거나 괄호가 잘려 있어도
+        #   어차피 적재하지 않으므로 확인 요청을 만들 필요가 없다.
+        note = ""
+        if zero_rule and score == 0:
+            rank = _nfc(row.get("rank", ""))
+            if not rank:
+                ambiguous.append({
+                    "reason": "0점 행 직위 미기재",
+                    "raw": row,
+                    "candidates": [],
+                    "detail": (f"0점 행은 직위가 '{ZERO_SCORE_MISS_RANK}' 일 때만 미참으로 "
+                               f"적재합니다. 화면의 직위 칸을 읽어 rank 에 넣어 주세요."),
+                })
+                continue
+            if rank != ZERO_SCORE_MISS_RANK:
+                excluded.append({
+                    "raw": row,
+                    "rank": rank,
+                    "reason": f"0점 · 직위 '{rank}' (미참 반영은 '{ZERO_SCORE_MISS_RANK}'만)",
+                })
+                continue
+            note = f"미참({ZERO_SCORE_MISS_RANK})"
+
         outer, inner, truncated = _split_bracket(raw_name)
         job = job_fix.get(raw_job, raw_job)
-        note = ""
 
         if truncated:
             # A(..) — 괄호 안이 잘림. 명단 인접성으로 후보만 제시하고 확정하지 않는다.
@@ -171,7 +211,7 @@ def resolve(
             ingame = canon_ingame(outer)                   # A(A) 본캐 접속
         else:
             ingame = canon_ingame(inner)                   # A(B) -> 본캐는 B
-            note = f"부캐 접속({outer}) → 본캐 환산"
+            note = (note + " · " if note else "") + f"부캐 접속({outer}) → 본캐 환산"
 
         # 2) 길드 명단 대조 (인게임 닉 기준)
         #    명단에 없으면 오독 가능성이 크다. 명단이 정답지이므로 유사도로 후보를
@@ -251,12 +291,16 @@ def resolve(
     return {
         "resolved": final,
         "ambiguous": ambiguous,
+        "excluded": excluded,
         "stats": {
             "raw_count": len(raw_rows),
             "resolved_count": len(final),
             "ambiguous_count": len(ambiguous),
-            "converted_count": sum(1 for r in final if r["note"]),
+            "converted_count": sum(1 for r in final
+                                   if r["note"] and r["note"] != f"미참({ZERO_SCORE_MISS_RANK})"),
             "zero_score_count": sum(1 for r in final if r["score"] == 0),
             "duplicates_merged": len(resolved) - len(dedup),
+            "zero_rule_applied": zero_rule,
+            "excluded_count": len(excluded),
         },
     }
