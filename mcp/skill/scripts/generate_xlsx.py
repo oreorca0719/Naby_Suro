@@ -27,7 +27,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 FONT = "맑은 고딕"
-ZERO_RULE_FROM = "20261111"
+ZERO_RULE_FROM = "20261104"
 MISS_RANK = "나방"
 
 

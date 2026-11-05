@@ -9,7 +9,7 @@
 - **주간미션** = 참여 횟수(대개 10). 출력엔 안 쓴다.
 - 출력 XLSX엔 **닉네임/직업/지하수로**만 쓰고 순위는 정렬 후 1부터 부여.
 
-## 1-1. 0점 규칙 (2026-11-11 주차부터)
+## 1-1. 0점 규칙 (2026-11-04 주차부터)
 
 | 0점 행의 직위 | 처리 |
 |---|---|
@@ -18,7 +18,7 @@
 | 못 읽음 | 추측 금지 — 확대 재판독 또는 사용자 확인 |
 
 - 0점이 아닌 행은 직위와 상관없이 그대로 반영한다.
-- 기준 주차는 커넥터 `config.py` 의 `ZERO_SCORE_RULE_FROM_WEEK`(기본 `20261111`), 미참 직위는 `ZERO_SCORE_MISS_RANK`(기본 `나방`). 환경변수로 바꿀 수 있다.
+- 기준 주차는 커넥터 `config.py` 의 `ZERO_SCORE_RULE_FROM_WEEK`(기본 `20261104`), 미참 직위는 `ZERO_SCORE_MISS_RANK`(기본 `나방`). 환경변수로 바꿀 수 있다.
 - 커넥터: `resolve_rows` 에 `rank`(직위)와 `week` 를 넘기면 규칙이 자동 적용되고 제외 인원은 `excluded` 로 돌아온다.
 - 독립 스크립트: data.json 행에 직위를 4번째 값으로 넣고 `--week` 를 주면 같은 규칙이 적용된다.
 
@@ -69,9 +69,9 @@ c = c.resize((c.width*5, c.height*5)); c.save('/home/claude/crop.png')
 
 ```bash
 # data.json 형태: {"rows": [["닉","직업",점수,"직위"], ...]}  (순위는 스크립트가 정렬 후 부여)
-# 직위는 0점 규칙용. --week 가 20261111 이상이면 0점·비나방 행을 자동 제외한다.
+# 직위는 0점 규칙용. --week 가 20261104 이상이면 0점·비나방 행을 자동 제외한다.
 python scripts/generate_xlsx.py \
-  --data data.json --week 20261111 \
+  --data data.json --week 20261104 \
   --out /mnt/user-data/outputs/guild_members_20260709_0715.xlsx \
   --last /mnt/user-data/outputs/guild_members_20260702_0708.xlsx
 ```
@@ -97,5 +97,5 @@ python scripts/generate_xlsx.py \
 ## 8. 산출물 관례
 
 - 파일명: `guild_members_시작YYYYMMDD_종료MMDD.xlsx`.
-- 0점 인원: 2026-11-11 주차부터 **직위 나방만 포함**, 그 밖의 0점은 제외하고 요약에 따로 표기(이전 주차는 0점 전원 포함). 합계·TOP3·총원을 요약에 표기.
+- 0점 인원: 2026-11-04 주차부터 **직위 나방만 포함**, 그 밖의 0점은 제외하고 요약에 따로 표기(2026-10-28 이전 주차는 0점 전원 포함). 합계·TOP3·총원을 요약에 표기.
 - 응답 말미에 업로드 명령어(WEEK_KEY=종료일)를 제시.

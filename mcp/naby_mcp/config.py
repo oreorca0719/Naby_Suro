@@ -50,7 +50,7 @@ SCORE_MAX_PLAUSIBLE = int(os.environ.get("SCORE_MAX_PLAUSIBLE", "500000"))
 # 이 주차부터 0점 행은 직위가 ZERO_SCORE_MISS_RANK 인 회원만 미참으로 적재한다.
 # 그 밖의 직위(신입 등) 0점 행은 적재하지 않는다(그 주 기록 자체를 남기지 않음).
 # 이 주차 이전은 기존 규칙(0점 전원 적재)을 그대로 따른다.
-ZERO_SCORE_RULE_FROM_WEEK = os.environ.get("ZERO_SCORE_RULE_FROM_WEEK", "20261111")
+ZERO_SCORE_RULE_FROM_WEEK = os.environ.get("ZERO_SCORE_RULE_FROM_WEEK", "20261104")
 ZERO_SCORE_MISS_RANK = os.environ.get("ZERO_SCORE_MISS_RANK", "나방")
 
 
