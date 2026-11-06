@@ -179,7 +179,7 @@
     /* ── CUTOFF CARDS (관리 페이지 상단) ── */
     .cutoff-row {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr;
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -1264,15 +1264,11 @@
     }
   </style>
 
-  <!-- 커트라인 — 가로 2열 -->
+  <!-- 커트라인 -->
   <div class="cutoff-row">
     <div class="cutoff-card cutoff-card-green">
       <div class="cutoff-label">현재 커트라인</div>
-      <div class="cutoff-value cutoff-value-green" id="cutoffCurrent">—</div>
-    </div>
-    <div class="cutoff-card cutoff-card-yellow">
-      <div class="cutoff-label">반영 예정 커트라인 (08/26)</div>
-      <div class="cutoff-value cutoff-value-yellow">50,000<span>점</span></div>
+      <div class="cutoff-value cutoff-value-green">50,000<span>점</span></div>
     </div>
   </div>
 
@@ -1547,20 +1543,6 @@ function normalizeMembers(members) {
 function renderStats(stats) {
   const updatedEl = document.getElementById('updatedAt');
   if (updatedEl && stats.updated_at) updatedEl.textContent = `업데이트: ${stats.updated_at}`;
-}
-
-// 현재 커트라인 — 참여자(점수>0) 정렬 후 하위 20% 위치 회원 한 명의 점수
-function renderCutoffs(members) {
-  const el = document.getElementById('cutoffCurrent');
-  if (!el) return;
-  const scores = members.map(m => m.score).filter(s => s > 0).sort((a, b) => a - b);
-  const n = scores.length;
-  if (n === 0) {
-    el.innerHTML = '—';
-    return;
-  }
-  const idx = Math.max(0, Math.ceil(n * 0.2) - 1);
-  el.innerHTML = `${fmt(scores[idx])}<span>점</span>`;
 }
 
 function calcAnalysis(members) {
@@ -2312,9 +2294,6 @@ async function init() {
   allMembers = data.all_members;
   filteredMembers = [...allMembers];
   currentWeek = data.stats.week;
-
-  // 커트라인 카드 (현재 / 신규 가입)
-  renderCutoffs(data.all_members);
 
   // 리더보드 4열 한 번에 처리 (응답 공유)
   await fetchAndRenderLeaderboards();
