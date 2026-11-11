@@ -2344,6 +2344,189 @@ def delete_memo(memo_id: int, _admin: str = Depends(require_editor)):
     return {"ok": True}
 
 
+# ── 보스 파티 스케줄러 (공개) ──────────────────────────────────────
+# 로그인 없이 누구나 등록한다. 수정·삭제는 등록 때 정한 비밀번호로만 가능하다.
+# 간부 메모 테이블의 별도 파티션을 쓴다(메모·대기자 목록은 pk 로 query 하므로 섞이지 않음).
+BOSS_PK = "BOSS_PARTY"
+BOSS_PARTY_MAX = 300            # 전체 등록 상한 (공개 쓰기 남용 방지)
+BOSS_PARTY_MAX_MEMBERS = 6
+BOSS_NOTE_MAX = 100
+BOSS_PW_MIN = 4
+BOSS_PW_ITER = 100_000
+
+# 보스 키 → (표시 이름, 난이도 목록). 이미지는 static/bosses/{키}.png
+BOSSES: dict[str, tuple[str, list[str]]] = {
+    "suu":       ("스우",            ["노멀", "하드", "익스트림"]),
+    "damien":    ("데미안",          ["노멀", "하드"]),
+    "slime":     ("가디언 엔젤 슬라임", ["노멀", "카오스"]),
+    "lucid":     ("루시드",          ["이지", "노멀", "하드"]),
+    "will":      ("윌",              ["이지", "노멀", "하드"]),
+    "dusk":      ("더스크",          ["노멀", "카오스"]),
+    "jinhilla":  ("진 힐라",         ["노멀", "하드"]),
+    "darknell":  ("듄켈",            ["노멀", "하드"]),
+    "blackmage": ("검은 마법사",      ["하드", "익스트림"]),
+    "seren":     ("선택받은 세렌",    ["노멀", "하드", "익스트림"]),
+    "kalos":     ("감시자 칼로스",    ["이지", "노멀", "카오스", "익스트림"]),
+    "adversary": ("최초의 대적자",    ["이지", "노멀", "하드", "익스트림"]),
+    "kaling":    ("카링",            ["이지", "노멀", "하드", "익스트림"]),
+    "limbo":     ("림보",            ["노멀", "하드"]),
+    "baldrix":   ("발드릭스",         ["노멀", "하드"]),
+}
+
+# 비밀번호 대입 방지 — 파티별 실패 횟수 (프로세스 메모리, 재시작 시 초기화)
+_BOSS_PW_FAILS: dict[int, list[float]] = defaultdict(list)
+_BOSS_PW_FAIL_LIMIT = 10
+_BOSS_PW_FAIL_WINDOW = 600      # 초
+
+
+def _boss_hash_pw(pw: str, salt: str) -> str:
+    return hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), bytes.fromhex(salt), BOSS_PW_ITER).hex()
+
+
+def _boss_today() -> str:
+    return datetime.now(KST).strftime("%Y-%m-%d")
+
+
+def _boss_validate(payload: dict, require_future: bool = True) -> dict:
+    """입력 검증 후 저장할 필드만 돌려준다."""
+    boss = str(payload.get("boss") or "")
+    if boss not in BOSSES:
+        raise HTTPException(status_code=400, detail="보스를 선택해주세요.")
+    diff = str(payload.get("difficulty") or "")
+    if diff not in BOSSES[boss][1]:
+        raise HTTPException(status_code=400, detail="난이도를 선택해주세요.")
+
+    date = str(payload.get("date") or "")
+    tm = str(payload.get("time") or "")
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+        datetime.strptime(tm, "%H:%M")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="날짜와 시간을 확인해주세요.")
+    if require_future and date < _boss_today():
+        raise HTTPException(status_code=400, detail="지난 날짜로는 등록할 수 없습니다.")
+
+    raw = payload.get("members")
+    members = raw if isinstance(raw, list) else _split_names(str(raw or ""))
+    members = [unicodedata.normalize("NFC", str(n)).strip() for n in members]
+    seen: list[str] = []
+    for n in members:
+        if n and n not in seen:
+            seen.append(n)
+    if not seen:
+        raise HTTPException(status_code=400, detail="파티원을 1명 이상 입력해주세요.")
+    if len(seen) > BOSS_PARTY_MAX_MEMBERS:
+        raise HTTPException(status_code=400, detail=f"파티원은 최대 {BOSS_PARTY_MAX_MEMBERS}명입니다.")
+    if any(len(n) > 20 for n in seen):
+        raise HTTPException(status_code=400, detail="닉네임이 너무 깁니다.")
+
+    note = unicodedata.normalize("NFC", str(payload.get("note") or "")).strip()
+    if len(note) > BOSS_NOTE_MAX:
+        raise HTTPException(status_code=400, detail=f"메모는 {BOSS_NOTE_MAX}자 이내로 입력해주세요.")
+
+    return {"boss": boss, "difficulty": diff, "date": date, "time": tm, "members": seen, "note": note}
+
+
+def _boss_public(item: dict, today: str) -> dict:
+    """비밀번호 해시/솔트는 절대 내보내지 않는다."""
+    boss = item.get("boss", "")
+    return {
+        "id": int(item["created_at"]),
+        "boss": boss,
+        "boss_name": BOSSES.get(boss, (boss, []))[0],
+        "difficulty": item.get("difficulty", ""),
+        "date": item.get("date", ""),
+        "time": item.get("time", ""),
+        "members": list(item.get("members") or []),
+        "note": item.get("note", ""),
+        "active": item.get("date", "") >= today,     # 날짜가 지나면 비활성
+        "updated_at": int(item["updated_at"]) if item.get("updated_at") else None,
+    }
+
+
+def _boss_rows() -> list[dict]:
+    from boto3.dynamodb.conditions import Key
+    resp = memo_table.query(KeyConditionExpression=Key("pk").eq(BOSS_PK), Limit=BOSS_PARTY_MAX)
+    return resp.get("Items", [])
+
+
+def _boss_get(party_id: int) -> dict:
+    item = memo_table.get_item(Key={"pk": BOSS_PK, "created_at": party_id}).get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="파티를 찾을 수 없습니다.")
+    return item
+
+
+def _boss_check_pw(item: dict, pw: str, naby_admin: str | None) -> None:
+    """파티 비밀번호 확인. 편집 권한 있는 관리자 세션은 통과(비밀번호 분실 대비)."""
+    username = _verify_session(naby_admin)
+    if username and username not in VIEWER_NAMES:
+        return
+    pid = int(item["created_at"])
+    now = time.time()
+    fails = [t for t in _BOSS_PW_FAILS[pid] if now - t < _BOSS_PW_FAIL_WINDOW]
+    _BOSS_PW_FAILS[pid] = fails
+    if len(fails) >= _BOSS_PW_FAIL_LIMIT:
+        raise HTTPException(status_code=429, detail="비밀번호를 너무 많이 틀렸습니다. 10분 뒤 다시 시도해주세요.")
+    expected = item.get("pw_hash", "")
+    if not pw or not expected or not hmac.compare_digest(_boss_hash_pw(str(pw), item.get("pw_salt", "")), expected):
+        fails.append(now)
+        raise HTTPException(status_code=403, detail="비밀번호가 일치하지 않습니다.")
+    _BOSS_PW_FAILS.pop(pid, None)
+
+
+@app.get("/api/boss-parties")
+def list_boss_parties():
+    today = _boss_today()
+    rows = [_boss_public(i, today) for i in _boss_rows()]
+    active = sorted((r for r in rows if r["active"]), key=lambda r: (r["date"], r["time"]))
+    inactive = sorted((r for r in rows if not r["active"]), key=lambda r: (r["date"], r["time"]), reverse=True)
+    bosses = [{"key": k, "name": v[0], "difficulties": v[1]} for k, v in BOSSES.items()]
+    return {"today": today, "parties": active + inactive, "bosses": bosses}
+
+
+@app.post("/api/boss-parties")
+def create_boss_party(payload: dict = Body(...)):
+    fields = _boss_validate(payload)
+    pw = str(payload.get("password") or "")
+    if len(pw) < BOSS_PW_MIN:
+        raise HTTPException(status_code=400, detail=f"비밀번호는 {BOSS_PW_MIN}자 이상이어야 합니다.")
+    if len(_boss_rows()) >= BOSS_PARTY_MAX:
+        raise HTTPException(status_code=400, detail="등록 가능한 파티 수를 초과했습니다. 지난 파티를 정리해주세요.")
+    salt = os.urandom(16).hex()
+    now = int(time.time() * 1000)
+    item = {"pk": BOSS_PK, "created_at": now, **fields,
+            "pw_salt": salt, "pw_hash": _boss_hash_pw(pw, salt)}
+    memo_table.put_item(Item=item)
+    return {"party": _boss_public(item, _boss_today())}
+
+
+@app.post("/api/boss-parties/{party_id}/verify")
+def verify_boss_party(party_id: int, payload: dict = Body(...), naby_admin: str = Cookie(None)):
+    """수정 폼을 열기 전에 비밀번호만 먼저 확인한다."""
+    _boss_check_pw(_boss_get(party_id), str(payload.get("password") or ""), naby_admin)
+    return {"ok": True}
+
+
+@app.put("/api/boss-parties/{party_id}")
+def update_boss_party(party_id: int, payload: dict = Body(...), naby_admin: str = Cookie(None)):
+    item = _boss_get(party_id)
+    _boss_check_pw(item, str(payload.get("password") or ""), naby_admin)
+    fields = _boss_validate(payload)
+    item.update(fields)
+    item["updated_at"] = int(time.time() * 1000)
+    memo_table.put_item(Item=item)
+    return {"party": _boss_public(item, _boss_today())}
+
+
+@app.delete("/api/boss-parties/{party_id}")
+def delete_boss_party(party_id: int, payload: dict = Body(default={}), naby_admin: str = Cookie(None)):
+    item = _boss_get(party_id)
+    _boss_check_pw(item, str((payload or {}).get("password") or ""), naby_admin)
+    memo_table.delete_item(Key={"pk": BOSS_PK, "created_at": party_id})
+    return {"ok": True}
+
+
 @app.get("/")
 def root():
     return FileResponse("static/index.html")          # 공개 페이지
@@ -2376,6 +2559,10 @@ def memo_page():
 @app.get("/aurora")
 def aurora_page():
     return FileResponse("static/aurora.html")         # 오로라 서버 길드 수로 Top10 랭킹/타임라인
+
+@app.get("/boss")
+def boss_page():
+    return FileResponse("static/boss.html")           # 보스 파티 스케줄러 (공개)
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

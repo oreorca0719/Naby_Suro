@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>보스 파티 스케줄러 | NabySuro</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" rel="stylesheet" />
+  <style>
+    /* 나비 길드 디자인 시스템 (aurora.html 과 동일 토큰) */
+    :root {
+      --bg: #F7F8FA; --surface: #FFFFFF; --fill: #F2F4F6; --fill-2: #F9FAFB;
+      --line: #E9ECEF; --text: #191F28; --ink-2: #4E5968; --muted: #8B95A1;
+      --accent: #3182F6; --accent-weak: #E8F1FD;
+      --danger: #F04452; --danger-weak: #FDECEE;
+      --up: #00A661; --up-weak: #E4F7EF;
+      --radius: 18px; --radius-sm: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #15171A; --surface: #1B1E22; --fill: #24282E; --fill-2: #212429;
+        --line: #2E333A; --text: #EDEFF2; --ink-2: #B0B8C1; --muted: #7B848F;
+        --accent: #4D93F8; --accent-weak: #1B2C44;
+        --danger: #FF6B75; --danger-weak: #3A2226;
+        --up: #2FCB86; --up-weak: #16342A;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased; min-height: 100vh; letter-spacing: -0.02em;
+    }
+    .wrapper { max-width: 960px; margin: 0 auto; padding: 0 20px 80px; width: 100%; }
+
+    header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 40px 0 28px; }
+    .header-left h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.035em; line-height: 1.3; }
+    .header-left .subtitle { font-size: 0.85rem; color: var(--muted); margin-top: 6px; font-weight: 500; }
+    .header-left .header-owner { font-size: 0.8rem; color: var(--muted); margin-top: 16px; font-weight: 600; }
+    .admin-link-btn {
+      display: inline-flex; align-items: center; font-size: 0.8rem; font-weight: 700; padding: 7px 14px;
+      border-radius: 999px; background: var(--fill); border: 0; color: var(--ink-2); text-decoration: none;
+      transition: background 0.15s; font-family: inherit; cursor: pointer;
+    }
+    .admin-link-btn:hover { background: var(--line); }
+
+    .page-tabs { display: flex; gap: 4px; margin-bottom: 28px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+    .page-tab {
+      padding: 12px 22px; color: var(--muted); text-decoration: none; font-size: 0.92rem; font-weight: 700;
+      letter-spacing: -0.01em; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+    }
+    .page-tab:hover { color: var(--text); }
+    .page-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* 상단 등록 바 */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .topbar-title { font-size: 1.05rem; font-weight: 700; }
+    .topbar-title small { font-size: 0.78rem; color: var(--muted); font-weight: 500; margin-left: 8px; }
+    .btn-primary {
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; padding: 12px 20px; border-radius: var(--radius-sm);
+      border: 0; background: var(--accent); color: #fff; cursor: pointer; letter-spacing: -0.025em;
+    }
+    .btn-primary:hover { filter: brightness(0.96); }
+
+    .section-label { font-size: 0.85rem; font-weight: 700; color: var(--muted); margin: 28px 0 12px; }
+
+    /* 파티 카드 */
+    .party-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .party {
+      background: var(--surface); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 14px;
+      border: 1px solid transparent;
+    }
+    .party.inactive { opacity: 0.5; filter: grayscale(0.9); }
+    .party-head { display: flex; gap: 14px; align-items: center; }
+    .boss-img {
+      width: 72px; height: 72px; flex: none; border-radius: 14px; background: var(--fill);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .boss-img img { max-width: 64px; max-height: 64px; object-fit: contain; }
+    .boss-img img.tiny { width: 40px; height: 40px; image-rendering: pixelated; }
+    .boss-name { font-size: 1.08rem; font-weight: 800; letter-spacing: -0.03em; }
+    .diff {
+      display: inline-block; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; margin-top: 5px;
+      background: var(--fill); color: var(--ink-2);
+    }
+    .diff-이지 { background: #E4F7EF; color: #00875A; }
+    .diff-노멀 { background: #E8F1FD; color: #1B64DA; }
+    .diff-하드 { background: #FDECEE; color: #D22030; }
+    .diff-카오스 { background: #2B2B33; color: #F5C451; }
+    .diff-익스트림 { background: #3A1020; color: #FF6B8B; }
+    .when { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+    .when-date { font-size: 0.98rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .when-time { font-size: 0.98rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .when-dday { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+    .status-badge { font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--fill); color: var(--muted); }
+    .status-badge.today { background: var(--danger-weak); color: var(--danger); }
+    .members { display: flex; flex-wrap: wrap; gap: 6px; }
+    .member { font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--fill); color: var(--ink-2); }
+    .note { font-size: 0.82rem; color: var(--ink-2); background: var(--fill-2); border-radius: 10px; padding: 8px 10px; line-height: 1.5; word-break: break-all; }
+    .party-actions { display: flex; gap: 6px; margin-top: auto; }
+    .party-actions button {
+      flex: 1; font-family: inherit; font-size: 0.82rem; font-weight: 700; padding: 9px; border-radius: 10px; border: 0;
+      cursor: pointer; background: var(--fill); color: var(--ink-2);
+    }
+    .party-actions button:hover { background: var(--line); }
+    .party.inactive .party-actions button.reactivate { background: var(--accent); color: #fff; }
+    .party.inactive:hover { opacity: 0.8; }
+
+    .empty { background: var(--surface); border-radius: var(--radius); padding: 40px 20px; text-align: center; color: var(--muted); font-size: 0.9rem; }
+
+    /* 모달 */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+    .modal.show { display: flex; }
+    .modal-content { background: var(--surface); border-radius: 22px; padding: 26px 22px 20px; width: 100%; max-width: 460px; max-height: calc(100vh - 32px); overflow-y: auto; }
+    .modal-header { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.035em; margin-bottom: 16px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; }
+    .field .hint { font-size: 0.72rem; color: var(--muted); font-weight: 500; margin-left: 4px; }
+    .field input, .field select, .field textarea {
+      width: 100%; font-family: inherit; font-size: 0.95rem; padding: 11px 12px; border-radius: 10px;
+      border: 1px solid var(--line); background: var(--fill-2); color: var(--text);
+    }
+    .field textarea { resize: vertical; min-height: 64px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .boss-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .boss-opt {
+      border: 2px solid transparent; background: var(--fill); border-radius: 10px; padding: 6px 2px 4px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: inherit; color: var(--ink-2);
+    }
+    .boss-opt img { width: 40px; height: 40px; object-fit: contain; }
+    .boss-opt img.tiny { width: 28px; height: 28px; margin: 6px; image-rendering: pixelated; }
+    .boss-opt span { font-size: 0.64rem; font-weight: 700; line-height: 1.2; text-align: center; word-break: keep-all; }
+    .boss-opt.sel { border-color: var(--accent); background: var(--accent-weak); color: var(--accent); }
+    .diff-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+    .diff-opt {
+      font-family: inherit; font-size: 0.82rem; font-weight: 700; padding: 7px 14px; border-radius: 999px; border: 2px solid transparent;
+      background: var(--fill); color: var(--ink-2); cursor: pointer;
+    }
+    .diff-opt.sel { border-color: var(--accent); background: var(--accent-weak); color: var(--accent); }
+    .form-error { color: var(--danger); font-size: 0.82rem; font-weight: 600; min-height: 1.2em; margin-bottom: 10px; }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-btn { flex: 1; font-family: inherit; font-size: 0.95rem; font-weight: 700; padding: 13px; border-radius: var(--radius-sm); border: 0; cursor: pointer; }
+    .modal-btn.primary { background: var(--accent); color: #fff; }
+    .modal-btn.secondary { background: var(--fill); color: var(--ink-2); }
+    .modal-btn.danger { background: var(--danger-weak); color: var(--danger); flex: 0 0 auto; padding: 13px 16px; }
+    .modal-btn:disabled { opacity: 0.6; cursor: default; }
+
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    @media (max-width: 560px) {
+      .wrapper { padding: 0 16px 56px; }
+      header { padding: 28px 0 20px; align-items: flex-start; flex-direction: column; }
+      .header-left h1 { font-size: 1.45rem; }
+      .page-tab { padding: 10px 16px; font-size: 0.82rem; }
+      .party-grid { grid-template-columns: 1fr; }
+      .boss-picker { grid-template-columns: repeat(4, 1fr); }
+      .btn-primary { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="header-left">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <h1>NabySuro</h1>
+        <a href="/login" class="admin-link-btn">관리자</a>
+      </div>
+      <div class="subtitle">지하수로 대시보드</div>
+      <div class="header-owner">운영자: NAVYSEAL</div>
+    </div>
+  </header>
+
+  <nav class="page-tabs">
+    <a href="/" class="page-tab">나비</a>
+    <a href="/aurora" class="page-tab">오로라 길드 랭킹</a>
+    <a href="/boss" class="page-tab active">보스 파티</a>
+  </nav>
+
+  <div class="topbar">
+    <div class="topbar-title">보스 파티 스케줄러<small>수정·삭제는 등록할 때 정한 비밀번호로만 가능합니다</small></div>
+    <button class="btn-primary" id="btnNew">+ 스케줄 등록</button>
+  </div>
+
+  <div id="activeLabel" class="section-label">예정된 파티</div>
+  <div id="activeList" class="party-grid"><div class="empty">불러오는 중...</div></div>
+
+  <div id="inactiveWrap" style="display:none;">
+    <div class="section-label">지난 파티 <span style="font-weight:500;">· 다음 일정을 등록하면 다시 활성화됩니다</span></div>
+    <div id="inactiveList" class="party-grid"></div>
+  </div>
+</div>
+
+<!-- 등록/수정 모달 -->
+<div class="modal" id="formModal" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+  <div class="modal-content">
+    <div class="modal-header" id="formTitle">스케줄 등록</div>
+    <div class="field">
+      <label>보스</label>
+      <div class="boss-picker" id="bossPicker"></div>
+    </div>
+    <div class="field">
+      <label>난이도</label>
+      <div class="diff-picker" id="diffPicker"><span style="font-size:0.8rem;color:var(--muted);">보스를 먼저 선택하세요</span></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" /></div>
+      <div class="field"><label for="fTime">시간</label><input type="time" id="fTime" step="600" /></div>
+    </div>
+    <div class="field">
+      <label for="fMembers">파티원 <span class="hint">최대 6명 · 쉼표 또는 줄바꿈으로 구분</span></label>
+      <textarea id="fMembers" rows="3" placeholder="닉네임1, 닉네임2, ..."></textarea>
+    </div>
+    <div class="field">
+      <label for="fNote">메모 <span class="hint">선택 · 100자</span></label>
+      <input type="text" id="fNote" maxlength="100" placeholder="예: 디코 보이스 채널 2번" />
+    </div>
+    <div class="field" id="pwField">
+      <label for="fPw">비밀번호 <span class="hint">수정·삭제할 때 필요 (4자 이상)</span></label>
+      <input type="password" id="fPw" autocomplete="new-password" />
+    </div>
+    <div class="form-error" id="formError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn danger" id="btnDelete" style="display:none;">삭제</button>
+      <button class="modal-btn secondary" id="btnCancel">취소</button>
+      <button class="modal-btn primary" id="btnSave">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 비밀번호 확인 모달 -->
+<div class="modal" id="pwModal" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+  <div class="modal-content" style="max-width:360px;">
+    <div class="modal-header" id="pwTitle">비밀번호 확인</div>
+    <div class="field">
+      <label for="pwInput">이 파티를 등록할 때 정한 비밀번호</label>
+      <input type="password" id="pwInput" autocomplete="current-password" />
+    </div>
+    <div class="form-error" id="pwError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="pwCancel">취소</button>
+      <button class="modal-btn primary" id="pwOk">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TINY_IMG = new Set(['dusk']);   // 원본이 작은 아이콘인 보스
+let BOSSES = [];
+let PARTIES = [];
+let TODAY = '';
+let state = { mode: 'create', id: null, password: '', boss: null, diff: null };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bossImg = (key, cls='') => `<img src="/static/bosses/${esc(key)}.png" alt="" class="${TINY_IMG.has(key) ? 'tiny ' : ''}${cls}" loading="lazy" />`;
+
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method, headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin',
+  });
+  let data = {};
+  try { data = await res.json(); } catch (_) {}
+  if (!res.ok) throw new Error(data.detail || `요청 실패 (${res.status})`);
+  return data;
+}
+
+function dayDiff(dateStr) {
+  const a = new Date(dateStr + 'T00:00:00'), b = new Date(TODAY + 'T00:00:00');
+  return Math.round((a - b) / 86400000);
+}
+function fmtDate(d) {
+  const dt = new Date(d + 'T00:00:00');
+  const wd = '일월화수목금토'[dt.getDay()];
+  return `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${wd})`;
+}
+
+function partyCard(p) {
+  const dd = dayDiff(p.date);
+  let badge = '';
+  if (!p.active) badge = '<span class="status-badge">종료</span>';
+  else if (dd === 0) badge = '<span class="status-badge today">오늘</span>';
+  else badge = `<span class="when-dday">D-${dd}</span>`;
+  return `
+    <div class="party ${p.active ? '' : 'inactive'}">
+      <div class="party-head">
+        <div class="boss-img">${bossImg(p.boss)}</div>
+        <div>
+          <div class="boss-name">${esc(p.boss_name)}</div>
+          <span class="diff diff-${esc(p.difficulty)}">${esc(p.difficulty)}</span>
+        </div>
+      </div>
+      <div class="when">
+        <span class="when-date">${fmtDate(p.date)}</span>
+        <span class="when-time">${esc(p.time)}</span>
+        ${badge}
+      </div>
+      <div class="members">${p.members.map(m => `<span class="member">${esc(m)}</span>`).join('')}</div>
+      ${p.note ? `<div class="note">${esc(p.note)}</div>` : ''}
+      <div class="party-actions">
+        <button data-act="edit" data-id="${p.id}" class="${p.active ? '' : 'reactivate'}">${p.active ? '수정' : '다음 일정 등록'}</button>
+      </div>
+    </div>`;
+}
+
+function render() {
+  const active = PARTIES.filter(p => p.active), inactive = PARTIES.filter(p => !p.active);
+  $('activeList').innerHTML = active.length ? active.map(partyCard).join('')
+    : '<div class="empty">예정된 파티가 없습니다. 상단의 <b>스케줄 등록</b>으로 추가하세요.</div>';
+  $('inactiveWrap').style.display = inactive.length ? '' : 'none';
+  $('inactiveList').innerHTML = inactive.map(partyCard).join('');
+}
+
+async function load() {
+  try {
+    const d = await api('GET', '/api/boss-parties');
+    BOSSES = d.bosses; PARTIES = d.parties; TODAY = d.today;
+    render();
+  } catch (e) {
+    $('activeList').innerHTML = `<div class="empty">불러오지 못했습니다: ${esc(e.message)}</div>`;
+  }
+}
+
+/* ── 폼 ── */
+function renderBossPicker() {
+  $('bossPicker').innerHTML = BOSSES.map(b =>
+    `<button type="button" class="boss-opt ${state.boss === b.key ? 'sel' : ''}" data-boss="${b.key}" title="${esc(b.name)}">
+       ${bossImg(b.key)}<span>${esc(b.name)}</span></button>`).join('');
+}
+function renderDiffPicker() {
+  const b = BOSSES.find(x => x.key === state.boss);
+  if (!b) return;
+  if (!b.difficulties.includes(state.diff)) state.diff = b.difficulties.length === 1 ? b.difficulties[0] : null;
+  $('diffPicker').innerHTML = b.difficulties.map(d =>
+    `<button type="button" class="diff-opt ${state.diff === d ? 'sel' : ''}" data-diff="${d}">${d}</button>`).join('');
+}
+
+function openForm(mode, party) {
+  state = { mode, id: party ? party.id : null, password: state.password, boss: party ? party.boss : null, diff: party ? party.difficulty : null };
+  $('formTitle').textContent = mode === 'create' ? '스케줄 등록' : (party.active ? '스케줄 수정' : '다음 일정 등록');
+  $('btnSave').textContent = mode === 'create' ? '등록' : '저장';
+  $('btnDelete').style.display = mode === 'create' ? 'none' : '';
+  $('pwField').style.display = mode === 'create' ? '' : 'none';
+  $('fDate').min = TODAY;
+  $('fDate').value = party && party.active ? party.date : (mode === 'create' ? TODAY : '');
+  $('fTime').value = party ? party.time : '21:00';
+  $('fMembers').value = party ? party.members.join(', ') : '';
+  $('fNote').value = party ? party.note : '';
+  $('fPw').value = '';
+  $('formError').textContent = '';
+  renderBossPicker();
+  if (state.boss) renderDiffPicker();
+  else $('diffPicker').innerHTML = '<span style="font-size:0.8rem;color:var(--muted);">보스를 먼저 선택하세요</span>';
+  $('formModal').classList.add('show');
+}
+function closeForm() { $('formModal').classList.remove('show'); state.password = ''; }
+
+$('bossPicker').addEventListener('click', e => {
+  const b = e.target.closest('[data-boss]'); if (!b) return;
+  state.boss = b.dataset.boss; renderBossPicker(); renderDiffPicker();
+});
+$('diffPicker').addEventListener('click', e => {
+  const d = e.target.closest('[data-diff]'); if (!d) return;
+  state.diff = d.dataset.diff; renderDiffPicker();
+});
+
+$('btnNew').onclick = () => { state.password = ''; openForm('create'); };
+$('btnCancel').onclick = closeForm;
+
+$('btnSave').onclick = async () => {
+  const body = {
+    boss: state.boss, difficulty: state.diff, date: $('fDate').value, time: $('fTime').value,
+    members: $('fMembers').value, note: $('fNote').value,
+  };
+  if (!body.boss) return ($('formError').textContent = '보스를 선택해주세요.');
+  if (!body.difficulty) return ($('formError').textContent = '난이도를 선택해주세요.');
+  if (state.mode === 'create') {
+    body.password = $('fPw').value;
+    if (body.password.length < 4) return ($('formError').textContent = '비밀번호는 4자 이상이어야 합니다.');
+  } else body.password = state.password;
+  $('btnSave').disabled = true;
+  try {
+    if (state.mode === 'create') await api('POST', '/api/boss-parties', body);
+    else await api('PUT', `/api/boss-parties/${state.id}`, body);
+    closeForm(); await load();
+  } catch (e) { $('formError').textContent = e.message; }
+  finally { $('btnSave').disabled = false; }
+};
+
+$('btnDelete').onclick = async () => {
+  if (!confirm('이 파티 일정을 삭제할까요? 되돌릴 수 없습니다.')) return;
+  try {
+    await api('DELETE', `/api/boss-parties/${state.id}`, { password: state.password });
+    closeForm(); await load();
+  } catch (e) { $('formError').textContent = e.message; }
+};
+
+/* ── 비밀번호 확인 → 수정 폼 ── */
+let pwTarget = null;
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act="edit"]'); if (!b) return;
+  pwTarget = PARTIES.find(p => String(p.id) === b.dataset.id);
+  $('pwInput').value = ''; $('pwError').textContent = '';
+  $('pwModal').classList.add('show'); $('pwInput').focus();
+});
+$('pwCancel').onclick = () => $('pwModal').classList.remove('show');
+async function submitPw() {
+  const pw = $('pwInput').value;
+  $('pwOk').disabled = true;
+  try {
+    await api('POST', `/api/boss-parties/${pwTarget.id}/verify`, { password: pw });
+    $('pwModal').classList.remove('show');
+    state.password = pw;
+    openForm('edit', pwTarget);
+  } catch (e) { $('pwError').textContent = e.message; }
+  finally { $('pwOk').disabled = false; }
+}
+$('pwOk').onclick = submitPw;
+$('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitPw(); });
+
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show')); });
+
+load();
+</script>
+</body>
+</html>
