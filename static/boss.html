@@ -61,6 +61,17 @@
     }
     .btn-primary:hover { filter: brightness(0.96); }
 
+    .search { position: relative; margin-bottom: 4px; }
+    .search input {
+      width: 100%; font-family: inherit; font-size: 0.95rem; padding: 12px 40px 12px 14px; border-radius: var(--radius-sm);
+      border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    }
+    .search-clear {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: var(--fill); color: var(--ink-2);
+      width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 0.9rem; line-height: 1; display: none;
+    }
+    .search-meta { font-size: 0.78rem; color: var(--muted); margin-top: 8px; min-height: 1em; }
+    .member.hit { background: var(--accent-weak); color: var(--accent); font-weight: 800; }
     .section-label { font-size: 0.85rem; font-weight: 700; color: var(--muted); margin: 28px 0 12px; }
 
     /* 파티 카드 */
@@ -190,11 +201,17 @@
     <button class="btn-primary" id="btnNew">+ 스케줄 등록</button>
   </div>
 
+  <div class="search">
+    <input type="text" id="searchInput" enterkeyhint="search" placeholder="닉네임으로 파티 검색" autocomplete="off" aria-label="닉네임으로 파티 검색" />
+    <button type="button" class="search-clear" id="searchClear" aria-label="검색어 지우기">✕</button>
+  </div>
+  <div class="search-meta" id="searchMeta"></div>
+
   <div id="activeLabel" class="section-label">예정된 파티</div>
   <div id="activeList" class="party-grid"><div class="empty">불러오는 중...</div></div>
 
   <div id="inactiveWrap" style="display:none;">
-    <div class="section-label">지난 파티 <span style="font-weight:500;">· 다음 일정을 등록하면 다시 활성화됩니다</span></div>
+    <div class="section-label">지난 파티 <span style="font-weight:500;">· 시작 시간이 지나면 이곳으로 옵니다 · 다음 일정을 등록하면 다시 활성화됩니다</span></div>
     <div id="inactiveList" class="party-grid"></div>
   </div>
 </div>
@@ -269,6 +286,7 @@ const TINY_IMG = new Set(['dusk']);   // 원본이 작은 아이콘인 보스
 let BOSSES = [];
 let PARTIES = [];
 let TODAY = '';
+let QUERY = '';
 let state = { mode: 'create', id: null, password: '', boss: null, diff: null };
 
 const $ = (id) => document.getElementById(id);
@@ -316,7 +334,7 @@ function partyCard(p) {
         <span class="when-time">${esc(p.time)}</span>
         ${badge}
       </div>
-      <div class="members">${p.members.map(m => `<span class="member">${esc(m)}</span>`).join('')}</div>
+      <div class="members">${p.members.map(m => `<span class="member ${QUERY && norm(m).includes(QUERY) ? 'hit' : ''}">${esc(m)}</span>`).join('')}</div>
       ${p.note ? `<div class="note">${esc(p.note)}</div>` : ''}
       <div class="party-actions">
         ${p.active ? `<button class="cal-btn" data-act="cal" data-id="${p.id}">캘린더에 추가</button>` : ''}
@@ -325,10 +343,16 @@ function partyCard(p) {
     </div>`;
 }
 
+const norm = (s) => String(s ?? '').normalize('NFC').toLowerCase().replace(/\s+/g, '');
+
 function render() {
-  const active = PARTIES.filter(p => p.active), inactive = PARTIES.filter(p => !p.active);
+  const list = QUERY ? PARTIES.filter(p => p.members.some(m => norm(m).includes(QUERY))) : PARTIES;
+  const active = list.filter(p => p.active), inactive = list.filter(p => !p.active);
+  $('searchMeta').textContent = QUERY ? `'${$('searchInput').value.trim()}' 검색 결과 ${list.length}건` : '';
+  $('searchClear').style.display = $('searchInput').value ? 'block' : 'none';
   $('activeList').innerHTML = active.length ? active.map(partyCard).join('')
-    : '<div class="empty">예정된 파티가 없습니다. 상단의 <b>스케줄 등록</b>으로 추가하세요.</div>';
+    : (QUERY ? '<div class="empty">이 닉네임이 들어간 예정 파티가 없습니다.</div>'
+             : '<div class="empty">예정된 파티가 없습니다. 상단의 <b>스케줄 등록</b>으로 추가하세요.</div>');
   $('inactiveWrap').style.display = inactive.length ? '' : 'none';
   $('inactiveList').innerHTML = inactive.map(partyCard).join('');
 }
@@ -465,7 +489,13 @@ $('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitPw(
 document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show')); });
 
+$('searchInput').addEventListener('input', () => { QUERY = norm($('searchInput').value); render(); });
+$('searchClear').onclick = () => { $('searchInput').value = ''; QUERY = ''; render(); $('searchInput').focus(); };
+
 load();
+// 시작 시간이 지난 파티가 페이지를 열어둔 채로도 비활성으로 넘어가도록 1분마다 갱신 (입력 중엔 건너뜀)
+setInterval(() => { if (!document.querySelector('.modal.show') && !document.hidden) load(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.querySelector('.modal.show')) load(); });
 </script>
 </body>
 </html>

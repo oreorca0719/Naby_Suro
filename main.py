@@ -2383,8 +2383,9 @@ def _boss_hash_pw(pw: str, salt: str) -> str:
     return hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), bytes.fromhex(salt), BOSS_PW_ITER).hex()
 
 
-def _boss_today() -> str:
-    return datetime.now(KST).strftime("%Y-%m-%d")
+def _boss_now() -> str:
+    """KST 'YYYY-MM-DD HH:MM' — 파티 시작 시각과 문자열로 비교한다."""
+    return datetime.now(KST).strftime("%Y-%m-%d %H:%M")
 
 
 def _boss_validate(payload: dict, require_future: bool = True) -> dict:
@@ -2403,8 +2404,8 @@ def _boss_validate(payload: dict, require_future: bool = True) -> dict:
         datetime.strptime(tm, "%H:%M")
     except ValueError:
         raise HTTPException(status_code=400, detail="날짜와 시간을 확인해주세요.")
-    if require_future and date < _boss_today():
-        raise HTTPException(status_code=400, detail="지난 날짜로는 등록할 수 없습니다.")
+    if require_future and f"{date} {tm}" <= _boss_now():
+        raise HTTPException(status_code=400, detail="이미 지난 시간으로는 등록할 수 없습니다.")
 
     raw = payload.get("members")
     members = raw if isinstance(raw, list) else _split_names(str(raw or ""))
@@ -2427,7 +2428,7 @@ def _boss_validate(payload: dict, require_future: bool = True) -> dict:
     return {"boss": boss, "difficulty": diff, "date": date, "time": tm, "members": seen, "note": note}
 
 
-def _boss_public(item: dict, today: str) -> dict:
+def _boss_public(item: dict, now: str) -> dict:
     """비밀번호 해시/솔트는 절대 내보내지 않는다."""
     boss = item.get("boss", "")
     return {
@@ -2439,7 +2440,8 @@ def _boss_public(item: dict, today: str) -> dict:
         "time": item.get("time", ""),
         "members": list(item.get("members") or []),
         "note": item.get("note", ""),
-        "active": item.get("date", "") >= today,     # 날짜가 지나면 비활성
+        # 시작 시각이 지나면 비활성
+        "active": f"{item.get('date', '')} {item.get('time', '')}" > now,
         "updated_at": int(item["updated_at"]) if item.get("updated_at") else None,
     }
 
@@ -2477,12 +2479,12 @@ def _boss_check_pw(item: dict, pw: str, naby_admin: str | None) -> None:
 
 @app.get("/api/boss-parties")
 def list_boss_parties():
-    today = _boss_today()
-    rows = [_boss_public(i, today) for i in _boss_rows()]
+    now = _boss_now()
+    rows = [_boss_public(i, now) for i in _boss_rows()]
     active = sorted((r for r in rows if r["active"]), key=lambda r: (r["date"], r["time"]))
     inactive = sorted((r for r in rows if not r["active"]), key=lambda r: (r["date"], r["time"]), reverse=True)
     bosses = [{"key": k, "name": v[0], "difficulties": v[1]} for k, v in BOSSES.items()]
-    return {"today": today, "parties": active + inactive, "bosses": bosses}
+    return {"today": now[:10], "now": now, "parties": active + inactive, "bosses": bosses}
 
 
 @app.post("/api/boss-parties")
@@ -2498,7 +2500,7 @@ def create_boss_party(payload: dict = Body(...)):
     item = {"pk": BOSS_PK, "created_at": now, **fields,
             "pw_salt": salt, "pw_hash": _boss_hash_pw(pw, salt)}
     memo_table.put_item(Item=item)
-    return {"party": _boss_public(item, _boss_today())}
+    return {"party": _boss_public(item, _boss_now())}
 
 
 @app.post("/api/boss-parties/{party_id}/verify")
@@ -2516,7 +2518,7 @@ def update_boss_party(party_id: int, payload: dict = Body(...), naby_admin: str 
     item.update(fields)
     item["updated_at"] = int(time.time() * 1000)
     memo_table.put_item(Item=item)
-    return {"party": _boss_public(item, _boss_today())}
+    return {"party": _boss_public(item, _boss_now())}
 
 
 BOSS_ICS_DURATION_MIN = 60     # 캘린더 일정 길이
@@ -2547,7 +2549,7 @@ def boss_party_ics(party_id: int):
     """휴대폰 캘린더에 추가할 .ics — 시작 30분 전 알림 포함. 공개 정보만 담는다."""
     from urllib.parse import quote
     item = _boss_get(party_id)
-    p = _boss_public(item, _boss_today())
+    p = _boss_public(item, _boss_now())
     start_kst = datetime.strptime(f"{p['date']} {p['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
     start = start_kst.astimezone(timezone.utc)
     end = start + timedelta(minutes=BOSS_ICS_DURATION_MIN)
