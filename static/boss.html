@@ -470,7 +470,8 @@ document.addEventListener('click', e => {
   // (안드로이드 브라우저는 웹에서 기기 캘린더 앱을 여는 것을 막는다 — 웨일·크롬·삼성 인터넷 실기기 확인)
   const target = IS_IOS ? `${location.origin}/api/boss-parties/${p.id}/ics` : IS_ANDROID ? googleCalUrl(p) : null;
   if (target) {
-    location.href = IS_KAKAO ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(target) : target;
+    // 안드로이드는 카톡 안에서 Google 캘린더가 그대로 뜬다. 아이폰 카톡은 .ics 를 처리 못 해 사파리로 연다.
+    location.href = IS_KAKAO && IS_IOS ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(target) : target;
     return;
   }
   $('calIcs').href = `/api/boss-parties/${p.id}/ics`;
