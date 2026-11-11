@@ -2519,6 +2519,67 @@ def update_boss_party(party_id: int, payload: dict = Body(...), naby_admin: str 
     return {"party": _boss_public(item, _boss_today())}
 
 
+BOSS_ICS_DURATION_MIN = 60     # 캘린더 일정 길이
+BOSS_ICS_ALARM_MIN = 30        # 시작 N분 전 휴대폰 알림
+
+
+def _ics_escape(s: str) -> str:
+    return (str(s).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+            .replace("\r\n", "\\n").replace("\n", "\\n"))
+
+
+def _ics_fold(line: str) -> str:
+    """RFC 5545: 한 줄 75바이트 초과 시 접는다 (UTF-8 글자 중간에서 자르지 않음)."""
+    out, cur = [], ""
+    for ch in line:
+        limit = 75 if not out else 74          # 이어지는 줄은 앞 공백 1바이트
+        if len((cur + ch).encode("utf-8")) > limit:
+            out.append(cur)
+            cur = ch
+        else:
+            cur += ch
+    out.append(cur)
+    return "\r\n ".join(out)
+
+
+@app.get("/api/boss-parties/{party_id}/ics")
+def boss_party_ics(party_id: int):
+    """휴대폰 캘린더에 추가할 .ics — 시작 30분 전 알림 포함. 공개 정보만 담는다."""
+    from urllib.parse import quote
+    item = _boss_get(party_id)
+    p = _boss_public(item, _boss_today())
+    start_kst = datetime.strptime(f"{p['date']} {p['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=KST)
+    start = start_kst.astimezone(timezone.utc)
+    end = start + timedelta(minutes=BOSS_ICS_DURATION_MIN)
+    fmt = "%Y%m%dT%H%M%SZ"
+    title = f"[보스] {p['boss_name']} {p['difficulty']}"
+    desc = "파티원: " + ", ".join(p["members"])
+    if p["note"]:
+        desc += "\n메모: " + p["note"]
+    seq = int((p["updated_at"] or 0) // 1000)   # 수정할 때마다 증가 → 다시 추가 시 갱신
+    lines = [
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//NabySuro//Boss Party//KO", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        f"UID:boss-party-{party_id}@nabysuro",
+        f"SEQUENCE:{seq}",
+        f"DTSTAMP:{datetime.now(timezone.utc).strftime(fmt)}",
+        f"DTSTART:{start.strftime(fmt)}",
+        f"DTEND:{end.strftime(fmt)}",
+        f"SUMMARY:{_ics_escape(title)}",
+        f"DESCRIPTION:{_ics_escape(desc)}",
+        "BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:{_ics_escape(title)}",
+        f"TRIGGER:-PT{BOSS_ICS_ALARM_MIN}M", "END:VALARM",
+        "END:VEVENT", "END:VCALENDAR",
+    ]
+    body = "\r\n".join(_ics_fold(l) for l in lines) + "\r\n"
+    fname = f"boss-{p['date']}.ics"
+    return Response(
+        content=body.encode("utf-8"),
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f"inline; filename=\"{fname}\"; filename*=UTF-8''{quote(fname)}"},
+    )
+
+
 @app.delete("/api/boss-parties/{party_id}")
 def delete_boss_party(party_id: int, payload: dict = Body(default={}), naby_admin: str = Cookie(None)):
     item = _boss_get(party_id)

@@ -102,6 +102,15 @@
       cursor: pointer; background: var(--fill); color: var(--ink-2);
     }
     .party-actions button:hover { background: var(--line); }
+    .party-actions button.cal-btn { background: var(--accent-weak); color: var(--accent); }
+    .party-actions button.cal-btn:hover { filter: brightness(0.96); background: var(--accent-weak); }
+    .cal-choice {
+      display: block; text-decoration: none; background: var(--fill); color: var(--text); border-radius: var(--radius-sm);
+      padding: 14px 16px; margin-bottom: 8px;
+    }
+    .cal-choice:hover { background: var(--line); }
+    .cal-choice b { display: block; font-size: 0.95rem; }
+    .cal-choice span { font-size: 0.78rem; color: var(--muted); font-weight: 500; }
     .party.inactive .party-actions button.reactivate { background: var(--accent); color: #fff; }
     .party.inactive:hover { opacity: 0.8; }
 
@@ -227,6 +236,18 @@
   </div>
 </div>
 
+<!-- 캘린더 추가 모달 -->
+<div class="modal" id="calModal" role="dialog" aria-modal="true" aria-labelledby="calTitle">
+  <div class="modal-content" style="max-width:360px;">
+    <div class="modal-header" id="calTitle">캘린더에 추가</div>
+    <a class="cal-choice" id="calIcs" href="#"><b>아이폰 · 삼성 캘린더</b><span>.ics 파일 · 시작 30분 전 알림 포함</span></a>
+    <a class="cal-choice" id="calGoogle" href="#" target="_blank" rel="noopener"><b>Google 캘린더</b><span>안드로이드 · PC · 알림은 Google 캘린더 기본 설정을 따름</span></a>
+    <div class="modal-actions" style="margin-top:8px;">
+      <button class="modal-btn secondary" id="calClose">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 비밀번호 확인 모달 -->
 <div class="modal" id="pwModal" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
   <div class="modal-content" style="max-width:360px;">
@@ -298,6 +319,7 @@ function partyCard(p) {
       <div class="members">${p.members.map(m => `<span class="member">${esc(m)}</span>`).join('')}</div>
       ${p.note ? `<div class="note">${esc(p.note)}</div>` : ''}
       <div class="party-actions">
+        ${p.active ? `<button class="cal-btn" data-act="cal" data-id="${p.id}">캘린더에 추가</button>` : ''}
         <button data-act="edit" data-id="${p.id}" class="${p.active ? '' : 'reactivate'}">${p.active ? '수정' : '다음 일정 등록'}</button>
       </div>
     </div>`;
@@ -394,6 +416,28 @@ $('btnDelete').onclick = async () => {
     closeForm(); await load();
   } catch (e) { $('formError').textContent = e.message; }
 };
+
+/* ── 캘린더 추가 ── */
+function googleCalUrl(p) {
+  // 날짜·시간은 KST 기준 → UTC 로 변환
+  const [y, mo, d] = p.date.split('-').map(Number), [h, mi] = p.time.split(':').map(Number);
+  const start = new Date(Date.UTC(y, mo - 1, d, h - 9, mi));
+  const end = new Date(start.getTime() + 60 * 60000);
+  const f = (dt) => dt.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  let details = '파티원: ' + p.members.join(', ');
+  if (p.note) details += '\n메모: ' + p.note;
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: `[보스] ${p.boss_name} ${p.difficulty}`, dates: `${f(start)}/${f(end)}`, details });
+  return 'https://calendar.google.com/calendar/render?' + q.toString().replace(/\+/g, '%20');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act="cal"]'); if (!b) return;
+  const p = PARTIES.find(x => String(x.id) === b.dataset.id); if (!p) return;
+  $('calIcs').href = `/api/boss-parties/${p.id}/ics`;
+  $('calGoogle').href = googleCalUrl(p);
+  $('calModal').classList.add('show');
+});
+$('calClose').onclick = () => $('calModal').classList.remove('show');
+['calIcs', 'calGoogle'].forEach(id => $(id).addEventListener('click', () => setTimeout(() => $('calModal').classList.remove('show'), 300)));
 
 /* ── 비밀번호 확인 → 수정 폼 ── */
 let pwTarget = null;
