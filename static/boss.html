@@ -281,11 +281,10 @@
 </div>
 
 <script>
-// 카카오톡 인앱 브라우저는 캘린더 파일을 '다운로드'로만 처리한다 → 기본 브라우저(사파리/크롬)로 다시 연다
+// 카카오톡 인앱 브라우저는 캘린더 파일을 '다운로드'로만 처리한다.
+// 페이지는 카톡 안에서 그대로 보고, '캘린더에 추가'를 누를 때만 캘린더 화면을 기본 브라우저로 바로 연다.
 const UA = navigator.userAgent;
-if (/KAKAOTALK/i.test(UA)) {
-  location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
-}
+const IS_KAKAO = /KAKAOTALK/i.test(UA);
 const IS_IOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_ANDROID = /Android/i.test(UA);
 
@@ -464,20 +463,16 @@ function googleCalUrl(p) {
   const q = new URLSearchParams({ action: 'TEMPLATE', text: ev.title, dates: `${f(ev.start)}/${f(ev.end)}`, details: ev.details });
   return 'https://calendar.google.com/calendar/render?' + q.toString().replace(/\+/g, '%20');
 }
-// 안드로이드: 기기 캘린더 앱의 '일정 추가' 화면을 바로 연다 (앱이 여러 개면 선택 창).
-// 브라우저가 막거나 받을 앱이 없으면 Google 캘린더 일정 추가 화면으로 넘어간다.
-function androidIntentUrl(p) {
-  const ev = calEvent(p), e = encodeURIComponent;
-  return 'intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/event;'
-    + `S.title=${e(ev.title)};S.description=${e(ev.details)};`
-    + `l.beginTime=${ev.start.getTime()};l.endTime=${ev.end.getTime()};`
-    + `S.browser_fallback_url=${e(googleCalUrl(p))};end`;
-}
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="cal"]'); if (!b) return;
   const p = PARTIES.find(x => String(x.id) === b.dataset.id); if (!p) return;
-  if (IS_IOS) { location.href = `/api/boss-parties/${p.id}/ics`; return; }   // 사파리: '캘린더에 추가' 창
-  if (IS_ANDROID) { location.href = androidIntentUrl(p); return; }
+  // 아이폰: .ics → 사파리 '캘린더에 추가' 창 / 안드로이드: Google 캘린더 일정 추가
+  // (안드로이드 브라우저는 웹에서 기기 캘린더 앱을 여는 것을 막는다 — 웨일·크롬·삼성 인터넷 실기기 확인)
+  const target = IS_IOS ? `${location.origin}/api/boss-parties/${p.id}/ics` : IS_ANDROID ? googleCalUrl(p) : null;
+  if (target) {
+    location.href = IS_KAKAO ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(target) : target;
+    return;
+  }
   $('calIcs').href = `/api/boss-parties/${p.id}/ics`;
   $('calGoogle').href = googleCalUrl(p);
   $('calModal').classList.add('show');
