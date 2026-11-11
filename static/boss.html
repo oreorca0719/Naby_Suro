@@ -463,12 +463,23 @@ function googleCalUrl(p) {
   const q = new URLSearchParams({ action: 'TEMPLATE', text: ev.title, dates: `${f(ev.start)}/${f(ev.end)}`, details: ev.details });
   return 'https://calendar.google.com/calendar/render?' + q.toString().replace(/\+/g, '%20');
 }
+// 안드로이드 카톡: 휴대폰 캘린더 앱의 '일정 추가' 화면을 바로 연다 (앱이 여러 개면 선택 창).
+// 카톡 인앱 브라우저에서는 이 방식으로 캘린더 등록 창이 떴다(삼성폰 실사용 제보). 웨일·크롬·삼성 인터넷은 막으므로 그쪽은 Google 캘린더로 간다.
+// 열리지 않으면 Google 캘린더 일정 추가 화면으로 넘어간다.
+function androidIntentUrl(p) {
+  const ev = calEvent(p), e = encodeURIComponent;
+  return 'intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/event;'
+    + `S.title=${e(ev.title)};S.description=${e(ev.details)};`
+    + `l.beginTime=${ev.start.getTime()};l.endTime=${ev.end.getTime()};`
+    + `S.browser_fallback_url=${e(googleCalUrl(p))};end`;
+}
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="cal"]'); if (!b) return;
   const p = PARTIES.find(x => String(x.id) === b.dataset.id); if (!p) return;
   // 아이폰: .ics → 사파리 '캘린더에 추가' 창 / 안드로이드: Google 캘린더 일정 추가
   // (안드로이드 브라우저는 웹에서 기기 캘린더 앱을 여는 것을 막는다 — 웨일·크롬·삼성 인터넷 실기기 확인)
   const target = IS_IOS ? `${location.origin}/api/boss-parties/${p.id}/ics` : IS_ANDROID ? googleCalUrl(p) : null;
+  if (IS_KAKAO && IS_ANDROID) { location.href = androidIntentUrl(p); return; }
   if (target) {
     // 안드로이드는 카톡 안에서 Google 캘린더가 그대로 뜬다. 아이폰 카톡은 .ics 를 처리 못 해 사파리로 연다.
     location.href = IS_KAKAO && IS_IOS ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(target) : target;
