@@ -257,8 +257,8 @@
 <div class="modal" id="calModal" role="dialog" aria-modal="true" aria-labelledby="calTitle">
   <div class="modal-content" style="max-width:360px;">
     <div class="modal-header" id="calTitle">캘린더에 추가</div>
-    <a class="cal-choice" id="calIcs" href="#"><b>아이폰 · 삼성 캘린더</b><span>.ics 파일 · 시작 30분 전 알림 포함</span></a>
-    <a class="cal-choice" id="calGoogle" href="#" target="_blank" rel="noopener"><b>Google 캘린더</b><span>안드로이드 · PC · 알림은 Google 캘린더 기본 설정을 따름</span></a>
+    <a class="cal-choice" id="calIcs" href="#"><b>캘린더 파일 (.ics)</b><span>아웃룩 · 맥 캘린더 등 · 시작 30분 전 알림 포함</span></a>
+    <a class="cal-choice" id="calGoogle" href="#" target="_blank" rel="noopener"><b>Google 캘린더</b><span>알림은 Google 캘린더 기본 설정을 따름</span></a>
     <div class="modal-actions" style="margin-top:8px;">
       <button class="modal-btn secondary" id="calClose">닫기</button>
     </div>
@@ -281,6 +281,14 @@
 </div>
 
 <script>
+// 카카오톡 인앱 브라우저는 캘린더 파일을 '다운로드'로만 처리한다 → 기본 브라우저(사파리/크롬)로 다시 연다
+const UA = navigator.userAgent;
+if (/KAKAOTALK/i.test(UA)) {
+  location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+}
+const IS_IOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_ANDROID = /Android/i.test(UA);
+
 const TINY_IMG = new Set(['dusk']);   // 원본이 작은 아이콘인 보스
 let BOSSES = [];
 let PARTIES = [];
@@ -441,20 +449,35 @@ $('btnDelete').onclick = async () => {
 };
 
 /* ── 캘린더 추가 ── */
-function googleCalUrl(p) {
+function calEvent(p) {
   // 날짜·시간은 KST 기준 → UTC 로 변환
   const [y, mo, d] = p.date.split('-').map(Number), [h, mi] = p.time.split(':').map(Number);
   const start = new Date(Date.UTC(y, mo - 1, d, h - 9, mi));
   const end = new Date(start.getTime() + 60 * 60000);
-  const f = (dt) => dt.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   let details = '파티원: ' + p.members.join(', ');
   if (p.note) details += '\n메모: ' + p.note;
-  const q = new URLSearchParams({ action: 'TEMPLATE', text: `[보스] ${p.boss_name} ${p.difficulty}`, dates: `${f(start)}/${f(end)}`, details });
+  return { title: `[보스] ${p.boss_name} ${p.difficulty}`, start, end, details };
+}
+function googleCalUrl(p) {
+  const ev = calEvent(p);
+  const f = (dt) => dt.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: ev.title, dates: `${f(ev.start)}/${f(ev.end)}`, details: ev.details });
   return 'https://calendar.google.com/calendar/render?' + q.toString().replace(/\+/g, '%20');
+}
+// 안드로이드: 기기 캘린더 앱의 '일정 추가' 화면을 바로 연다 (앱이 여러 개면 선택 창).
+// 브라우저가 막거나 받을 앱이 없으면 Google 캘린더 일정 추가 화면으로 넘어간다.
+function androidIntentUrl(p) {
+  const ev = calEvent(p), e = encodeURIComponent;
+  return 'intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/event;'
+    + `S.title=${e(ev.title)};S.description=${e(ev.details)};`
+    + `l.beginTime=${ev.start.getTime()};l.endTime=${ev.end.getTime()};`
+    + `S.browser_fallback_url=${e(googleCalUrl(p))};end`;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="cal"]'); if (!b) return;
   const p = PARTIES.find(x => String(x.id) === b.dataset.id); if (!p) return;
+  if (IS_IOS) { location.href = `/api/boss-parties/${p.id}/ics`; return; }   // 사파리: '캘린더에 추가' 창
+  if (IS_ANDROID) { location.href = androidIntentUrl(p); return; }
   $('calIcs').href = `/api/boss-parties/${p.id}/ics`;
   $('calGoogle').href = googleCalUrl(p);
   $('calModal').classList.add('show');
